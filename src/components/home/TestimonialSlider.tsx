@@ -1,0 +1,170 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+const testimonials = [
+  {
+    image: "/img/avatar-1.jpg",
+    alt: "Foto de Ana",
+    quote:
+      "Sed ut perspiciatis unde omnis iste natus error sit voluptatem illo accusantium doloremque laudantium, totam rem aperiam.",
+    author: "Ana — Hope River Artist"
+  },
+  {
+    image: "/img/avatar-2.jpg",
+    alt: "Foto de Marta",
+    quote:
+      "Sed ut perspiciatis unde omnis iste natus error sit voluptatem illo accusantium doloremque laudantium, totam rem aperiam.",
+    author: "Marta — Hope River Artist"
+  },
+  {
+    image: "/img/avatar-3.jpg",
+    alt: "Foto de Luis",
+    quote:
+      "Sed ut perspiciatis unde omnis iste natus error sit voluptatem illo accusantium doloremque laudantium, totam rem aperiam.",
+    author: "Luis — Hope River Artist"
+  }
+];
+
+export function TestimonialSlider() {
+  const [active, setActive] = useState<number | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const current = active === null ? null : testimonials[active];
+
+  useEffect(() => {
+    if (active === null) return;
+    document.body.classList.add("modal-open");
+    panelRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActive(null);
+      if (event.key === "ArrowRight") {
+        setActive((value) =>
+          value === null ? 0 : (value + 1) % testimonials.length
+        );
+      }
+      if (event.key === "ArrowLeft") {
+        setActive((value) =>
+          value === null
+            ? 0
+            : (value - 1 + testimonials.length) % testimonials.length
+        );
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.classList.remove("modal-open");
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [active]);
+
+  const loop = [...testimonials, ...testimonials];
+
+  return (
+    <>
+      <section id="testimonio" className="testimonial section">
+        <div className="container testimonial__container">
+          <header className="testimonial__head">
+            <h2 className="testimonial__title section-title">Lo que dicen</h2>
+            <p className="testimonial__subtitle section-subtitle">
+              Quienes han pasado por el taller
+            </p>
+          </header>
+          <div className="testimonial__viewport">
+            <div className="testimonial__track is-animated">
+              {loop.map((testimonial, index) => (
+                <article
+                  className="testimonial__slide"
+                  tabIndex={index < testimonials.length ? 0 : -1}
+                  aria-hidden={index >= testimonials.length || undefined}
+                  onClick={() => setActive(index % testimonials.length)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      setActive(index % testimonials.length);
+                    }
+                  }}
+                  key={`${testimonial.author}-${index}`}
+                >
+                  <img
+                    className="testimonial__avatar"
+                    src={testimonial.image}
+                    alt={testimonial.alt}
+                  />
+                  <div className="testimonial__body">
+                    <p className="testimonial__quote">{testimonial.quote}</p>
+                    <p className="testimonial__author">{testimonial.author}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {current && (
+        <div
+          className="testimonial-modal is-open"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tm-title"
+        >
+          <button
+            className="testimonial-modal__backdrop"
+            type="button"
+            aria-label="Cerrar"
+            onClick={() => setActive(null)}
+          />
+          <div
+            className="testimonial-modal__panel"
+            tabIndex={-1}
+            ref={panelRef}
+          >
+            <div className="testimonial-modal__topbar">
+              <button
+                className="testimonial-modal__icon-btn"
+                type="button"
+                aria-label="Anterior"
+                onClick={() =>
+                  setActive(
+                    ((active ?? 0) - 1 + testimonials.length) %
+                      testimonials.length
+                  )
+                }
+              >
+                &lsaquo;
+              </button>
+              <button
+                className="testimonial-modal__icon-btn"
+                type="button"
+                aria-label="Siguiente"
+                onClick={() =>
+                  setActive(
+                    ((active ?? 0) + 1) % testimonials.length
+                  )
+                }
+              >
+                &rsaquo;
+              </button>
+              <button
+                className="testimonial-modal__icon-btn testimonial-modal__icon-btn--close"
+                type="button"
+                aria-label="Cerrar"
+                onClick={() => setActive(null)}
+              >
+                x
+              </button>
+            </div>
+            <div className="testimonial-modal__content">
+              <img
+                className="testimonial-modal__avatar"
+                src={current.image}
+                alt={current.alt}
+              />
+              <p className="testimonial-modal__quote">{current.quote}</p>
+              <p className="testimonial-modal__author">{current.author}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

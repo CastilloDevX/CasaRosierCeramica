@@ -1,0 +1,82 @@
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  --font-display: var(--font-baskervville), "Baskervville", serif;
+  --font-menu: var(--font-nunito), "Nunito", sans-serif;
+  font-family: var(--font-display);
+  line-height: normal;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+.ig-modal__backdrop,
+.testimonial-modal__backdrop,
+.studio-lightbox__backdrop {
+  border: 0;
+  padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+.asset-fallback {
+  background: #e9e2d8;
+  object-fit: cover;
+}
+
+.privacy {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 56px 24px 72px;
+  font-family: var(--font-display);
+}
+
+.privacy h1 {
+  margin: 0 0 20px;
+  font-size: clamp(34px, 5vw, 54px);
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.privacy h2 {
+  margin: 30px 0 10px;
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 700;
+}
+
+.privacy p,
+.privacy li {
+  margin: 0 0 12px;
+  font-size: 21px;
+  line-height: 1.5;
+}
+
+.privacy ul {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.privacy a {
+  text-decoration: underline;
+}
+
+.blog-post__content h2 {
+  font-weight: 700;
+}
