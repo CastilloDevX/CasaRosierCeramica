@@ -20,6 +20,36 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
   const desktopItems = mobileItems.filter(
     (item) => !home || item.label !== "Inicio"
   );
+  const navigationByLabel = new Map(mobileItems.map((item) => [item.label, item]));
+  const visibleDropdownItems = (label: string) =>
+    (navigationByLabel.get(label)?.children ?? []).filter(
+      (child) => child.visible && child.href !== navigationByLabel.get(label)?.href
+    );
+  const scrollDesktopItems = [
+    { label: "Inicio", href: "/#hero", children: [] },
+    {
+      label: "Clases",
+      href: "/clases",
+      children: visibleDropdownItems("Clases")
+    },
+    {
+      label: "Workshops",
+      href: "/workshops",
+      children: visibleDropdownItems("Workshops")
+    },
+    {
+      label: "Reservas Privadas",
+      href: "/reservas-privadas",
+      children: visibleDropdownItems("Experiencias")
+    },
+    {
+      label: "Tarjeta de regalo",
+      href: "/gift-card",
+      children: visibleDropdownItems("Gift Card")
+    },
+    { label: "El Estudio", href: "/el-estudio", children: [] },
+    { label: "Blog", href: "/blog", children: [] }
+  ];
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -290,6 +320,66 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
               alt="Casa Rosier"
             />
           </Link>
+          <nav className="scroll-desktop-nav" aria-label="Principal">
+            <ul className="scroll-desktop-nav__list">
+              {scrollDesktopItems.map((item, index) => (
+                <li
+                  className={classNames(
+                    "scroll-desktop-nav__item",
+                    item.children.length > 0 &&
+                      "scroll-desktop-nav__item--has-children"
+                  )}
+                  key={item.href}
+                >
+                  <Link
+                    className="scroll-desktop-nav__link"
+                    href={item.href}
+                    aria-current={current(item.href) ? "page" : undefined}
+                  >
+                    {item.label}
+                    {item.children.length > 0 && (
+                      <span
+                        className="scroll-desktop-nav__plus"
+                        aria-hidden="true"
+                      >
+                        +
+                      </span>
+                    )}
+                  </Link>
+                  {item.children.length > 0 && (
+                    <ul className="scroll-desktop-submenu" role="menu">
+                      {item.children.map((child) => (
+                        <li
+                          className="scroll-desktop-submenu__item"
+                          role="none"
+                          key={child.href}
+                        >
+                          <Link
+                            className="scroll-desktop-submenu__link"
+                            href={child.href}
+                            role="menuitem"
+                            aria-current={
+                              current(child.href) ? "page" : undefined
+                            }
+                          >
+                            {child.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {index < scrollDesktopItems.length - 1 && (
+                    <span
+                      className="scroll-desktop-nav__separator"
+                      aria-hidden="true"
+                    >
+                      |
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </nav>
           <button
             className="mobile-scroll-nav__toggle"
             type="button"
