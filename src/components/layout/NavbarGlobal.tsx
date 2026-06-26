@@ -10,6 +10,7 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [staticMobileOpen, setStaticMobileOpen] = useState(false);
   const [mobileScrolled, setMobileScrolled] = useState(false);
   const [desktopOpen, setDesktopOpen] = useState<string | null>(null);
   const [mobileAccordion, setMobileAccordion] = useState<string | null>(null);
@@ -24,6 +25,7 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setMobileOpen(false);
+        setStaticMobileOpen(false);
         setDesktopOpen(null);
       }
     };
@@ -34,6 +36,7 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
         !rootRef.current.contains(event.target)
       ) {
         setMobileOpen(false);
+        setStaticMobileOpen(false);
         setDesktopOpen(null);
       }
     };
@@ -64,7 +67,13 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
       : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <div className="site-nav-shell" ref={rootRef}>
+    <div
+      className={classNames(
+        "site-nav-shell",
+        home ? "site-nav-shell--home" : "site-nav-shell--internal"
+      )}
+      ref={rootRef}
+    >
       <div className="navbar-global hero__top container">
         <Link className="hero__logo" href="/#hero" aria-label="Casa Rosier">
           <img
@@ -154,6 +163,112 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
           </ul>
         </nav>
       </div>
+
+      {!home && (
+        <div
+          className={classNames(
+            "mobile-static-nav",
+            staticMobileOpen && "is-open"
+          )}
+        >
+          <div className="mobile-static-nav__bar">
+            <Link
+              className="mobile-static-nav__logo"
+              href="/#hero"
+              aria-label="Casa Rosier"
+              onClick={() => setStaticMobileOpen(false)}
+            >
+              <img
+                className="mobile-static-nav__logo-image"
+                src="/img/logo-header.png"
+                alt="Casa Rosier"
+              />
+            </Link>
+            <button
+              className="mobile-static-nav__toggle"
+              type="button"
+              aria-expanded={staticMobileOpen}
+              aria-controls="mobile-static-menu"
+              aria-label={staticMobileOpen ? "Cerrar menu" : "Abrir menu"}
+              onClick={() => setStaticMobileOpen((open) => !open)}
+            >
+              <span className="mobile-scroll-nav__icon" aria-hidden="true" />
+            </button>
+          </div>
+
+          <nav
+            id="mobile-static-menu"
+            className="mobile-static-menu"
+            aria-label="Principal movil"
+            hidden={!staticMobileOpen}
+          >
+            <ul className="mobile-menu__list">
+              {mobileItems.map((item, index) => {
+                const children =
+                  item.children?.filter((child) => child.visible) ?? [];
+                const open = mobileAccordion === item.label;
+                const submenuId = `mobile-static-submenu-${index}`;
+                return (
+                  <li
+                    className={classNames(
+                      "mobile-menu__item",
+                      open && "mobile-menu__item--open"
+                    )}
+                    key={item.label}
+                  >
+                    <div className="mobile-menu__row">
+                      <Link
+                        className="mobile-menu__link"
+                        href={item.href}
+                        aria-current={current(item.href) ? "page" : undefined}
+                        onClick={() => setStaticMobileOpen(false)}
+                      >
+                        {item.label}
+                      </Link>
+                      {children.length > 0 && (
+                        <button
+                          className="mobile-menu__toggle"
+                          type="button"
+                          aria-expanded={open}
+                          aria-controls={submenuId}
+                          aria-label={`Abrir submenu de ${item.label}`}
+                          onClick={() =>
+                            setMobileAccordion(open ? null : item.label)
+                          }
+                        >
+                          <span aria-hidden="true">{open ? "x" : "+"}</span>
+                        </button>
+                      )}
+                    </div>
+                    {children.length > 0 && (
+                      <div className="mobile-submenu" id={submenuId}>
+                        <div className="mobile-submenu__inner">
+                          <ul className="mobile-submenu__list">
+                            {children.map((child) => (
+                              <li key={child.href}>
+                                <Link
+                                  className="mobile-submenu__link"
+                                  href={child.href}
+                                  aria-current={
+                                    current(child.href) ? "page" : undefined
+                                  }
+                                  onClick={() => setStaticMobileOpen(false)}
+                                >
+                                  {child.label}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        </div>
+      )}
 
       <div
         className={classNames(
