@@ -1,13 +1,16 @@
 export function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
+  const socialLoop = Array.from({ length: 12 }, (_, index) => (index % 4) + 1);
+  const socialItems = [...socialLoop, ...socialLoop];
+
   return (
     <footer id="footer" className="site-footer">
       {socialTrack && (
         <div className="footer-social__viewport">
           <div className="footer-social__track is-animated">
-            {[1, 2, 3, 4, 1, 2, 3, 4].map((index, position) => (
+            {socialItems.map((index, position) => (
               <a
                 className="footer-social__item"
-                href="https://www.instagram.com/casarosier/"
+                href="https://www.facebook.com/casarosier"
                 target="_blank"
                 rel="noreferrer"
                 aria-hidden={position > 3 ? true : undefined}
@@ -92,7 +95,7 @@ export function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
             <div className="contact-info__social">
               <a
                 className="contact-info__social-link"
-                href="https://www.instagram.com/casarosier/"
+                href="https://www.facebook.com/casarosier"
                 aria-label="Instagram"
                 target="_blank"
                 rel="noreferrer"
@@ -101,7 +104,7 @@ export function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
               </a>
               <a
                 className="contact-info__social-link"
-                href="https://www.facebook.com/"
+                href="https://www.facebook.com/casarosier"
                 aria-label="Facebook"
                 target="_blank"
                 rel="noreferrer"

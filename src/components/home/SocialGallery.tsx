@@ -148,7 +148,7 @@ export function SocialGallery() {
               <div className="ig-modal__body">{current.body}</div>
               <a
                 className="ig-modal__link"
-                href="https://www.instagram.com/casarosier/"
+                href="https://www.facebook.com/casarosier"
                 target="_blank"
                 rel="noreferrer"
               >

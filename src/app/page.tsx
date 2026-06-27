@@ -9,7 +9,7 @@ import { PromoEntry } from "@/components/ui/PromoEntry";
 import { classes, giftCards, workshops } from "@/data/classes";
 
 export const metadata: Metadata = {
-  title: "Casa Rosier",
+  title: "Casa Rosier Cerámica",
   description: "Studio de ceramica en Barcelona"
 };
 
