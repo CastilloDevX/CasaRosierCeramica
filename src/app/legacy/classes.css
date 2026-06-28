@@ -767,6 +767,92 @@
   padding-left: 18px;
 }
 
+.thumbnail-carousel {
+  display: grid;
+  gap: 18px;
+}
+
+.collection-page .featured__container,
+.classes-page .featured__container {
+  max-width: 784px;
+}
+
+.collection-page .featured__head,
+.classes-page .featured__head {
+  margin-bottom: 34px;
+}
+
+.featured__lede {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.collection-page .cards-grid,
+.classes-page .cards-grid {
+  row-gap: 34px;
+  column-gap: 19px;
+}
+
+.classes-card .content-card__meta {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+.classes-card .content-card__title {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.classes-card .content-card__excerpt {
+  font-size: 17px;
+  margin-bottom: 10px;
+}
+
+.classes-card .content-card__cta {
+  font-size: 10px;
+}
+
+.class-detail__container {
+  max-width: 944px;
+}
+
+.class-detail__layout {
+  grid-template-columns: minmax(256px, 336px) minmax(0, 1fr);
+  gap: 38px;
+}
+
+.class-detail__title {
+  font-size: clamp(27px, 3.2vw, 38px);
+}
+
+.class-detail__question {
+  font-size: 18px;
+}
+
+.class-detail__highlight {
+  font-size: 16px;
+}
+
+.class-detail__fact-block {
+  padding: 18px 19px;
+}
+
+.class-sidecard h3,
+.class-detail__fact-block h2,
+.class-detail__includes h2,
+.class-detail__text-block h2,
+.class-detail__program h2 {
+  font-size: 21px;
+}
+
+.class-sidecard p,
+.class-sidecard li,
+.class-detail__copy p,
+.class-detail__text-block p,
+.class-detail__schedule-item p {
+  font-size: 13px;
+}
+
 @media (max-width: 992px) {
   .collection-page .cards-grid,
   .classes-page .cards-grid {

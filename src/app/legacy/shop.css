@@ -316,6 +316,66 @@
   font-weight: 400;
 }
 
+.shop-listing__container {
+  max-width: 896px;
+}
+
+.shop-listing__intro {
+  font-size: 14px;
+}
+
+.shop-grid {
+  row-gap: 34px;
+  column-gap: 19px;
+}
+
+.shop-card .content-card__title {
+  font-size: 18px;
+}
+
+.shop-card__price {
+  font-size: 14px;
+}
+
+.shop-card__availability,
+.shop-card__meta {
+  font-size: 10px;
+}
+
+.shop-card__cta {
+  font-size: 10px;
+}
+
+.shop-detail__container {
+  max-width: 944px;
+}
+
+.shop-detail__layout {
+  grid-template-columns: minmax(256px, 336px) minmax(0, 1fr);
+  gap: 38px;
+}
+
+.shop-detail__title {
+  font-size: clamp(27px, 3.2vw, 38px);
+}
+
+.shop-detail__highlight,
+.shop-detail__price-main {
+  font-size: 16px;
+}
+
+.shop-sidecard h3,
+.shop-detail__fact-block h2,
+.shop-detail__text-block h2 {
+  font-size: 21px;
+}
+
+.shop-sidecard p,
+.shop-detail__text-block p,
+.shop-detail__schedule-item p {
+  font-size: 13px;
+}
+
 @media (max-width: 992px) {
   .shop-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

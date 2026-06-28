@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { assetPath } from "@/lib/assets";
 import { classNames } from "@/lib/utils";
+import { ThumbnailGallery } from "@/components/ui/Carousel";
 
 export function Gallery({
   images,
@@ -17,30 +17,33 @@ export function Gallery({
   videoLabel: string;
   ctaHref: string;
 }) {
-  const [active, setActive] = useState(0);
   return (
     <div className="class-gallery">
-      <img
-        className="class-gallery__main"
-        src={assetPath(images[active])}
-        alt={title}
-      />
-      <div className="class-gallery__thumbs">
-        {images.map((image, index) => (
+      <ThumbnailGallery
+        items={images}
+        ariaLabel={`Galeria de ${title}`}
+        thumbsClassName="class-gallery__thumbs"
+        renderMain={(image) => (
+          <img
+            className="class-gallery__main"
+            src={assetPath(image)}
+            alt={title}
+          />
+        )}
+        renderThumb={(image, index, isActive, select) => (
           <button
             className={classNames(
               "class-gallery__thumb",
-              index === active && "is-active"
+              isActive && "is-active"
             )}
             type="button"
             aria-label={`Ver imagen ${index + 1} de ${title}`}
-            onClick={() => setActive(index)}
-            key={`${image}-${index}`}
+            onClick={select}
           >
             <img src={assetPath(image)} alt={`${title} ${index + 1}`} />
           </button>
-        ))}
-      </div>
+        )}
+      />
       <a
         className="class-gallery__video-card"
         href={ctaHref}

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { assetPath } from "@/lib/assets";
+import { Carousel } from "@/components/ui/Carousel";
 
 const slides = [
   {
@@ -42,88 +42,50 @@ const slides = [
 ];
 
 export function IntroSlider() {
-  const [index, setIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-
-  useEffect(() => {
-    if (
-      paused ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      return;
-    }
-    const timer = window.setInterval(
-      () => setIndex((value) => (value + 1) % slides.length),
-      4000
-    );
-    return () => window.clearInterval(timer);
-  }, [paused]);
-
   return (
     <section
       id="intro"
       className="home-intro-slider section"
-      aria-roledescription="carousel"
-      aria-label="Introduccion visual Casa Rosier"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={() => setPaused(false)}
     >
-      <div className="container home-intro-slider__inner">
-        <div className="home-intro-slider__viewport">
-          <div
-            className="home-intro-slider__slides"
-            style={{ transform: `translateX(-${index * 100}%)` }}
-          >
-            {slides.map((slide) => (
-              <article
-                className="home-intro-slider__slide"
-                id={slide.id}
-                key={slide.id}
-              >
-                <div className="intro-slider-image">
-                  <img
-                    src={assetPath(slide.image)}
-                    alt={slide.imageAlt}
-                    className={
-                      assetPath(slide.image) !== `/${slide.image}`
-                        ? "asset-fallback"
-                        : undefined
-                    }
-                  />
-                </div>
-                <div className="intro-slider-content">
-                  <div className="intro-slider-content__inner">
-                    <p className="intro-slider-content__text">{slide.text}</p>
-                    <Link
-                      className="intro-slider-content__button"
-                      href={slide.buttonHref}
-                    >
-                      {slide.buttonText}
-                    </Link>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-        <div className="home-intro-slider__dots">
-          {slides.map((slide, slideIndex) => (
-            <button
-              className={`home-intro-slider__dot ${
-                slideIndex === index ? "is-active" : ""
-              }`}
-              type="button"
-              aria-label={`Ir al slide ${slideIndex + 1}`}
-              aria-controls={slide.id}
-              aria-pressed={slideIndex === index}
-              onClick={() => setIndex(slideIndex)}
-              key={slide.id}
-            />
-          ))}
-        </div>
-      </div>
+      <Carousel
+        items={slides}
+        ariaLabel="Introduccion visual Casa Rosier"
+        className="container home-intro-slider__inner"
+        viewportClassName="home-intro-slider__viewport"
+        trackClassName="home-intro-slider__slides"
+        slideClassName="home-intro-slider__slide"
+        dotsClassName="home-intro-slider__dots"
+        dotClassName="home-intro-slider__dot"
+        showDots
+        autoPlayMs={4000}
+        getSlideId={(slide) => slide.id}
+        renderItem={(slide) => (
+          <>
+            <div className="intro-slider-image">
+              <img
+                src={assetPath(slide.image)}
+                alt={slide.imageAlt}
+                className={
+                  assetPath(slide.image) !== `/${slide.image}`
+                    ? "asset-fallback"
+                    : undefined
+                }
+              />
+            </div>
+            <div className="intro-slider-content">
+              <div className="intro-slider-content__inner">
+                <p className="intro-slider-content__text">{slide.text}</p>
+                <Link
+                  className="intro-slider-content__button"
+                  href={slide.buttonHref}
+                >
+                  {slide.buttonText}
+                </Link>
+              </div>
+            </div>
+          </>
+        )}
+      />
     </section>
   );
 }

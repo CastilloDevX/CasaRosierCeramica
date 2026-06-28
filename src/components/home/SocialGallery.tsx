@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Carousel } from "@/components/ui/Carousel";
 
 const posts = [
   {
@@ -72,21 +73,29 @@ export function SocialGallery() {
               siguenos en instagram - @casarosier
             </p>
           </header>
-          <div className="social__viewport">
-            <div className="social__track">
-              {posts.map((post, index) => (
+          <Carousel
+            items={posts}
+            ariaLabel="Galeria continua de Instagram"
+            className="social__carousel"
+            viewportClassName="social__viewport"
+            trackClassName="social__track is-animated"
+            slideClassName="social__slide"
+            marquee
+            renderItem={(post, { realIndex, isDuplicate }) => (
                 <button
                   className="social__item"
                   type="button"
-                  onClick={() => setActive(index)}
-                  aria-label={`Abrir post social ${index + 1}`}
-                  key={post.image}
+                  onClick={() => setActive(realIndex)}
+                  aria-label={`Abrir post social ${realIndex + 1}`}
+                  tabIndex={isDuplicate ? -1 : undefined}
                 >
-                  <img src={post.image} alt={`Post social ${index + 1}`} />
+                  <img
+                    src={post.image}
+                    alt={isDuplicate ? "" : `Post social ${realIndex + 1}`}
+                  />
                 </button>
-              ))}
-            </div>
-          </div>
+            )}
+          />
         </div>
       </section>
 
@@ -105,6 +114,14 @@ export function SocialGallery() {
             onClick={() => setActive(null)}
           />
           <div className="ig-modal__panel" tabIndex={-1} ref={panelRef}>
+            <button
+              className="ig-modal__icon-btn ig-modal__icon-btn--close"
+              type="button"
+              aria-label="Cerrar"
+              onClick={() => setActive(null)}
+            >
+              <span className="ig-modal__close-mark" aria-hidden="true" />
+            </button>
             <section className="ig-modal__media">
               <img src={current.image} alt="" />
               <div className="ig-modal__overlay-text">Post</div>
@@ -112,7 +129,7 @@ export function SocialGallery() {
             <section className="ig-modal__content">
               <div className="ig-modal__topbar">
                 <button
-                  className="ig-modal__icon-btn"
+                  className="ig-modal__icon-btn ig-modal__icon-btn--prev"
                   type="button"
                   aria-label="Anterior"
                   onClick={() =>
@@ -121,25 +138,23 @@ export function SocialGallery() {
                     )
                   }
                 >
-                  &lsaquo;
+                  <span
+                    className="ig-modal__arrow-mark ig-modal__arrow-mark--prev"
+                    aria-hidden="true"
+                  />
                 </button>
                 <button
-                  className="ig-modal__icon-btn"
+                  className="ig-modal__icon-btn ig-modal__icon-btn--next"
                   type="button"
                   aria-label="Siguiente"
                   onClick={() =>
                     setActive(((active ?? 0) + 1) % posts.length)
                   }
                 >
-                  &rsaquo;
-                </button>
-                <button
-                  className="ig-modal__icon-btn ig-modal__icon-btn--close"
-                  type="button"
-                  aria-label="Cerrar"
-                  onClick={() => setActive(null)}
-                >
-                  x
+                  <span
+                    className="ig-modal__arrow-mark ig-modal__arrow-mark--next"
+                    aria-hidden="true"
+                  />
                 </button>
               </div>
               <h3 id="ig-title" className="ig-modal__title">

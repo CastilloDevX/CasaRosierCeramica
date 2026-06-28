@@ -1,21 +1,26 @@
+import { Carousel } from "@/components/ui/Carousel";
+
 export function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
   const socialLoop = Array.from({ length: 12 }, (_, index) => (index % 4) + 1);
-  const socialItems = [...socialLoop, ...socialLoop];
 
   return (
     <footer id="footer" className="site-footer">
       {socialTrack && (
-        <div className="footer-social__viewport">
-          <div className="footer-social__track is-animated">
-            {socialItems.map((index, position) => (
+        <Carousel
+          items={socialLoop}
+          ariaLabel="Galeria social continua"
+          className="footer-social"
+          viewportClassName="footer-social__viewport"
+          trackClassName="footer-social__track is-animated"
+          slideClassName="footer-social__slide"
+          marquee
+          renderItem={(index, { realIndex, isDuplicate }) => (
               <a
                 className="footer-social__item"
                 href="https://www.facebook.com/casarosier"
                 target="_blank"
                 rel="noreferrer"
-                aria-hidden={position > 3 ? true : undefined}
-                tabIndex={position > 3 ? -1 : undefined}
-                key={`${index}-${position}`}
+                tabIndex={isDuplicate || realIndex > 3 ? -1 : undefined}
               >
                 <img
                   src={
@@ -23,12 +28,11 @@ export function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
                       ? "/img/social-4.jpeg"
                       : `/img/social-${index}.jpg`
                   }
-                  alt={position > 3 ? "" : `Instagram ${index}`}
+                  alt={isDuplicate || realIndex > 3 ? "" : `Instagram ${index}`}
                 />
               </a>
-            ))}
-          </div>
-        </div>
+          )}
+        />
       )}
       <section id="contacto-footer" className="contact-footer">
         <div className="container contact-footer__container">

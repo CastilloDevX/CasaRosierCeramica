@@ -1,43 +1,45 @@
 "use client";
 
-import { useState } from "react";
 import type { ShopItem } from "@/data/types";
 import { assetPath } from "@/lib/assets";
 import { classNames } from "@/lib/utils";
+import { ThumbnailGallery } from "@/components/ui/Carousel";
 
 export function ShopDetail({ item }: { item: ShopItem }) {
-  const [active, setActive] = useState(0);
   return (
     <section className="shop-detail section">
       <div className="container shop-detail__container">
         <div className="shop-detail__layout">
           <section className="shop-detail__media-column">
-            <div className="shop-gallery">
-              <img
-                className="shop-gallery__main"
-                src={assetPath(item.gallery[active] ?? item.image)}
-                alt={item.name}
-              />
-              <div className="shop-gallery__thumbs">
-                {item.gallery.map((image, index) => (
+            <ThumbnailGallery
+              items={item.gallery.length ? item.gallery : [item.image]}
+              ariaLabel={`Galeria de ${item.name}`}
+              className="shop-gallery"
+              thumbsClassName="shop-gallery__thumbs"
+              renderMain={(image) => (
+                <img
+                  className="shop-gallery__main"
+                  src={assetPath(image ?? item.image)}
+                  alt={item.name}
+                />
+              )}
+              renderThumb={(image, index, isActive, select) => (
                   <button
                     className={classNames(
                       "shop-gallery__thumb",
-                      active === index && "is-active"
+                      isActive && "is-active"
                     )}
                     type="button"
                     aria-label={`Ver imagen ${index + 1} de ${item.name}`}
-                    onClick={() => setActive(index)}
-                    key={`${image}-${index}`}
+                    onClick={select}
                   >
                     <img
                       src={assetPath(image)}
                       alt={`${item.name} ${index + 1}`}
                     />
                   </button>
-                ))}
-              </div>
-            </div>
+              )}
+            />
             <div className="shop-sidecard">
               <h3>Disponibilidad</h3>
               <p>{item.availability}</p>

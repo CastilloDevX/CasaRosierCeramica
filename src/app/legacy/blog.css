@@ -272,13 +272,43 @@
 }
 
 .featured-carousel__dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   border: 0;
   background: #d6cec4;
   padding: 0;
   cursor: pointer;
+}
+
+.featured-slide.carousel__slide {
+  flex: 0 0 100%;
+}
+
+.blog-featured__container {
+  max-width: 944px;
+}
+
+.blog-listing__container,
+.blog-post__container,
+.blog-post-cta__container,
+.blog-post-nav__container,
+.blog-related__container {
+  max-width: 864px;
+}
+
+.blog-grid,
+.blog-related__grid {
+  gap: 27px 19px;
+}
+
+.blog-card__title,
+.blog-related__card h3 {
+  font-size: 19px;
+}
+
+.blog-card__excerpt {
+  font-size: 13px;
 }
 
 .featured-carousel__dot.is-active {

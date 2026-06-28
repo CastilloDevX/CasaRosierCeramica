@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Carousel } from "@/components/ui/Carousel";
 
 const testimonials = [
   {
@@ -57,8 +58,6 @@ export function TestimonialSlider() {
     };
   }, [active]);
 
-  const loop = [...testimonials, ...testimonials];
-
   return (
     <>
       <section id="testimonio" className="testimonial section">
@@ -69,34 +68,40 @@ export function TestimonialSlider() {
               Quienes han pasado por el taller
             </p>
           </header>
-          <div className="testimonial__viewport">
-            <div className="testimonial__track is-animated">
-              {loop.map((testimonial, index) => (
-                <article
-                  className="testimonial__slide"
-                  tabIndex={index < testimonials.length ? 0 : -1}
-                  aria-hidden={index >= testimonials.length || undefined}
-                  onClick={() => setActive(index % testimonials.length)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      setActive(index % testimonials.length);
-                    }
-                  }}
-                  key={`${testimonial.author}-${index}`}
-                >
-                  <img
-                    className="testimonial__avatar"
-                    src={testimonial.image}
-                    alt={testimonial.alt}
-                  />
-                  <div className="testimonial__body">
-                    <p className="testimonial__quote">{testimonial.quote}</p>
-                    <p className="testimonial__author">{testimonial.author}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
+          <Carousel
+            items={testimonials}
+            ariaLabel="Testimonios de quienes han pasado por el taller"
+            className="testimonial__carousel"
+            viewportClassName="testimonial__viewport"
+            trackClassName="testimonial__track"
+            slideClassName="testimonial__slide"
+            dotsClassName="testimonial__dots"
+            dotClassName="testimonial__dot"
+            showDots
+            dotLabel={(slideIndex) => `Ver testimonio ${slideIndex + 1}`}
+            getSlideProps={(_, { realIndex }) => ({
+              tabIndex: 0,
+              onClick: () => setActive(realIndex),
+              onKeyDown: (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  setActive(realIndex);
+                }
+              }
+            })}
+            renderItem={(testimonial) => (
+              <>
+                <img
+                  className="testimonial__avatar"
+                  src={testimonial.image}
+                  alt={testimonial.alt}
+                />
+                <div className="testimonial__body">
+                  <p className="testimonial__quote">{testimonial.quote}</p>
+                  <p className="testimonial__author">{testimonial.author}</p>
+                </div>
+              </>
+            )}
+          />
         </div>
       </section>
 
