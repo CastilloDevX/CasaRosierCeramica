@@ -46,39 +46,16 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
     <section className="class-detail section">
       <div className="container class-detail__container">
         <div className="class-detail__layout">
-          <div className="class-detail__top-block">
-            <section className="class-detail__media-column">
-              <Gallery
-                images={item.galleryImages}
-                title={item.title}
-                videoImage={item.videoCardImage}
-                videoLabel={item.videoCardLabel}
-                ctaHref={item.ctaHref}
-                showVideo={false}
-              />
-            </section>
+          <section className="class-detail__media-column">
+            <Gallery
+              images={item.galleryImages}
+              title={item.title}
+              videoImage={item.videoCardImage}
+              videoLabel={item.videoCardLabel}
+              ctaHref={item.ctaHref}
+              showVideo={false}
+            />
 
-            <section className="class-detail__content-column">
-              <header className="class-detail__head">
-                <h1 className="class-detail__title">{item.subtitle}</h1>
-                <p className="class-detail__question">
-                  Te apasiona la creatividad y deseas explorar el mundo de la
-                  ceramica?
-                </p>
-                <p className="class-detail__highlight">
-                  {item.introHighlight}
-                </p>
-              </header>
-
-              <div className="class-detail__copy">
-                {item.description.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
-              </div>
-            </section>
-          </div>
-
-          <div className="class-detail__bottom-block">
             <aside className="class-detail__side-column">
               <a
                 className="class-gallery__video-card"
@@ -103,10 +80,43 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                 <p>{item.additionalInfo}</p>
               </div>
             </aside>
+          </section>
+
+          <section className="class-detail__content-column">
+            <header className="class-detail__head">
+              <h1 className="class-detail__title">{item.subtitle}</h1>
+              <p className="class-detail__question">
+                Te apasiona la creatividad y deseas explorar el mundo de la
+                ceramica?
+              </p>
+              <p className="class-detail__highlight">
+                {item.introHighlight}
+              </p>
+            </header>
+
+            <div className="class-detail__copy">
+              {item.description.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+            </div>
 
             <section className="class-detail__info-column">
               <section className="class-detail__facts">
-                {isGiftCard ? (
+                <div className="class-detail__fact-block">
+                  <h2>Precio</h2>
+                  <div className="class-detail__price-list">
+                    {item.priceOptions.map((option) => (
+                      <div
+                        className="class-detail__price-row"
+                        key={option.label}
+                      >
+                        <span>{option.label}</span>
+                        <strong>{option.price}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {isGiftCard && (
                   <div className="class-detail__fact-block class-detail__fact-block--selector">
                     <h2>Tipo de tarjeta</h2>
                     <div className="gift-card-selector">
@@ -135,21 +145,6 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                           ))}
                         </select>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="class-detail__fact-block">
-                    <h2>Precio</h2>
-                    <div className="class-detail__price-list">
-                      {item.priceOptions.map((option) => (
-                        <div
-                          className="class-detail__price-row"
-                          key={option.label}
-                        >
-                          <span>{option.label}</span>
-                          <strong>{option.price}</strong>
-                        </div>
-                      ))}
                     </div>
                   </div>
                 )}
@@ -262,7 +257,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                 )}
               </section>
             </section>
-          </div>
+          </section>
         </div>
       </div>
     </section>
