@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { BodyClass } from "@/components/layout/BodyClass";
-import { Footer } from "@/components/layout/Footer";
-import { HeaderInterno } from "@/components/layout/HeaderInterno";
-import { ShopDetail } from "@/components/shop/ShopDetail";
-import { bySlug, published } from "@/data/shop";
+import { ShopItemPage as ShopItemScreen } from "@/features/shop/ShopItemPage";
+import {
+  generateShopItemMetadata,
+  generateShopStaticParams,
+  getShopRouteItem
+} from "@/features/shop/shopRouting";
 
 export function generateStaticParams() {
-  return published.map((item) => ({ slug: item.slug }));
+  return generateShopStaticParams();
 }
 
 export async function generateMetadata({
@@ -15,13 +16,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const item = bySlug((await params).slug);
-  return item
-    ? {
-        title: { absolute: item.seoTitle },
-        description: item.seoDescription
-      }
-    : {};
+  return generateShopItemMetadata(params);
 }
 
 export default async function ShopDetailPage({
@@ -29,20 +24,7 @@ export default async function ShopDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const item = bySlug((await params).slug);
+  const item = await getShopRouteItem(params);
   if (!item) notFound();
-  return (
-    <>
-      <BodyClass className="shop-detail-page" />
-      <HeaderInterno
-        image={item.image}
-        eyebrow={item.categoryLabel}
-        title={item.name}
-      />
-      <main>
-        <ShopDetail item={item} />
-      </main>
-      <Footer />
-    </>
-  );
+  return <ShopItemScreen item={item} />;
 }

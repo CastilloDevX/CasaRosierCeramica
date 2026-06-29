@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { CollectionLanding } from "@/components/collections/CollectionLanding";
-import { classes } from "@/data/classes";
+import { ExperienceCollectionPage } from "@/features/experiences/ExperienceCollectionPage";
+import { experienceCollections } from "@/features/experiences/experienceRoutes";
 
 export const metadata: Metadata = {
   title: "Cursos y talleres de ceramica",
@@ -9,13 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function ClassesPage() {
-  return (
-    <CollectionLanding
-      bodyClass="collection-page classes-page"
-      eyebrow="En Barcelona"
-      title="Cursos y talleres de ceramica"
-      lede="Un espacio para aprender ceramica con calma, explorar tecnicas, tocar la materia y encontrar una practica guiada que acompana cada proceso desde el primer gesto."
-      items={classes}
-    />
-  );
+  return <ExperienceCollectionPage config={experienceCollections.classes} />;
 }

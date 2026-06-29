@@ -3,7 +3,23 @@
 import { useEffect, useRef, useState } from "react";
 import { Carousel } from "@/components/ui/Carousel";
 
-const posts = [
+export interface SocialGalleryPost {
+  image: string;
+  title: string;
+  body: string;
+  date: string;
+}
+
+export interface SocialGalleryProps {
+  id?: string;
+  title?: string;
+  subtitle?: string;
+  posts?: readonly SocialGalleryPost[];
+  ariaLabel?: string;
+  sourceHref?: string;
+}
+
+export const defaultSocialGalleryPosts: readonly SocialGalleryPost[] = [
   {
     image: "/img/social-1.jpg",
     title: "Serie en proceso",
@@ -30,9 +46,17 @@ const posts = [
   }
 ];
 
-export function SocialGallery() {
+export function SocialGallery({
+  id = "galeria-social",
+  title = "Y tu, cuando tuviste\ntu ultima idea?",
+  subtitle = "siguenos en instagram - @casarosier",
+  posts = defaultSocialGalleryPosts,
+  ariaLabel = "Galeria continua de Instagram",
+  sourceHref = "https://www.facebook.com/casarosier"
+}: SocialGalleryProps = {}) {
   const [active, setActive] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const postCount = posts.length;
   const current = active === null ? null : posts[active];
 
   useEffect(() => {
@@ -43,12 +67,12 @@ export function SocialGallery() {
       if (event.key === "Escape") setActive(null);
       if (event.key === "ArrowRight") {
         setActive((value) =>
-          value === null ? 0 : (value + 1) % posts.length
+          value === null ? 0 : (value + 1) % postCount
         );
       }
       if (event.key === "ArrowLeft") {
         setActive((value) =>
-          value === null ? 0 : (value - 1 + posts.length) % posts.length
+          value === null ? 0 : (value - 1 + postCount) % postCount
         );
       }
     };
@@ -57,25 +81,28 @@ export function SocialGallery() {
       document.body.classList.remove("modal-open");
       document.removeEventListener("keydown", onKey);
     };
-  }, [active]);
+  }, [active, postCount]);
 
   return (
     <>
-      <section id="galeria-social" className="social section">
+      <section id={id} className="social section">
         <div className="container social__container">
           <header className="social__head">
             <h2 className="social__title section-title">
-              Y tu, cuando tuviste
-              <br />
-              tu ultima idea?
+              {title.split("\n").map((line, index, lines) => (
+                <span key={line}>
+                  {line}
+                  {index < lines.length - 1 && <br />}
+                </span>
+              ))}
             </h2>
             <p className="social__subtitle">
-              siguenos en instagram - @casarosier
+              {subtitle}
             </p>
           </header>
           <Carousel
             items={posts}
-            ariaLabel="Galeria continua de Instagram"
+            ariaLabel={ariaLabel}
             className="social__carousel"
             viewportClassName="social__viewport"
             trackClassName="social__track is-animated"
@@ -163,7 +190,7 @@ export function SocialGallery() {
               <div className="ig-modal__body">{current.body}</div>
               <a
                 className="ig-modal__link"
-                href="https://www.facebook.com/casarosier"
+                href={sourceHref}
                 target="_blank"
                 rel="noreferrer"
               >

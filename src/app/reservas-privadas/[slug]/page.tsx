@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ExperienceDetailScreen } from "@/components/collections/ExperienceDetailScreen";
-import { bySlug, privateExperiences } from "@/data/classes";
+import { ExperienceDetailPage } from "@/features/experiences/ExperienceDetailPage";
+import {
+  generateExperienceMetadata,
+  generateExperienceStaticParams,
+  getExperienceRouteItem
+} from "@/features/experiences/experienceDetailRouting";
 
 export function generateStaticParams() {
-  return privateExperiences.map((item) => ({ slug: item.slug }));
+  return generateExperienceStaticParams("private-booking");
 }
 
 export async function generateMetadata({
@@ -12,13 +16,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const item = bySlug((await params).slug);
-  return item
-    ? {
-        title: { absolute: item.seoTitle },
-        description: item.seoDescription
-      }
-    : {};
+  return generateExperienceMetadata(params);
 }
 
 export default async function PrivateExperienceDetailPage({
@@ -26,7 +24,7 @@ export default async function PrivateExperienceDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const item = bySlug((await params).slug);
-  if (!item || item.kind !== "private-booking") notFound();
-  return <ExperienceDetailScreen item={item} />;
+  const item = await getExperienceRouteItem(params, "private-booking");
+  if (!item) notFound();
+  return <ExperienceDetailPage item={item} />;
 }

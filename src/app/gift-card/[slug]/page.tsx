@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ExperienceDetailScreen } from "@/components/collections/ExperienceDetailScreen";
-import { bySlug, giftCards } from "@/data/classes";
+import { ExperienceDetailPage } from "@/features/experiences/ExperienceDetailPage";
+import {
+  generateExperienceMetadata,
+  generateExperienceStaticParams,
+  getExperienceRouteItem
+} from "@/features/experiences/experienceDetailRouting";
 
 export function generateStaticParams() {
-  return giftCards.map((item) => ({ slug: item.slug }));
+  return generateExperienceStaticParams("gift-card");
 }
 
 export async function generateMetadata({
@@ -12,13 +16,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const item = bySlug((await params).slug);
-  return item
-    ? {
-        title: { absolute: item.seoTitle },
-        description: item.seoDescription
-      }
-    : {};
+  return generateExperienceMetadata(params);
 }
 
 export default async function GiftCardDetailPage({
@@ -26,7 +24,7 @@ export default async function GiftCardDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const item = bySlug((await params).slug);
-  if (!item || item.kind !== "gift-card") notFound();
-  return <ExperienceDetailScreen item={item} />;
+  const item = await getExperienceRouteItem(params, "gift-card");
+  if (!item) notFound();
+  return <ExperienceDetailPage item={item} />;
 }

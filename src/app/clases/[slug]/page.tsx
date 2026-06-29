@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ExperienceDetailScreen } from "@/components/collections/ExperienceDetailScreen";
-import { bySlug, classes } from "@/data/classes";
+import { ExperienceDetailPage } from "@/features/experiences/ExperienceDetailPage";
+import {
+  generateExperienceMetadata,
+  generateExperienceStaticParams,
+  getExperienceRouteItem
+} from "@/features/experiences/experienceDetailRouting";
 
 export function generateStaticParams() {
-  return classes.map((item) => ({ slug: item.slug }));
+  return generateExperienceStaticParams("class");
 }
 
 export async function generateMetadata({
@@ -12,13 +16,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const item = bySlug((await params).slug);
-  return item
-    ? {
-        title: { absolute: item.seoTitle },
-        description: item.seoDescription
-      }
-    : {};
+  return generateExperienceMetadata(params);
 }
 
 export default async function ClassDetailPage({
@@ -26,7 +24,7 @@ export default async function ClassDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const item = bySlug((await params).slug);
-  if (!item || item.kind !== "class") notFound();
-  return <ExperienceDetailScreen item={item} />;
+  const item = await getExperienceRouteItem(params, "class");
+  if (!item) notFound();
+  return <ExperienceDetailPage item={item} />;
 }
