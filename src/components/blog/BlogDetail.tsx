@@ -19,6 +19,9 @@ export function BlogDetail({ post }: { post: BlogPost }) {
               <p className="blog-post__excerpt">{post.excerpt}</p>
             </div>
           </div>
+          <figure className="blog-post__cover-figure" aria-label={post.title}>
+            <img src={assetPath(post.coverImage)} alt={post.title} />
+          </figure>
           <article className="article-content blog-post__content">
             {post.contentBlocks.map((block, index) => (
               <ContentBlock block={block} key={`${block.type}-${index}`} />

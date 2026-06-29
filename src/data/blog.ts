@@ -28,49 +28,58 @@ export const blogPosts = [
     "seoDescription": "Una reflexion sobre el proceso creativo en ceramica, la arcilla y el trabajo dentro del taller.",
     "contentBlocks": [
       {
-        "type": "paragraph",
-        "content": "A veces una pieza empieza mucho antes de tener una forma definida. Empieza cuando una intuicion pide tiempo y las manos aceptan no saber aun que estan buscando."
-      },
-      {
-        "type": "heading",
-        "level": 2,
-        "content": "La arcilla como punto de partida"
-      },
-      {
-        "type": "paragraph",
-        "content": "Trabajar con ceramica implica escuchar el material, observar como responde y aceptar que el proceso tambien propone caminos. No todo se decide al principio."
-      },
-      {
         "type": "quote",
-        "content": "La ceramica tambien es aprender a mirar lo que ocurre mientras las manos trabajan."
+        "content": "Una pieza empieza cuando las manos aceptan no tener todas las respuestas."
       },
       {
-        "type": "image",
-        "src": "img/intro-b.jpg",
-        "alt": "Proceso de modelado de una pieza ceramica",
-        "caption": "Pieza en proceso dentro del taller."
+        "type": "paragraph",
+        "content": "A veces una pieza empieza mucho antes de tener una forma definida. Empieza cuando una intuicion pide tiempo y las manos aceptan no saber aun que estan buscando. En ceramica, esa primera duda no es un obstaculo: es una manera de entrar en contacto con el material."
+      },
+      {
+        "type": "paragraph",
+        "content": "Trabajar con arcilla implica escuchar como responde, observar que pide y aceptar que el proceso tambien propone caminos. No todo se decide al principio; muchas veces la pieza se va aclarando cuando aparece el primer gesto."
       },
       {
         "type": "heading",
         "level": 3,
-        "content": "Empezar sin controlar del todo"
+        "content": "La arcilla como punto de partida"
+      },
+      {
+        "type": "paragraph",
+        "content": "La arcilla no espera una idea perfecta. Permite empezar desde una presion, una curva, una union o una textura. Cada movimiento deja una senal y esa senal ayuda a decidir el siguiente paso."
       },
       {
         "type": "paragraph",
         "content": "En el estudio muchas veces trabajamos asi: con una idea inicial lo bastante clara para empezar, pero lo bastante abierta como para dejar que la materia tambien participe."
       },
       {
-        "type": "list",
-        "items": [
-          "Aceptar que el primer gesto no tiene que resolverlo todo.",
-          "Observar como cambia una idea cuando toca la materia.",
-          "Corregir sin perder frescura."
+        "type": "gallery",
+        "images": [
+          {
+            "src": "img/intro-b.jpg",
+            "alt": "Proceso de modelado de una pieza ceramica"
+          },
+          {
+            "src": "img/intro-c.jpg",
+            "alt": "Herramientas y piezas en proceso dentro del taller"
+          }
         ]
       },
       {
-        "type": "cta",
-        "text": "Ver clases",
-        "href": "clases/index.html"
+        "type": "quote",
+        "content": "La ceramica tambien es aprender a mirar lo que ocurre mientras las manos trabajan."
+      },
+      {
+        "type": "paragraph",
+        "content": "Aceptar que el primer gesto no tiene que resolverlo todo cambia la forma de trabajar. Permite observar como una idea se transforma cuando toca la materia, corregir sin perder frescura y construir una pieza desde decisiones pequenas."
+      },
+      {
+        "type": "paragraph",
+        "content": "Por eso empezar sin tenerlo todo claro puede ser una ventaja. Te obliga a mirar con atencion, a sostener el proceso y a descubrir la forma desde dentro."
+      },
+      {
+        "type": "quote",
+        "content": "No hace falta saberlo todo para empezar; basta con escuchar el primer gesto."
       }
     ]
   },
@@ -79,7 +88,7 @@ export const blogPosts = [
     "title": "Engobes, esmaltes y pequenas decisiones de superficie",
     "slug": "engobes-esmaltes-y-pequenas-decisiones-de-superficie",
     "excerpt": "Una nota breve sobre capas, tiempos y como pequenas decisiones alteran la lectura final de una pieza.",
-    "coverImage": "img/social-3.jpg",
+    "coverImage": "img/social-2.jpg",
     "category": "Esmaltes",
     "tags": [
       "esmaltes",
@@ -91,7 +100,7 @@ export const blogPosts = [
     "status": "published",
     "isFeatured": true,
     "featuredOrder": 2,
-    "featuredImage": "img/social-3.jpg",
+    "featuredImage": "img/social-2.jpg",
     "featuredExcerpt": "Notas sobre capas, tiempos y decisiones minimas que alteran la lectura final de una pieza.",
     "featuredOnHome": false,
     "visibleInListing": true,
@@ -101,23 +110,71 @@ export const blogPosts = [
     "seoDescription": "Apuntes sobre engobes, esmaltes y decisiones de superficie dentro del taller de Casa Rosier.",
     "contentBlocks": [
       {
+        "type": "quote",
+        "content": "Una capa puede cambiarlo todo si aparece en el momento preciso."
+      },
+      {
         "type": "paragraph",
-        "content": "El acabado de una pieza no depende solo del color. Depende tambien del espesor, la absorcion, el orden de las capas y el momento en el que se aplican."
+        "content": "Las clases de ceramica funcional no solo te ensenan a hacer una taza o un cuenco. Te proponen un tipo de creatividad mas completa: pensar con las manos, tomar decisiones con el cuerpo y convertir una idea en un objeto que se usa. Si estas empezando o si ya tienes recorrido, trabajar piezas funcionales cambia tu forma de crear porque mezcla tecnica, intuicion y proposito."
+      },
+      {
+        "type": "paragraph",
+        "content": "Aqui tienes siete maneras concretas en que una clase de ceramica funcional puede potenciar tu creatividad."
       },
       {
         "type": "heading",
-        "level": 2,
-        "content": "La superficie tambien cuenta una historia"
+        "level": 3,
+        "content": "Conexion real con el material"
       },
       {
         "type": "paragraph",
-        "content": "En el taller nos interesa trabajar la superficie como una decision lenta. A veces una pieza pide contraste. Otras veces necesita silencio visual."
+        "content": "La arcilla es respuesta inmediata. Si aprietas, cede. Si dudas, se nota. Esa relacion directa te obliga a observar y a sentir, y de ahi salen ideas nuevas. Al amasar, estirar, comprimir o alisar, empiezas a entender el material como un dialogo: tu propones, la arcilla responde."
       },
       {
-        "type": "image",
-        "src": "img/clase-3.png",
-        "alt": "Muestras de color y superficie en ceramica",
-        "caption": "Pruebas de color en proceso."
+        "type": "paragraph",
+        "content": "Esa conexion desarrolla intuicion creativa y abre puertas a formas y texturas que no aparecen cuando solo estas pensando un proyecto."
+      },
+      {
+        "type": "paragraph",
+        "content": "Las clases de ceramica funcional no solo te ensenan a hacer una taza o un cuenco. Te proponen un tipo de creatividad mas completa: pensar con las manos, tomar decisiones con el cuerpo y convertir una idea en un objeto que se usa."
+      },
+      {
+        "type": "gallery",
+        "images": [
+          {
+            "src": "img/social-5.jpg",
+            "alt": "Aplicacion de superficie sobre una pieza ceramica"
+          },
+          {
+            "src": "img/social-3.jpg",
+            "alt": "Detalle de esmalte sobre ceramica"
+          }
+        ]
+      },
+      {
+        "type": "quote",
+        "content": "Una capa puede cambiarlo todo si aparece en el momento preciso."
+      },
+      {
+        "type": "paragraph",
+        "content": "Las clases de ceramica funcional no solo te ensenan a hacer una taza o un cuenco. Te proponen un tipo de creatividad mas completa: pensar con las manos, tomar decisiones con el cuerpo y convertir una idea en un objeto que se usa."
+      },
+      {
+        "type": "paragraph",
+        "content": "Si estas empezando o si ya tienes recorrido, trabajar piezas funcionales cambia tu forma de crear porque mezcla tecnica, intuicion y proposito."
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "content": "Conexion real con el material"
+      },
+      {
+        "type": "paragraph",
+        "content": "La arcilla es respuesta inmediata. Si aprietas, cede. Si dudas, se nota. Esa relacion directa te obliga a observar y a sentir, y de ahi salen ideas nuevas."
+      },
+      {
+        "type": "paragraph",
+        "content": "Esa conexion desarrolla intuicion creativa y abre puertas a formas y texturas que no aparecen cuando solo estas pensando un proyecto."
       },
       {
         "type": "quote",
@@ -156,17 +213,29 @@ export const blogPosts = [
     "seoDescription": "Reflexion sobre el ritmo del taller, la repeticion y el tiempo dentro de la practica ceramica.",
     "contentBlocks": [
       {
+        "type": "quote",
+        "content": "Cuando nadie tiene prisa, el taller empieza a mostrar lo que normalmente queda escondido."
+      },
+      {
         "type": "paragraph",
-        "content": "Hay algo importante que ocurre cuando el espacio no empuja a producir mas rapido: aparece una escucha distinta. Se corrige mejor. Se mira mas. Se entiende mas."
+        "content": "Hay algo importante que ocurre cuando el espacio no empuja a producir mas rapido: aparece una escucha distinta. Se corrige mejor. Se mira mas. Se entiende mas. La pieza deja de ser solo un resultado y empieza a ser una conversacion con el tiempo."
+      },
+      {
+        "type": "paragraph",
+        "content": "La ceramica necesita pausas reales. Secado, espera, coccion, observacion. El taller no intenta esconder eso; al contrario, lo integra como parte de la experiencia para que cada persona entienda que crear tambien implica esperar."
       },
       {
         "type": "heading",
-        "level": 2,
+        "level": 3,
         "content": "Aprender tambien es sostener el tiempo"
       },
       {
         "type": "paragraph",
-        "content": "La ceramica necesita pausas reales. Secado, espera, coccion, observacion. El taller no intenta esconder eso; al contrario, lo integra como parte de la experiencia."
+        "content": "Cuando una pieza se trabaja sin urgencia, aparecen detalles que antes pasaban desapercibidos: una curva que necesita respirar, una pared demasiado delgada, una textura que pide continuidad o un gesto que conviene repetir con mas calma."
+      },
+      {
+        "type": "paragraph",
+        "content": "Ese ritmo no vuelve el proceso mas lento; lo vuelve mas consciente. La repeticion deja de ser mecanica y se convierte en una forma de entender."
       },
       {
         "type": "gallery",
@@ -176,14 +245,26 @@ export const blogPosts = [
             "alt": "Mesa de trabajo del taller"
           },
           {
-            "src": "img/intro-c.jpg",
-            "alt": "Herramientas dentro del estudio"
+            "src": "img/social-4.jpeg",
+            "alt": "Momento de trabajo pausado en el taller"
           }
         ]
       },
       {
+        "type": "quote",
+        "content": "Trabajar sin prisa no significa hacer menos; significa mirar mejor."
+      },
+      {
         "type": "paragraph",
-        "content": "Trabajar asi cambia la relacion con la pieza y con una misma. Hay menos ansiedad por terminar y mas interes por comprender."
+        "content": "Trabajar asi cambia la relacion con la pieza y con una misma. Hay menos ansiedad por terminar y mas interes por comprender. Se aprende a reconocer cuando una forma necesita seguir, cuando conviene detenerse y cuando una pequena decision puede sostener todo el objeto."
+      },
+      {
+        "type": "paragraph",
+        "content": "En ese tiempo compartido, el taller se vuelve un lugar donde la tecnica no esta separada de la presencia. Cada espera tambien ensena."
+      },
+      {
+        "type": "quote",
+        "content": "La pieza tambien se forma en los momentos en que parece que no pasa nada."
       }
     ]
   }
