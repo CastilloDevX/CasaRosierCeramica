@@ -2,17 +2,28 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { navigation } from "@/data/navigation";
 import { classNames } from "@/lib/utils";
+
+const DESKTOP_SUBMENU_CLOSE_DELAY = 320;
 
 export function NavbarGlobal({ home = false }: { home?: boolean }) {
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
+  const desktopCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+  const scrollDesktopCloseTimeoutRef = useRef<
+    ReturnType<typeof setTimeout> | null
+  >(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [staticMobileOpen, setStaticMobileOpen] = useState(false);
   const [mobileScrolled, setMobileScrolled] = useState(false);
   const [desktopOpen, setDesktopOpen] = useState<string | null>(null);
+  const [scrollDesktopOpen, setScrollDesktopOpen] = useState<string | null>(
+    null
+  );
   const [mobileAccordion, setMobileAccordion] = useState<string | null>(null);
   const mobileItems = navigation
     .filter((item) => item.visible)
@@ -51,12 +62,65 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
     { label: "Blog", href: "/blog", children: [] }
   ];
 
+  const clearDesktopCloseTimeout = useCallback(() => {
+    if (desktopCloseTimeoutRef.current) {
+      clearTimeout(desktopCloseTimeoutRef.current);
+      desktopCloseTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearScrollDesktopCloseTimeout = useCallback(() => {
+    if (scrollDesktopCloseTimeoutRef.current) {
+      clearTimeout(scrollDesktopCloseTimeoutRef.current);
+      scrollDesktopCloseTimeoutRef.current = null;
+    }
+  }, []);
+
+  const openDesktopMenu = useCallback((label: string) => {
+    clearDesktopCloseTimeout();
+    setDesktopOpen(label);
+  }, [clearDesktopCloseTimeout]);
+
+  const closeDesktopMenu = useCallback(() => {
+    clearDesktopCloseTimeout();
+    setDesktopOpen(null);
+  }, [clearDesktopCloseTimeout]);
+
+  const scheduleDesktopMenuClose = useCallback(() => {
+    clearDesktopCloseTimeout();
+    desktopCloseTimeoutRef.current = setTimeout(() => {
+      setDesktopOpen(null);
+      desktopCloseTimeoutRef.current = null;
+    }, DESKTOP_SUBMENU_CLOSE_DELAY);
+  }, [clearDesktopCloseTimeout]);
+
+  const openScrollDesktopMenu = useCallback((href: string) => {
+    clearScrollDesktopCloseTimeout();
+    setScrollDesktopOpen(href);
+  }, [clearScrollDesktopCloseTimeout]);
+
+  const closeScrollDesktopMenu = useCallback(() => {
+    clearScrollDesktopCloseTimeout();
+    setScrollDesktopOpen(null);
+  }, [clearScrollDesktopCloseTimeout]);
+
+  const scheduleScrollDesktopMenuClose = useCallback(() => {
+    clearScrollDesktopCloseTimeout();
+    scrollDesktopCloseTimeoutRef.current = setTimeout(() => {
+      setScrollDesktopOpen(null);
+      scrollDesktopCloseTimeoutRef.current = null;
+    }, DESKTOP_SUBMENU_CLOSE_DELAY);
+  }, [clearScrollDesktopCloseTimeout]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setMobileOpen(false);
         setStaticMobileOpen(false);
+        clearDesktopCloseTimeout();
+        clearScrollDesktopCloseTimeout();
         setDesktopOpen(null);
+        setScrollDesktopOpen(null);
       }
     };
     const onPointerDown = (event: PointerEvent) => {
@@ -67,7 +131,10 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
       ) {
         setMobileOpen(false);
         setStaticMobileOpen(false);
+        clearDesktopCloseTimeout();
+        clearScrollDesktopCloseTimeout();
         setDesktopOpen(null);
+        setScrollDesktopOpen(null);
       }
     };
     document.addEventListener("keydown", onKeyDown);
@@ -76,7 +143,14 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("pointerdown", onPointerDown);
     };
-  }, []);
+  }, [clearDesktopCloseTimeout, clearScrollDesktopCloseTimeout]);
+
+  useEffect(() => {
+    return () => {
+      clearDesktopCloseTimeout();
+      clearScrollDesktopCloseTimeout();
+    };
+  }, [clearDesktopCloseTimeout, clearScrollDesktopCloseTimeout]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -129,11 +203,13 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
                   )}
                   key={item.label}
                   onMouseEnter={() =>
-                    children.length > 0 && setDesktopOpen(item.label)
+                    children.length > 0 && openDesktopMenu(item.label)
                   }
-                  onMouseLeave={() => setDesktopOpen(null)}
+                  onMouseLeave={() =>
+                    children.length > 0 && scheduleDesktopMenuClose()
+                  }
                   onFocus={() =>
-                    children.length > 0 && setDesktopOpen(item.label)
+                    children.length > 0 && openDesktopMenu(item.label)
                   }
                 >
                   <div className="hero__nav-group">
@@ -143,7 +219,7 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
                       aria-current={current(item.href) ? "page" : undefined}
                       onClick={() => {
                         setMobileOpen(false);
-                        setDesktopOpen(null);
+                        closeDesktopMenu();
                       }}
                     >
                       {item.label}
@@ -157,7 +233,7 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
                         aria-controls={submenuId}
                         aria-label={`Abrir submenu de ${item.label}`}
                         onClick={() =>
-                          setDesktopOpen(open ? null : item.label)
+                          open ? closeDesktopMenu() : openDesktopMenu(item.label)
                         }
                       >
                         <span className="hero__plus" aria-hidden="true" />
@@ -179,7 +255,7 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
                             aria-current={
                               current(child.href) ? "page" : undefined
                             }
-                            onClick={() => setDesktopOpen(null)}
+                            onClick={closeDesktopMenu}
                           >
                             {child.label}
                           </Link>
@@ -322,62 +398,80 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
           </Link>
           <nav className="scroll-desktop-nav" aria-label="Principal">
             <ul className="scroll-desktop-nav__list">
-              {scrollDesktopItems.map((item, index) => (
-                <li
-                  className={classNames(
-                    "scroll-desktop-nav__item",
-                    item.children.length > 0 &&
-                      "scroll-desktop-nav__item--has-children"
-                  )}
-                  key={item.href}
-                >
-                  <Link
-                    className="scroll-desktop-nav__link"
-                    href={item.href}
-                    aria-current={current(item.href) ? "page" : undefined}
+              {scrollDesktopItems.map((item, index) => {
+                const open = scrollDesktopOpen === item.href;
+                return (
+                  <li
+                    className={classNames(
+                      "scroll-desktop-nav__item",
+                      item.children.length > 0 &&
+                        "scroll-desktop-nav__item--has-children",
+                      open && "is-open"
+                    )}
+                    key={item.href}
+                    onMouseEnter={() =>
+                      item.children.length > 0 &&
+                      openScrollDesktopMenu(item.href)
+                    }
+                    onMouseLeave={() =>
+                      item.children.length > 0 &&
+                      scheduleScrollDesktopMenuClose()
+                    }
+                    onFocus={() =>
+                      item.children.length > 0 &&
+                      openScrollDesktopMenu(item.href)
+                    }
                   >
-                    {item.label}
+                    <Link
+                      className="scroll-desktop-nav__link"
+                      href={item.href}
+                      aria-current={current(item.href) ? "page" : undefined}
+                      onClick={closeScrollDesktopMenu}
+                    >
+                      {item.label}
+                      {item.children.length > 0 && (
+                        <span
+                          className="scroll-desktop-nav__plus"
+                          aria-hidden="true"
+                        >
+                          +
+                        </span>
+                      )}
+                    </Link>
                     {item.children.length > 0 && (
+                      <ul className="scroll-desktop-submenu" role="menu">
+                        {item.children.map((child) => (
+                          <li
+                            className="scroll-desktop-submenu__item"
+                            role="none"
+                            key={child.href}
+                          >
+                            <Link
+                              className="scroll-desktop-submenu__link"
+                              href={child.href}
+                              role="menuitem"
+                              aria-current={
+                                current(child.href) ? "page" : undefined
+                              }
+                              onClick={closeScrollDesktopMenu}
+                            >
+                              {child.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {index < scrollDesktopItems.length - 1 && (
                       <span
-                        className="scroll-desktop-nav__plus"
+                        className="scroll-desktop-nav__separator"
                         aria-hidden="true"
                       >
-                        +
+                        |
                       </span>
                     )}
-                  </Link>
-                  {item.children.length > 0 && (
-                    <ul className="scroll-desktop-submenu" role="menu">
-                      {item.children.map((child) => (
-                        <li
-                          className="scroll-desktop-submenu__item"
-                          role="none"
-                          key={child.href}
-                        >
-                          <Link
-                            className="scroll-desktop-submenu__link"
-                            href={child.href}
-                            role="menuitem"
-                            aria-current={
-                              current(child.href) ? "page" : undefined
-                            }
-                          >
-                            {child.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {index < scrollDesktopItems.length - 1 && (
-                    <span
-                      className="scroll-desktop-nav__separator"
-                      aria-hidden="true"
-                    >
-                      |
-                    </span>
-                  )}
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           </nav>
           <button

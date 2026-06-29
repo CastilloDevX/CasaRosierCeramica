@@ -113,6 +113,16 @@ body {
   display: none;
 }
 
+.hero__nav-item--has-children::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  top: 100%;
+  z-index: 19;
+  height: 20px;
+}
+
 @media (min-width: 769px) {
   .mobile-scroll-nav {
     position: fixed;
@@ -171,6 +181,16 @@ body {
     white-space: nowrap;
   }
 
+  .scroll-desktop-nav__item--has-children::before {
+    content: "";
+    position: absolute;
+    left: -8px;
+    right: -8px;
+    top: 100%;
+    z-index: 1;
+    height: 16px;
+  }
+
   .scroll-desktop-nav__link {
     min-height: 44px;
     display: inline-flex;
@@ -220,6 +240,7 @@ body {
       transform 180ms ease;
   }
 
+  .scroll-desktop-nav__item.is-open > .scroll-desktop-submenu,
   .scroll-desktop-nav__item:hover > .scroll-desktop-submenu,
   .scroll-desktop-nav__item:focus-within > .scroll-desktop-submenu {
     opacity: 1;
@@ -1456,6 +1477,165 @@ body {
 .featured-carousel__dot {
   width: 10px;
   height: 10px;
+}
+
+.class-detail {
+  padding-top: 26px;
+}
+
+.class-detail__container {
+  max-width: 944px;
+}
+
+.class-detail__layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.class-detail__top-block,
+.class-detail__bottom-block {
+  display: grid;
+  grid-template-columns: minmax(256px, 336px) minmax(0, 1fr);
+  gap: 38px;
+  align-items: start;
+}
+
+.class-detail__media-column,
+.class-detail__content-column,
+.class-detail__side-column,
+.class-detail__info-column {
+  min-width: 0;
+  order: initial;
+}
+
+.class-detail-page .class-detail__media-column {
+  padding-top: 0;
+}
+
+.class-detail__side-column {
+  display: grid;
+  gap: 16px;
+}
+
+.class-gallery {
+  gap: 12px;
+}
+
+.class-gallery__main {
+  aspect-ratio: 1 / 1;
+}
+
+.class-gallery__thumbs,
+.class-detail-page[data-promo-page="gift-card"] .class-gallery__thumbs,
+.class-detail-page[data-promo-page="workshop"] .class-gallery__thumbs {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  max-width: none;
+}
+
+.class-gallery__video-card {
+  margin: 0;
+}
+
+.class-gallery__video-card img {
+  aspect-ratio: 1.18 / 1;
+}
+
+.class-sidecard {
+  margin-top: 0;
+}
+
+.class-detail__head {
+  margin-top: -4px;
+}
+
+.class-detail__title {
+  font-size: clamp(32px, 3.8vw, 46px);
+  line-height: 1.02;
+}
+
+.class-detail__facts {
+  margin-top: 0;
+}
+
+.class-detail__includes {
+  margin-top: 30px;
+}
+
+@media (max-width: 992px) {
+  .class-detail__top-block,
+  .class-detail__bottom-block {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .class-detail__media-column,
+  .class-detail__side-column {
+    width: min(100%, 420px);
+    margin-inline: auto;
+  }
+
+  .class-detail__content-column,
+  .class-detail__info-column {
+    width: min(100%, 620px);
+    margin-inline: auto;
+  }
+
+  .class-detail__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .class-detail {
+    padding-top: 20px;
+  }
+
+  .class-detail__layout {
+    gap: 28px;
+  }
+
+  .class-detail__top-block,
+  .class-detail__bottom-block {
+    gap: 20px;
+  }
+
+  .class-detail__media-column,
+  .class-detail__side-column,
+  .class-detail__content-column,
+  .class-detail__info-column {
+    width: min(100%, 340px);
+    margin-inline: auto;
+  }
+
+  .class-detail__content-column,
+  .class-detail__info-column {
+    width: min(100%, 360px);
+  }
+
+  .class-detail__title {
+    font-size: clamp(30px, 8vw, 36px);
+  }
+
+  .class-gallery__main,
+  .class-gallery__video-card,
+  .class-detail-page[data-promo-page="gift-card"] .class-gallery__main,
+  .class-detail-page[data-promo-page="gift-card"] .class-gallery__video-card {
+    max-width: none;
+  }
+
+  .class-gallery__thumbs,
+  .class-detail-page[data-promo-page="gift-card"] .class-gallery__thumbs,
+  .class-detail-page[data-promo-page="workshop"] .class-gallery__thumbs {
+    max-width: none;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .class-detail__facts {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ig-modal,
