@@ -1,0 +1,68 @@
+[
+  {
+    "id": "47b973cb-6eb0-58a3-a2e2-1be7268d2070",
+    "name": "Contacto footer",
+    "slug": "footer-contact",
+    "type": "contact",
+    "status": "active",
+    "title": "Contacto",
+    "description": "Formulario de contacto del footer publico.",
+    "success_message": "Gracias, recibimos tu mensaje.",
+    "redirect_url": "",
+    "email_notification_enabled": false,
+    "notification_email": "info@casarosierceramica.com",
+    "fields": [
+      {
+        "id": "c6ada424-33b0-5412-b318-39d38df19b5e",
+        "label": "Nombre",
+        "name": "name",
+        "type": "text",
+        "placeholder": "Nombre",
+        "required": true,
+        "options": [],
+        "default_value": "",
+        "sort_order": 0,
+        "is_visible": true
+      },
+      {
+        "id": "ef6f0987-fc95-5986-990c-6c717f4e7054",
+        "label": "Correo electronico",
+        "name": "email",
+        "type": "email",
+        "placeholder": "Correo electronico",
+        "required": true,
+        "options": [],
+        "default_value": "",
+        "sort_order": 1,
+        "is_visible": true
+      },
+      {
+        "id": "015477d3-1b18-59cf-acc7-2e66da07edf3",
+        "label": "Numero de telefono",
+        "name": "phone",
+        "type": "phone",
+        "placeholder": "Numero de telefono",
+        "required": true,
+        "options": [],
+        "default_value": "",
+        "sort_order": 2,
+        "is_visible": true
+      },
+      {
+        "id": "d4790cc4-8caf-5d6c-a039-a304b3724549",
+        "label": "Comentario",
+        "name": "message",
+        "type": "textarea",
+        "placeholder": "Comentario",
+        "required": true,
+        "options": [],
+        "default_value": "",
+        "sort_order": 3,
+        "is_visible": true
+      }
+    ],
+    "created_at": "2026-06-29T18:00:00.000Z",
+    "updated_at": "2026-06-29T18:00:00.000Z",
+    "deleted_at": null
+  }
+]

@@ -1,0 +1,49 @@
+[
+  {
+    "id": "ffa7ee32-cd50-44d4-b87a-764cdc1eaa8b",
+    "entity_type": "redirect",
+    "entity_id": "b1831ffb-10af-481e-95cc-02567096e7a1",
+    "title": "/home → /",
+    "deleted_by": "system",
+    "deleted_at": "2026-07-01T06:02:35.612Z",
+    "restore_data": {
+      "id": "b1831ffb-10af-481e-95cc-02567096e7a1",
+      "source_url": "/home",
+      "target_url": "/",
+      "redirect_type": "301",
+      "status": "active",
+      "notes": "",
+      "hit_count": 0,
+      "last_hit_at": null,
+      "created_at": "2026-07-01T06:02:02.681Z",
+      "updated_at": "2026-07-01T06:02:02.681Z",
+      "deleted_at": null
+    }
+  },
+  {
+    "id": "b5c02933-717f-4655-9065-7335acab7599",
+    "entity_type": "media",
+    "entity_id": "99211e03-7205-4d5d-951a-9ab72618680d",
+    "title": "Estilo retro de píxel_ ZERO.png",
+    "deleted_by": "super@admin.com",
+    "deleted_at": "2026-07-01T03:10:44.349Z",
+    "restore_data": {
+      "id": "99211e03-7205-4d5d-951a-9ab72618680d",
+      "file_name": "general/1782798605849-70000ddc.png",
+      "original_name": "Estilo retro de píxel_ ZERO.png",
+      "file_url": "/uploads/general/1782798605849-70000ddc.png",
+      "file_type": "png",
+      "mime_type": "image/png",
+      "size": 2128818,
+      "alt_text": "",
+      "title": "Estilo retro de píxel_ ZERO.png",
+      "description": "",
+      "folder": "general",
+      "tags": [],
+      "status": "active",
+      "created_at": "2026-06-30T05:50:05.877Z",
+      "updated_at": "2026-06-30T05:50:05.877Z",
+      "deleted_at": null
+    }
+  }
+]

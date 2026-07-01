@@ -1,0 +1,41 @@
+[
+  {
+    "id": "8be8d54d-e4d1-4f20-92e5-335ecee8a4cd",
+    "name": "Ana Marquez",
+    "role": "Alumna de torno",
+    "text": "Llegue sin experiencia y sali entendiendo mucho mejor como acompanar la arcilla. El ritmo del taller hace que todo se sienta cercano y posible.",
+    "avatar_id": "/img/avatar-1.jpg",
+    "status": "published",
+    "sort_order": 0,
+    "is_featured": true,
+    "created_at": "2026-06-29T18:00:00.000Z",
+    "updated_at": "2026-06-29T18:00:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "d57cd883-6189-4765-a517-f7f86a2b4732",
+    "name": "Marta Vidal",
+    "role": "Workshop de esmaltes",
+    "text": "Me gusto que no fuera solo hacer una pieza bonita. Aprendi a mirar la superficie, probar color y tomar decisiones con mas calma.",
+    "avatar_id": "/img/avatar-2.jpg",
+    "status": "published",
+    "sort_order": 1,
+    "is_featured": true,
+    "created_at": "2026-06-29T18:01:00.000Z",
+    "updated_at": "2026-06-29T18:01:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "dd6a6345-d35d-475f-af69-1a02c5470a7b",
+    "name": "Luis Ortega",
+    "role": "Clase de modelado",
+    "text": "El espacio tiene una energia muy tranquila. Las correcciones fueron claras y me ayudaron a terminar una pieza que realmente sentia mia.",
+    "avatar_id": "/img/avatar-3.jpg",
+    "status": "published",
+    "sort_order": 2,
+    "is_featured": true,
+    "created_at": "2026-06-29T18:02:00.000Z",
+    "updated_at": "2026-06-29T18:02:00.000Z",
+    "deleted_at": null
+  }
+]

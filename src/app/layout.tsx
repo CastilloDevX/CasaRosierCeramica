@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Baskervville, Inter } from "next/font/google";
+import { Baskervville, Inter, Manrope } from "next/font/google";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import "./tailwind.css";
 import "./legacy/base.css";
@@ -27,6 +27,13 @@ const baskervville = Baskervville({
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap"
+});
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
+  variable: "--font-manrope",
   display: "swap"
 });
 
@@ -60,7 +67,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${baskervville.variable} ${inter.variable} ${nunito.variable}`}
+        className={`${baskervville.variable} ${inter.variable} ${manrope.variable} ${nunito.variable}`}
       >
         {children}
         <SiteChrome />

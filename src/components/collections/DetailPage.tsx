@@ -151,19 +151,21 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                 <div className="class-detail__fact-block">
                   <h2>Duracion</h2>
                   <p className="class-detail__duration">{item.duration}</p>
-                  <div className="class-detail__schedule">
-                    {item.schedule.map((schedule) => (
-                      <div
-                        className="class-detail__schedule-item"
-                        key={schedule.day}
-                      >
-                        <h4>{schedule.day}</h4>
-                        {schedule.slots.map((slot) => (
-                          <p key={slot}>{slot}</p>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+                  {item.schedule.length ? (
+                    <div className="class-detail__schedule">
+                      {item.schedule.map((schedule) => (
+                        <div
+                          className="class-detail__schedule-item"
+                          key={schedule.day}
+                        >
+                          <h4>{schedule.day}</h4>
+                          {schedule.slots.map((slot) => (
+                            <p key={slot}>{slot}</p>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </section>
 

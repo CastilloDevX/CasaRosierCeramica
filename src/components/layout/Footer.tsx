@@ -1,4 +1,5 @@
 import { Carousel } from "@/components/ui/Carousel";
+import FooterContactForm from "./FooterContactForm";
 
 export function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
   const socialLoop = Array.from({ length: 12 }, (_, index) => (index % 4) + 1);
@@ -29,6 +30,8 @@ export function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
                       : `/img/social-${index}.jpg`
                   }
                   alt={isDuplicate || realIndex > 3 ? "" : `Instagram ${index}`}
+                  loading="lazy"
+                  decoding="async"
                 />
               </a>
           )}
@@ -36,56 +39,7 @@ export function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
       )}
       <section id="contacto-footer" className="contact-footer">
         <div className="container contact-footer__container">
-          <form className="contact-form" action="#">
-            <div className="contact-form__row">
-              <div>
-                <label htmlFor="nombre">Nombre</label>
-                <input
-                  id="nombre"
-                  className="contact-form__input"
-                  name="nombre"
-                  type="text"
-                  placeholder="Nombre"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="email">Correo electronico *</label>
-                <input
-                  id="email"
-                  className="contact-form__input"
-                  name="email"
-                  type="email"
-                  placeholder="Correo electronico *"
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <label htmlFor="telefono">Numero de telefono</label>
-              <input
-                id="telefono"
-                className="contact-form__input"
-                name="telefono"
-                type="tel"
-                placeholder="Numero de telefono"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="comentario">Comentario</label>
-              <textarea
-                id="comentario"
-                className="contact-form__textarea"
-                name="comentario"
-                placeholder="Comentario"
-                required
-              />
-            </div>
-            <button className="contact-form__submit" type="submit">
-              Enviar
-            </button>
-          </form>
+          <FooterContactForm />
           <div className="contact-info">
             <h2 className="contact-info__title">Contacto</h2>
             <p className="contact-info__text">+34 600 000 000</p>
@@ -104,7 +58,7 @@ export function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
                 target="_blank"
                 rel="noreferrer"
               >
-                <img src="/img/icon-instagram.svg" alt="" />
+                <img src="/img/icon-instagram.svg" alt="" loading="lazy" decoding="async" />
               </a>
               <a
                 className="contact-info__social-link"
@@ -113,7 +67,15 @@ export function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
                 target="_blank"
                 rel="noreferrer"
               >
-                <img src="/img/icon-facebook.svg" alt="" />
+                <img src="/img/icon-facebook.svg" alt="" loading="lazy" decoding="async" />
+              </a>
+            </div>
+            <div className="contact-info__legal-links" aria-label="Enlaces legales">
+              <a className="contact-info__legal-link" href="/politica-privacidad">
+                Política y privacidad
+              </a>
+              <a className="contact-info__legal-link" href="/auth">
+                Administración
               </a>
             </div>
           </div>

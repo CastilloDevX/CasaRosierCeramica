@@ -31,6 +31,10 @@ export interface ExperienceItem {
   description: string[];
   coverImage: string;
   heroImage: string;
+  heroVariant?: "image" | "text";
+  heroMenuTone?: "light" | "dark";
+  heroTitleImage?: string;
+  heroTitleImageSecondary?: string;
   heroTitle: string;
   listingTitle: string;
   listingSubtitle: string;
@@ -49,6 +53,7 @@ export interface ExperienceItem {
   whoCanJoin: string[];
   paymentMethods: string[];
   additionalInfo: string;
+  showIdeaPromptSection?: boolean;
   ctaHref: string;
   seoTitle: string;
   seoDescription: string;
@@ -127,6 +132,8 @@ export interface BlogPost {
   seoDescription: string;
   contentBlocks: BlogContentBlock[];
 }
+
+export type BlogPostStatus = BlogPost["status"];
 
 export interface NavigationItem {
   label: string;

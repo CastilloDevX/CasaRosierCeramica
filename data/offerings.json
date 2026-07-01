@@ -1,0 +1,971 @@
+[
+  {
+    "id": "c1373e8a-f240-592e-bb46-ac17a0b9ef93",
+    "type": "class",
+    "title": "Primer contacto con torno",
+    "slug": "primer-contacto-con-torno",
+    "subtitle": "Experiencia ceramica: modela y decora tu pieza",
+    "excerpt": "Tecnica base para centrar, levantar y terminar tus primeras piezas.",
+    "description": "Podras alternar entre sesiones de modelado y las practicas basicas de torno, creando piezas sencillas para entender como responde la arcilla en cada etapa.\n\nDisponemos de una biblioteca propia de engobes y esmaltes, con materiales pensados para que explores el color, la superficie y la coccion con acompanamiento cercano.\n\nLa idea es que entiendas cada decision: composicion, estados de la arcilla, herramientas y pequenos gestos que transforman el resultado.",
+    "price": 100,
+    "currency": "EUR",
+    "status": "published",
+    "featured": true,
+    "header_id": null,
+    "duration": "Sesiones de 2 h.",
+    "schedule": [
+      "Martes: 10:30 a 12:30, 18:00 a 20:00",
+      "Miercoles: 10:00 a 12:00, 19:00 a 21:00",
+      "Sabado: Consultar disponibilidad"
+    ],
+    "teacher": "",
+    "capacity": null,
+    "cover_image_url": "/img/social-2.jpg",
+    "gallery": [
+      "/img/social-2.jpg",
+      "/img/social-2.jpg",
+      "/img/workshop-2.jpg",
+      "/img/intro-b.jpg"
+    ],
+    "details": {
+      "source": "src/data/classes.ts",
+      "legacyId": "class-01",
+      "legacyKind": "class",
+      "category": "Clases - Iniciacion",
+      "heroTitle": "Un dia de Ceramica",
+      "heroImage": "/img/hero-bg.jpg",
+      "introHighlight": "Una experiencia guiada para crear y decorar tu primera pieza, sin experiencia previa.",
+      "videoCardImage": "/img/social-2.jpg",
+      "videoCardLabel": "VIDEO",
+      "included": [
+        "Engobes y esmaltes",
+        "Hornadas",
+        "Pastas"
+      ],
+      "program": [
+        {
+          "title": "Primera clase: funciones quimicas",
+          "content": "Entender la funcion quimica y fisica de un engobe: composicion base, equilibrio arcilla-frita-fundente y comportamiento en crudo y coccion.",
+          "points": [
+            "Relacion entre mezcla, aplicacion y superficie final.",
+            "Lectura basica de defectos y pequenos ajustes."
+          ]
+        },
+        {
+          "title": "2da clase: la reologia de los esmaltes",
+          "content": "Trabajamos densidad, aplicacion y control del acabado para conseguir resultados consistentes."
+        },
+        {
+          "title": "Como se fabrican los engobes comerciales",
+          "content": "Revision de materiales, formulaciones sencillas y criterios para elegir o adaptar productos comerciales."
+        }
+      ],
+      "whatYouWillLearn": [
+        "En el taller trabajamos desde la curiosidad y la practica guiada. Queremos que entiendas el proceso y no solo el resultado.",
+        "Vas a aprender nociones basicas de modelado, torno, texturas, engobes, color y pequenos recursos de acabado para tus primeras piezas.",
+        "Tambien hablaremos de tiempos de secado, ritmo de trabajo y decisiones que ayudan a construir una pieza con mas criterio."
+      ],
+      "whoCanJoin": [
+        "Es un espacio pensado para principiantes, personas sin experiencia previa y alumnas que buscan volver a practicar con acompanamiento.",
+        "No es necesario tener conocimientos de ceramica. Solo ganas de trabajar con las manos y tiempo para observar el proceso."
+      ],
+      "paymentMethods": [
+        "Transferencia bancaria",
+        "PayPal",
+        "Tarjeta de credito",
+        "Efectivo",
+        "Bizum"
+      ],
+      "additionalInfo": "Cualquier consulta o informacion adicional que necesites, puedes escribir al WhatsApp 633788860 o al correo info@casarosierceramica.com.",
+      "ctaHref": "https://wa.me/34633788860",
+      "giftCardTypeLabel": "",
+      "giftCardTypeOptions": [],
+      "pricing": [
+        {
+          "description": "Bono 4 clases",
+          "price": 100,
+          "order": 0
+        },
+        {
+          "description": "Bono 2 clases",
+          "price": 70,
+          "order": 1
+        }
+      ]
+    },
+    "seo_title": "Primer contacto con torno | Casa Rosier",
+    "seo_description": "Clase de iniciacion a la ceramica en Barcelona para aprender torno, modelado y decoracion en un entorno editorial y artesanal.",
+    "created_at": "2026-06-29T18:00:00.000Z",
+    "updated_at": "2026-06-29T18:00:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "c7cfd4df-9f96-569a-aa43-5f6b2654231c",
+    "type": "class",
+    "title": "Modelado expresivo",
+    "slug": "modelado-expresivo",
+    "subtitle": "Experiencia ceramica: volumen, gesto y lenguaje propio",
+    "excerpt": "Construccion manual para crear volumen, textura y lenguaje propio.",
+    "description": "Una clase pensada para trabajar la pieza desde la mano, el gesto y la observacion del volumen.\n\nExploramos tecnicas de construccion manual para crear recipientes, pequenas esculturas y objetos utiles con caracter.\n\nLa propuesta combina demostracion, practica y correcciones personalizadas.",
+    "price": 110,
+    "currency": "EUR",
+    "status": "published",
+    "featured": true,
+    "header_id": null,
+    "duration": "Sesiones de 2 h.",
+    "schedule": [
+      "Lunes: 18:00 a 20:00",
+      "Jueves: 11:00 a 13:00, 19:00 a 21:00"
+    ],
+    "teacher": "",
+    "capacity": null,
+    "cover_image_url": "/img/intro-e.jpg",
+    "gallery": [
+      "/img/intro-e.jpg",
+      "/img/intro-e.jpg",
+      "/img/social-4.jpeg",
+      "/img/workshop-1.jpg"
+    ],
+    "details": {
+      "source": "src/data/classes.ts",
+      "legacyId": "class-02",
+      "legacyKind": "class",
+      "category": "Clases - Modelado",
+      "heroTitle": "Modelado expresivo",
+      "heroImage": "/img/intro-e.jpg",
+      "introHighlight": "Una sesion para construir volumen y textura con calma, criterio y acompanamiento cercano.",
+      "videoCardImage": "/img/social-4.jpeg",
+      "videoCardLabel": "VIDEO",
+      "included": [
+        "Arcillas de prueba",
+        "Herramientas basicas",
+        "Coccion de piezas seleccionadas"
+      ],
+      "program": [
+        {
+          "title": "Volumen y estructura",
+          "content": "Bases para construir piezas estables, equilibradas y con mejor lectura formal."
+        },
+        {
+          "title": "Textura y superficie",
+          "content": "Recursos para intervenir la piel de la pieza con repeticion, contraste y ritmo."
+        },
+        {
+          "title": "Correccion y acabado",
+          "content": "Refinamos uniones, bordes, proporciones y decisiones de cierre."
+        }
+      ],
+      "whatYouWillLearn": [
+        "Aprenderas a levantar piezas desde placas, churros y pellizco combinando tecnica y expresion.",
+        "Tambien veras como corregir proporciones y mejorar el acabado sin perder frescura."
+      ],
+      "whoCanJoin": [
+        "Ideal para personas que disfrutan del trabajo manual y quieren desarrollar sensibilidad material.",
+        "Puede hacerse sin experiencia previa."
+      ],
+      "paymentMethods": [
+        "Transferencia bancaria",
+        "Tarjeta de credito",
+        "Bizum"
+      ],
+      "additionalInfo": "Podemos adaptar el ritmo de la clase si buscas una experiencia mas tranquila o un enfoque mas tecnico.",
+      "ctaHref": "https://wa.me/34633788860",
+      "giftCardTypeLabel": "",
+      "giftCardTypeOptions": [],
+      "pricing": [
+        {
+          "description": "Bono 4 clases",
+          "price": 110,
+          "order": 0
+        },
+        {
+          "description": "Clase suelta",
+          "price": 32,
+          "order": 1
+        }
+      ]
+    },
+    "seo_title": "Modelado expresivo | Casa Rosier",
+    "seo_description": "Clase de modelado manual en Barcelona para trabajar volumen, textura y construccion ceramica con acompanamiento.",
+    "created_at": "2026-06-29T18:01:00.000Z",
+    "updated_at": "2026-06-29T18:01:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "ae5cb4f4-490b-59db-9fae-5c1a64f81628",
+    "type": "class",
+    "title": "Color y acabados",
+    "slug": "color-y-acabados",
+    "subtitle": "Experiencia ceramica: capas, contraste y superficie",
+    "excerpt": "Capas, contrastes y control de coccion para resultados consistentes.",
+    "description": "Esta experiencia se centra en color, prueba y control de superficie para que entiendas como responden engobes y esmaltes.\n\nTrabajamos aplicacion, combinaciones y pequenos cambios que alteran brillo, densidad y lectura final.\n\nEs una clase ideal para quienes quieren profundizar en el lenguaje visual de sus piezas.",
+    "price": 95,
+    "currency": "EUR",
+    "status": "published",
+    "featured": true,
+    "header_id": null,
+    "duration": "Sesiones de 2 h.",
+    "schedule": [
+      "Viernes: 10:30 a 12:30, 17:30 a 19:30"
+    ],
+    "teacher": "",
+    "capacity": null,
+    "cover_image_url": "/img/social-3.jpg",
+    "gallery": [
+      "/img/social-3.jpg",
+      "/img/intro-d.jpg",
+      "/img/social-3.jpg",
+      "/img/workshop-3.jpg"
+    ],
+    "details": {
+      "source": "src/data/classes.ts",
+      "legacyId": "class-03",
+      "legacyKind": "class",
+      "category": "Clases - Esmaltes",
+      "heroTitle": "Color y acabados",
+      "heroImage": "/img/intro-d.jpg",
+      "introHighlight": "Un taller para entender color, materia y reaccion de la superficie con una mirada precisa.",
+      "videoCardImage": "/img/social-3.jpg",
+      "videoCardLabel": "VIDEO",
+      "included": [
+        "Muestrario de engobes",
+        "Biblioteca de esmaltes",
+        "Piezas de prueba"
+      ],
+      "program": [
+        {
+          "title": "Bases de color",
+          "content": "Lectura de contraste, temperatura visual y relacion entre soporte y acabado."
+        },
+        {
+          "title": "Aplicacion y capas",
+          "content": "Brocha, inmersion, veladuras y pequenos gestos para modular la superficie."
+        },
+        {
+          "title": "Pruebas y registro",
+          "content": "Como documentar resultados para construir tu propio archivo de ensayo."
+        }
+      ],
+      "whatYouWillLearn": [
+        "Aprenderas a planificar pruebas, leer resultados y construir un criterio propio para el acabado.",
+        "Tambien vas a mejorar la forma en que registras formulas, capas y observaciones."
+      ],
+      "whoCanJoin": [
+        "Recomendado para alumnas que ya hicieron una primera aproximacion a la ceramica o quieren profundizar en color.",
+        "Tambien sirve para principiantes con ganas de observar y probar con metodo."
+      ],
+      "paymentMethods": [
+        "Transferencia bancaria",
+        "PayPal",
+        "Bizum"
+      ],
+      "additionalInfo": "Si vienes con piezas propias, podemos revisar previamente si son adecuadas para la sesion.",
+      "ctaHref": "https://wa.me/34633788860",
+      "giftCardTypeLabel": "",
+      "giftCardTypeOptions": [],
+      "pricing": [
+        {
+          "description": "Bono 3 sesiones",
+          "price": 95,
+          "order": 0
+        },
+        {
+          "description": "Clase suelta",
+          "price": 38,
+          "order": 1
+        }
+      ]
+    },
+    "seo_title": "Color y acabados | Casa Rosier",
+    "seo_description": "Taller de esmaltes y superficies en Barcelona para trabajar color, capas y acabados de forma precisa.",
+    "created_at": "2026-06-29T18:02:00.000Z",
+    "updated_at": "2026-06-29T18:02:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "dd499bf9-70bf-52d0-b8b8-a8b1350aecb4",
+    "type": "workshop",
+    "title": "Piezas de gran formato",
+    "slug": "gran-formato",
+    "subtitle": "Workshop de estructura, escala y secado",
+    "excerpt": "Metodos de estructura y secado para trabajar escala sin deformaciones.",
+    "description": "Una experiencia intensiva para pensar piezas mas grandes sin perder estructura.\n\nRevisamos soportes, tiempos, armado y estrategias de secado.",
+    "price": 140,
+    "currency": "EUR",
+    "status": "published",
+    "featured": false,
+    "header_id": null,
+    "duration": "Sesiones de 3 h.",
+    "schedule": [
+      "Sabado: 11:00 a 14:00"
+    ],
+    "teacher": "",
+    "capacity": null,
+    "cover_image_url": "/img/workshop-1.jpg",
+    "gallery": [
+      "/img/workshop-1.jpg",
+      "/img/social-1.jpg",
+      "/img/intro-c.jpg"
+    ],
+    "details": {
+      "source": "src/data/classes.ts",
+      "legacyId": "class-04",
+      "legacyKind": "workshop",
+      "category": "Workshop - Intensivo",
+      "heroTitle": "Piezas de gran formato",
+      "heroImage": "/img/workshop-1.jpg",
+      "introHighlight": "Un workshop para ganar confianza cuando la pieza empieza a crecer.",
+      "videoCardImage": "/img/social-1.jpg",
+      "videoCardLabel": "VIDEO",
+      "included": [
+        "Acompanamiento tecnico",
+        "Arcilla de trabajo",
+        "Material de apoyo"
+      ],
+      "program": [
+        {
+          "title": "Escala y estructura",
+          "content": "Como organizar una pieza de mayor tamano desde el inicio."
+        },
+        {
+          "title": "Secado y soporte",
+          "content": "Evitar tensiones, hundimientos y deformaciones frecuentes."
+        }
+      ],
+      "whatYouWillLearn": [
+        "Veras criterios practicos para trabajar gran formato con mas control."
+      ],
+      "whoCanJoin": [
+        "Pensado para alumnas con base previa o curiosidad por escalar su trabajo."
+      ],
+      "paymentMethods": [
+        "Transferencia bancaria",
+        "Tarjeta de credito"
+      ],
+      "additionalInfo": "Podemos revisar referencias o piezas previas antes del workshop.",
+      "ctaHref": "https://wa.me/34633788860",
+      "giftCardTypeLabel": "",
+      "giftCardTypeOptions": [],
+      "pricing": [
+        {
+          "description": "Workshop intensivo",
+          "price": 140,
+          "order": 0
+        }
+      ]
+    },
+    "seo_title": "Piezas de gran formato | Casa Rosier",
+    "seo_description": "Workshop ceramico de gran formato en Barcelona para trabajar escala, estructura y secado.",
+    "created_at": "2026-06-29T18:03:00.000Z",
+    "updated_at": "2026-06-29T18:03:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "d2d64449-dddb-5f06-8586-d2a6718f06eb",
+    "type": "workshop",
+    "title": "Torno avanzado",
+    "slug": "torno-avanzado",
+    "subtitle": "Workshop de ritmo, simetria y precision",
+    "excerpt": "Ritmo, simetria y precision para elevar tu repertorio tecnico.",
+    "description": "Profundizamos en el control de paredes, apertura, series y pequenas correcciones para mejorar consistencia.\n\nIdeal para alumnas que ya tienen una primera base en torno y quieren ordenar tecnica.",
+    "price": 150,
+    "currency": "EUR",
+    "status": "published",
+    "featured": false,
+    "header_id": null,
+    "duration": "Sesiones de 3 h.",
+    "schedule": [
+      "Miercoles: 19:00 a 22:00"
+    ],
+    "teacher": "",
+    "capacity": null,
+    "cover_image_url": "/img/workshop-2.jpg",
+    "gallery": [
+      "/img/workshop-2.jpg",
+      "/img/social-2.jpg",
+      "/img/intro-a.jpg"
+    ],
+    "details": {
+      "source": "src/data/classes.ts",
+      "legacyId": "class-05",
+      "legacyKind": "workshop",
+      "category": "Workshop - Avanzado",
+      "heroTitle": "Torno avanzado",
+      "heroImage": "/img/workshop-2.jpg",
+      "introHighlight": "Una practica precisa para afinar gesto, repeticion y lectura tecnica.",
+      "videoCardImage": "/img/social-2.jpg",
+      "videoCardLabel": "VIDEO",
+      "included": [
+        "Uso de torno",
+        "Correccion personalizada",
+        "Pasta de trabajo"
+      ],
+      "program": [
+        {
+          "title": "Control y simetria",
+          "content": "Rutinas para mejorar estabilidad, pared y perfil."
+        },
+        {
+          "title": "Series cortas",
+          "content": "Como repetir con mas consistencia sin tensar el proceso."
+        }
+      ],
+      "whatYouWillLearn": [
+        "Vas a ordenar tecnica y detectar tus errores repetidos con mas rapidez."
+      ],
+      "whoCanJoin": [
+        "Requiere experiencia previa basica en torno."
+      ],
+      "paymentMethods": [
+        "Transferencia bancaria",
+        "Bizum"
+      ],
+      "additionalInfo": "Trae ropa comoda y, si quieres, fotos de piezas tuyas para orientar la clase.",
+      "ctaHref": "https://wa.me/34633788860",
+      "giftCardTypeLabel": "",
+      "giftCardTypeOptions": [],
+      "pricing": [
+        {
+          "description": "Workshop intensivo",
+          "price": 150,
+          "order": 0
+        }
+      ]
+    },
+    "seo_title": "Torno avanzado | Casa Rosier",
+    "seo_description": "Workshop de torno avanzado en Barcelona para mejorar precision, ritmo y consistencia.",
+    "created_at": "2026-06-29T18:04:00.000Z",
+    "updated_at": "2026-06-29T18:04:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "66d286f4-f5d5-536f-9478-983e7b2ca162",
+    "type": "workshop",
+    "title": "Experimentacion material",
+    "slug": "experimentacion-material",
+    "subtitle": "Workshop creativo de pasta, superficie y combinaciones",
+    "excerpt": "Pruebas de pasta, superficies y combinaciones para nuevas series.",
+    "description": "Un espacio mas libre para mezclar recursos, testear materiales y abrir nuevas direcciones de trabajo.\n\nSe proponen ejercicios para activar ideas y observar resultados sin perder criterio.",
+    "price": 125,
+    "currency": "EUR",
+    "status": "published",
+    "featured": false,
+    "header_id": null,
+    "duration": "Sesiones de 2,5 h.",
+    "schedule": [
+      "Viernes: 18:30 a 21:00"
+    ],
+    "teacher": "",
+    "capacity": null,
+    "cover_image_url": "/img/workshop-3.jpg",
+    "gallery": [
+      "/img/workshop-3.jpg",
+      "/img/social-4.jpeg",
+      "/img/intro-e.jpg"
+    ],
+    "details": {
+      "source": "src/data/classes.ts",
+      "legacyId": "class-06",
+      "legacyKind": "workshop",
+      "category": "Workshop - Creativo",
+      "heroTitle": "Experimentacion material",
+      "heroImage": "/img/workshop-3.jpg",
+      "introHighlight": "Un workshop para probar, observar y abrir caminos sin caer en formulas rapidas.",
+      "videoCardImage": "/img/social-4.jpeg",
+      "videoCardLabel": "VIDEO",
+      "included": [
+        "Muestrario de pastas",
+        "Pruebas de textura",
+        "Biblioteca de referencias"
+      ],
+      "program": [
+        {
+          "title": "Prueba de materiales",
+          "content": "Combinamos soportes, texturas y acabados para abrir nuevas lecturas."
+        },
+        {
+          "title": "Serie experimental",
+          "content": "Pequeno ejercicio para pensar familia, variacion y criterio visual."
+        }
+      ],
+      "whatYouWillLearn": [
+        "Aprenderas a estructurar un ensayo material y a leer resultados con mas distancia."
+      ],
+      "whoCanJoin": [
+        "Abierto a principiantes curiosos y a alumnas que quieran salir de rutinas conocidas."
+      ],
+      "paymentMethods": [
+        "Transferencia bancaria",
+        "PayPal",
+        "Bizum"
+      ],
+      "additionalInfo": "Si estas desarrollando una serie, podemos orientar el workshop hacia esa busqueda.",
+      "ctaHref": "https://wa.me/34633788860",
+      "giftCardTypeLabel": "",
+      "giftCardTypeOptions": [],
+      "pricing": [
+        {
+          "description": "Workshop creativo",
+          "price": 125,
+          "order": 0
+        }
+      ]
+    },
+    "seo_title": "Experimentacion material | Casa Rosier",
+    "seo_description": "Workshop creativo de ceramica en Barcelona para probar materiales, texturas y combinaciones.",
+    "created_at": "2026-06-29T18:05:00.000Z",
+    "updated_at": "2026-06-29T18:05:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "676520a9-38a6-5f54-8cee-b23887308b14",
+    "type": "gift_card",
+    "title": "Beginner Class",
+    "slug": "beginner-class",
+    "subtitle": "Gift card: una primera experiencia en torno",
+    "excerpt": "Una experiencia guiada para introducirte al torno, la forma y el ritmo del taller.",
+    "description": "Esta gift card esta pensada para regalar una primera aproximacion a la ceramica desde el torno, con una experiencia cuidada y accesible.\n\nLa persona que la recibe trabaja con acompanamiento cercano, conoce el ritmo del taller y crea sus primeras piezas en un entorno tranquilo.\n\nEs una opcion adecuada para regalar una actividad sensible, manual y memorable, sin necesidad de experiencia previa.",
+    "price": 75,
+    "currency": "EUR",
+    "status": "published",
+    "featured": true,
+    "header_id": null,
+    "duration": "Sesion de 2 h.",
+    "schedule": [
+      "Disponible: Canje segun agenda del estudio"
+    ],
+    "teacher": "",
+    "capacity": null,
+    "cover_image_url": "/img/gift-1.jpg",
+    "gallery": [
+      "/img/gift-1.jpg",
+      "/img/social-2.jpg",
+      "/img/social-2.jpg"
+    ],
+    "details": {
+      "source": "src/data/classes.ts",
+      "legacyId": "gift-01",
+      "legacyKind": "gift-card",
+      "category": "Experiencia - Iniciacion",
+      "heroTitle": "Regala una experiencia en ceramica",
+      "heroImage": "/img/gift-1.jpg",
+      "introHighlight": "Una gift card editorial y serena para regalar tiempo de taller, materia y una primera pieza hecha a mano.",
+      "videoCardImage": "/img/social-2.jpg",
+      "videoCardLabel": "VIDEO",
+      "included": [
+        "Materiales basicos",
+        "Coccion de una seleccion de piezas",
+        "Acompanamiento en taller"
+      ],
+      "program": [
+        {
+          "title": "Bienvenida al taller",
+          "content": "Recorrido breve por el espacio, herramientas y tiempos del proceso."
+        },
+        {
+          "title": "Primer contacto con torno",
+          "content": "Centrado, apertura y levantado de una forma sencilla."
+        },
+        {
+          "title": "Cierre de la experiencia",
+          "content": "Revision de piezas, secado y siguientes pasos del proceso."
+        }
+      ],
+      "whatYouWillLearn": [
+        "La experiencia busca que la persona pueda tocar la arcilla, entender el gesto inicial del torno y llevarse una memoria real del taller.",
+        "No se trata de un regalo comercial rapido, sino de una experiencia cuidada y con acompanamiento."
+      ],
+      "whoCanJoin": [
+        "Ideal para principiantes, parejas o personas que quieren regalar una actividad distinta.",
+        "No hace falta experiencia previa."
+      ],
+      "paymentMethods": [
+        "Transferencia bancaria",
+        "Tarjeta de credito",
+        "Bizum"
+      ],
+      "additionalInfo": "Podemos preparar la gift card en formato digital y orientar el regalo segun disponibilidad o tipo de experiencia.",
+      "ctaHref": "https://wa.me/34633788860",
+      "giftCardTypeLabel": "Tarjeta digital o fisica?",
+      "giftCardTypeOptions": [
+        "Para imprimir o enviar por e-mail",
+        "Retirar por el estudio"
+      ],
+      "pricing": [
+        {
+          "description": "Gift card individual",
+          "price": 75,
+          "order": 0
+        },
+        {
+          "description": "Gift card para dos",
+          "price": 140,
+          "order": 1
+        }
+      ]
+    },
+    "seo_title": "Beginner Class Gift Card | Casa Rosier",
+    "seo_description": "Tarjeta de regalo para una primera experiencia de ceramica en Barcelona, con torno, acompanamiento y atmosfera artesanal.",
+    "created_at": "2026-06-29T18:06:00.000Z",
+    "updated_at": "2026-06-29T18:06:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "48e72786-371d-5734-8c31-2e9e21373381",
+    "type": "gift_card",
+    "title": "Sculpture Class",
+    "slug": "sculpture-class",
+    "subtitle": "Gift card: una experiencia de volumen y textura",
+    "excerpt": "Sesion orientada a volumen y textura para crear piezas expresivas con tecnica y control.",
+    "description": "Una tarjeta de regalo pensada para quienes disfrutan del trabajo manual, el volumen y la construccion de una pieza con caracter.\n\nLa experiencia se centra en modelado expresivo, texturas y pequenos recursos de acabado para crear una pieza singular.\n\nEs una forma de regalar tiempo de estudio y una experiencia mas plastica, material y contemplativa.",
+    "price": 80,
+    "currency": "EUR",
+    "status": "published",
+    "featured": true,
+    "header_id": null,
+    "duration": "Sesion de 2 h.",
+    "schedule": [
+      "Disponible: Canje segun agenda del estudio"
+    ],
+    "teacher": "",
+    "capacity": null,
+    "cover_image_url": "/img/workshop-2.jpg",
+    "gallery": [
+      "/img/workshop-2.jpg",
+      "/img/social-4.jpeg",
+      "/img/intro-e.jpg"
+    ],
+    "details": {
+      "source": "src/data/classes.ts",
+      "legacyId": "gift-02",
+      "legacyKind": "gift-card",
+      "category": "Experiencia - Escultura",
+      "heroTitle": "Regala una experiencia de escultura",
+      "heroImage": "/img/workshop-2.jpg",
+      "introHighlight": "Una gift card para regalar una sesion de modelado, volumen y sensibilidad material en un entorno calmado.",
+      "videoCardImage": "/img/social-4.jpeg",
+      "videoCardLabel": "VIDEO",
+      "included": [
+        "Materiales basicos",
+        "Herramientas de modelado",
+        "Coccion de una seleccion de piezas"
+      ],
+      "program": [
+        {
+          "title": "Introduccion al modelado",
+          "content": "Presentacion de tecnicas sencillas de construccion manual."
+        },
+        {
+          "title": "Volumen y textura",
+          "content": "Desarrollo de una pieza expresiva con acompanamiento cercano."
+        },
+        {
+          "title": "Acabado y cierre",
+          "content": "Revision de superficies, correccion de detalles y explicacion del proceso posterior."
+        }
+      ],
+      "whatYouWillLearn": [
+        "La persona que recibe la gift card entra en contacto con el modelado de forma accesible y cuidada.",
+        "La experiencia combina expresion, tecnica basica y una atmosfera serena de estudio."
+      ],
+      "whoCanJoin": [
+        "Pensada para principiantes, amantes de lo manual o personas que valoran experiencias sensibles y calmadas.",
+        "No requiere experiencia previa."
+      ],
+      "paymentMethods": [
+        "Transferencia bancaria",
+        "PayPal",
+        "Bizum"
+      ],
+      "additionalInfo": "La gift card puede entregarse como regalo digital o reservarse como experiencia para una fecha concreta.",
+      "ctaHref": "https://wa.me/34633788860",
+      "giftCardTypeLabel": "Tarjeta digital o fisica?",
+      "giftCardTypeOptions": [
+        "Para imprimir o enviar por e-mail",
+        "Retirar por el estudio"
+      ],
+      "pricing": [
+        {
+          "description": "Gift card individual",
+          "price": 80,
+          "order": 0
+        },
+        {
+          "description": "Gift card para dos",
+          "price": 150,
+          "order": 1
+        }
+      ]
+    },
+    "seo_title": "Sculpture Class Gift Card | Casa Rosier",
+    "seo_description": "Tarjeta de regalo para una experiencia de modelado y escultura ceramica en Barcelona, con acompanamiento y atmosfera editorial.",
+    "created_at": "2026-06-29T18:07:00.000Z",
+    "updated_at": "2026-06-29T18:07:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "01838aac-5e3a-5946-8ac1-eaaeefd65cf6",
+    "type": "experience",
+    "title": "Experiencia para dos",
+    "slug": "experiencia-para-dos",
+    "subtitle": "Reserva privada: una sesion de ceramica para compartir",
+    "excerpt": "Una experiencia privada para venir en pareja, con calma, acompanamiento y una pieza creada entre dos.",
+    "description": "Una reserva pensada para compartir el taller de forma privada, sin prisa y con acompanamiento cercano durante todo el proceso.\n\nLa experiencia combina una introduccion al trabajo con arcilla, una pequena demostracion tecnica y tiempo suficiente para modelar, probar y construir una pieza con sentido propio.\n\nEs una propuesta adecuada para parejas, amigas o personas que quieren regalarse un rato distinto en el estudio, con una atmosfera cuidada y artesanal.",
+    "price": 140,
+    "currency": "EUR",
+    "status": "published",
+    "featured": true,
+    "header_id": null,
+    "duration": "Sesion de 2 h.",
+    "schedule": [
+      "Disponible: Canje segun agenda del estudio"
+    ],
+    "teacher": "",
+    "capacity": null,
+    "cover_image_url": "/img/social-2.jpg",
+    "gallery": [
+      "/img/social-2.jpg",
+      "/img/social-2.jpg",
+      "/img/workshop-2.jpg",
+      "/img/intro-b.jpg"
+    ],
+    "details": {
+      "source": "src/data/classes.ts",
+      "legacyId": "private-01",
+      "legacyKind": "private-booking",
+      "category": "Experiencias - Para dos",
+      "heroTitle": "Experiencia privada para dos",
+      "heroImage": "/img/social-2.jpg",
+      "introHighlight": "Una sesion privada para compartir el taller, tocar la arcilla y crear una memoria material entre dos personas.",
+      "videoCardImage": "/img/social-2.jpg",
+      "videoCardLabel": "VIDEO",
+      "included": [
+        "Materiales basicos",
+        "Uso de herramientas",
+        "Coccion de una seleccion de piezas"
+      ],
+      "program": [
+        {
+          "title": "Bienvenida y presentacion",
+          "content": "Recibimos a las dos personas, presentamos el espacio y marcamos el ritmo de la sesion."
+        },
+        {
+          "title": "Modelado guiado",
+          "content": "Trabajamos una pieza sencilla desde la mano y la observacion del material."
+        },
+        {
+          "title": "Cierre del proceso",
+          "content": "Revisamos piezas, resolvemos dudas y explicamos secado, coccion y retirada."
+        }
+      ],
+      "whatYouWillLearn": [
+        "La experiencia permite entender de forma accesible como responde la arcilla, como se construye una pieza sencilla y como se acompana el proceso desde el estudio.",
+        "Tambien es una forma de compartir tiempo de calidad en un entorno sereno, material y muy cuidado."
+      ],
+      "whoCanJoin": [
+        "Pensada para parejas, amistades o dos personas que quieran venir juntas al taller.",
+        "No hace falta experiencia previa."
+      ],
+      "paymentMethods": [
+        "Transferencia bancaria",
+        "Tarjeta de credito",
+        "Bizum"
+      ],
+      "additionalInfo": "Podemos adaptar el tono de la sesion si buscas una experiencia mas romantica, mas relajada o simplemente un plan distinto para compartir.",
+      "ctaHref": "https://wa.me/34633788860",
+      "giftCardTypeLabel": "",
+      "giftCardTypeOptions": [],
+      "pricing": [
+        {
+          "description": "Sesion privada para dos",
+          "price": 140,
+          "order": 0
+        }
+      ]
+    },
+    "seo_title": "Experiencia privada para dos | Casa Rosier",
+    "seo_description": "Reserva privada para dos personas en el estudio de ceramica Casa Rosier en Barcelona, con acompanamiento y una experiencia artesanal compartida.",
+    "created_at": "2026-06-29T18:08:00.000Z",
+    "updated_at": "2026-06-29T18:08:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "6c18f2ec-6c19-5b8b-b0e6-3e3c5e734e50",
+    "type": "experience",
+    "title": "Celebracion privada",
+    "slug": "celebracion-privada",
+    "subtitle": "Reserva privada: un encuentro de ceramica para celebrar",
+    "excerpt": "Una reserva de estudio para pequenos grupos que quieran celebrar de una forma sensible, manual y distinta.",
+    "description": "Esta experiencia esta pensada para celebraciones pequenas: cumpleanos, encuentros especiales o planes intimos con una atmosfera tranquila y bien acompasada.\n\nEl taller se adapta al grupo para que todas las personas puedan participar desde un lugar accesible, con una propuesta clara y un ritmo agradable.\n\nLa ceramica se convierte aqui en una excusa para compartir, conversar, hacer con las manos y construir un recuerdo comun.",
+    "price": 220,
+    "currency": "EUR",
+    "status": "published",
+    "featured": true,
+    "header_id": null,
+    "duration": "Sesion de 2,5 h.",
+    "schedule": [
+      "Disponible: Segun agenda del estudio y tamano del grupo"
+    ],
+    "teacher": "",
+    "capacity": null,
+    "cover_image_url": "/img/social-3.jpg",
+    "gallery": [
+      "/img/social-3.jpg",
+      "/img/workshop-3.jpg",
+      "/img/intro-d.jpg",
+      "/img/social-1.jpg"
+    ],
+    "details": {
+      "source": "src/data/classes.ts",
+      "legacyId": "private-02",
+      "legacyKind": "private-booking",
+      "category": "Experiencias - Celebraciones",
+      "heroTitle": "Celebracion privada en el taller",
+      "heroImage": "/img/social-3.jpg",
+      "introHighlight": "Una celebracion de pequeno formato para reunirse en el estudio y vivir una experiencia manual, sensible y compartida.",
+      "videoCardImage": "/img/social-1.jpg",
+      "videoCardLabel": "VIDEO",
+      "included": [
+        "Materiales y herramientas",
+        "Dinamica guiada",
+        "Coccion de piezas seleccionadas"
+      ],
+      "program": [
+        {
+          "title": "Recepcion del grupo",
+          "content": "Introduccion breve al espacio y planteamiento de la actividad."
+        },
+        {
+          "title": "Experiencia guiada",
+          "content": "Cada participante desarrolla una pieza sencilla con ayuda del taller."
+        },
+        {
+          "title": "Cierre y recogida",
+          "content": "Organizamos las piezas, explicamos el proceso posterior y resolvemos dudas."
+        }
+      ],
+      "whatYouWillLearn": [
+        "El grupo se lleva una primera aproximacion al trabajo con arcilla y una experiencia compartida que mezcla observacion, proceso y juego material.",
+        "La sesion prioriza la experiencia y el acompanamiento antes que la perfeccion tecnica."
+      ],
+      "whoCanJoin": [
+        "Ideal para pequenos grupos que quieren celebrar algo de forma distinta.",
+        "No requiere experiencia previa."
+      ],
+      "paymentMethods": [
+        "Transferencia bancaria",
+        "Bizum"
+      ],
+      "additionalInfo": "Si necesitas ajustar aforo, horario o tono de la experiencia, podemos definirlo contigo antes de reservar.",
+      "ctaHref": "https://wa.me/34633788860",
+      "giftCardTypeLabel": "",
+      "giftCardTypeOptions": [],
+      "pricing": [
+        {
+          "description": "Grupo de 4 personas",
+          "price": 220,
+          "order": 0
+        },
+        {
+          "description": "Grupo de 6 personas",
+          "price": 320,
+          "order": 1
+        }
+      ]
+    },
+    "seo_title": "Celebracion privada | Casa Rosier",
+    "seo_description": "Reserva privada de ceramica para pequenas celebraciones en Barcelona, con actividad guiada y ambiente editorial.",
+    "created_at": "2026-06-29T18:09:00.000Z",
+    "updated_at": "2026-06-29T18:09:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "a1025164-6830-51f6-979d-ea951f7fe059",
+    "type": "experience",
+    "title": "Sesion para equipos",
+    "slug": "sesion-para-equipos",
+    "subtitle": "Reserva privada: ceramica para equipos y grupos de trabajo",
+    "excerpt": "Una sesion privada para equipos pequenos que quieran salir del formato habitual y compartir una experiencia manual.",
+    "description": "Pensada para equipos creativos, pequenos estudios o grupos de trabajo que buscan una actividad distinta, pausada y con una relacion mas directa con la materia.\n\nLa propuesta puede enfocarse como una experiencia de cohesion, una pausa compartida o un encuentro fuera del ritmo habitual del trabajo.\n\nLa ceramica ofrece aqui un contexto muy claro: observar, ensayar, equivocarse, conversar y construir algo en comun con las manos.",
+    "price": 360,
+    "currency": "EUR",
+    "status": "published",
+    "featured": true,
+    "header_id": null,
+    "duration": "Sesion de 2,5 h.",
+    "schedule": [
+      "Disponible: Consultar disponibilidad y formato"
+    ],
+    "teacher": "",
+    "capacity": null,
+    "cover_image_url": "/img/social-4.jpeg",
+    "gallery": [
+      "/img/social-4.jpeg",
+      "/img/workshop-1.jpg",
+      "/img/intro-e.jpg",
+      "/img/social-2.jpg"
+    ],
+    "details": {
+      "source": "src/data/classes.ts",
+      "legacyId": "private-03",
+      "legacyKind": "private-booking",
+      "category": "Experiencias - Equipos",
+      "heroTitle": "Sesion privada para equipos",
+      "heroImage": "/img/social-4.jpeg",
+      "introHighlight": "Una reserva privada para equipos pequenos que quieren compartir una experiencia artesanal con sentido y buen ritmo.",
+      "videoCardImage": "/img/social-4.jpeg",
+      "videoCardLabel": "VIDEO",
+      "included": [
+        "Materiales basicos",
+        "Diseno de sesion guiada",
+        "Acompanamiento del equipo del estudio"
+      ],
+      "program": [
+        {
+          "title": "Introduccion y contexto",
+          "content": "Explicamos el espacio, el material y el enfoque de la sesion para el grupo."
+        },
+        {
+          "title": "Trabajo guiado",
+          "content": "Cada participante desarrolla una propuesta sencilla con ritmo comun y acompanamiento cercano."
+        },
+        {
+          "title": "Puesta en comun",
+          "content": "Cierre del encuentro con revision de piezas y comentarios finales."
+        }
+      ],
+      "whatYouWillLearn": [
+        "La sesion ayuda a comprender el valor del proceso, la observacion y el trabajo material compartido.",
+        "Es una experiencia util para equipos que quieren salir del formato corporativo estandar y vivir algo mas humano y pausado."
+      ],
+      "whoCanJoin": [
+        "Pensada para equipos pequenos, colectivos creativos o grupos de trabajo.",
+        "No hace falta experiencia previa en ceramica."
+      ],
+      "paymentMethods": [
+        "Transferencia bancaria"
+      ],
+      "additionalInfo": "Podemos adaptar la sesion al numero de personas, al tipo de grupo y al tono del encuentro.",
+      "ctaHref": "https://wa.me/34633788860",
+      "giftCardTypeLabel": "",
+      "giftCardTypeOptions": [],
+      "pricing": [
+        {
+          "description": "Equipo de 6 personas",
+          "price": 360,
+          "order": 0
+        },
+        {
+          "description": "Equipo de 8 personas",
+          "price": 460,
+          "order": 1
+        }
+      ]
+    },
+    "seo_title": "Sesion privada para equipos | Casa Rosier",
+    "seo_description": "Experiencia privada de ceramica para equipos y grupos de trabajo en Barcelona, en un estudio calmado y artesanal.",
+    "created_at": "2026-06-29T18:10:00.000Z",
+    "updated_at": "2026-06-29T18:10:00.000Z",
+    "deleted_at": null
+  }
+]

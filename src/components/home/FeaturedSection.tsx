@@ -38,6 +38,8 @@ export function FeaturedSection({
                 <img
                   src={assetPath(item.coverImage)}
                   alt={item.title}
+                  loading="lazy"
+                  decoding="async"
                   className={
                     assetPath(item.coverImage) !== `/${item.coverImage}`
                       ? "asset-fallback"

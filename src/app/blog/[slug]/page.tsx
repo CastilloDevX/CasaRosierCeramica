@@ -7,7 +7,9 @@ import {
   getBlogPostRouteItem
 } from "@/features/blog/blogRouting";
 
-export function generateStaticParams() {
+export const dynamic = "force-dynamic";
+
+export async function generateStaticParams() {
   return generateBlogStaticParams();
 }
 

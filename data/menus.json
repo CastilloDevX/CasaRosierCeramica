@@ -1,0 +1,32 @@
+[
+  {
+    "id": "menu-main-default",
+    "name": "Menú principal",
+    "location": "main",
+    "status": "active",
+    "items": [],
+    "created_at": "2025-06-26T00:00:00.000Z",
+    "updated_at": "2025-06-26T00:00:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "menu-mobile-default",
+    "name": "Menú móvil",
+    "location": "mobile",
+    "status": "active",
+    "items": [],
+    "created_at": "2025-06-26T00:00:00.000Z",
+    "updated_at": "2025-06-26T00:00:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "menu-footer-default",
+    "name": "Menú footer",
+    "location": "footer",
+    "status": "active",
+    "items": [],
+    "created_at": "2025-06-26T00:00:00.000Z",
+    "updated_at": "2025-06-26T00:00:00.000Z",
+    "deleted_at": null
+  }
+]

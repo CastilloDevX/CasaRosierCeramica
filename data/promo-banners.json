@@ -1,0 +1,19 @@
+[
+  {
+    "id": "9f9a6f53-ffce-45e0-88f0-6a45aa47a87c",
+    "title": "Regalate un dia de ceramica",
+    "text": "Ven a probar el torno, tocar la arcilla y crear una pieza en el taller.",
+    "key_text": "Plazas limitadas 2",
+    "detail_text": "No necesitas experiencia previa. Solo ganas de venir al taller y probar algo distinto.",
+    "image_url": "/img/1766778567125-t8t5rt.png",
+    "button_text": "Reservar plaza",
+    "link_url": "/clases",
+    "start_date": "2026-06-29",
+    "end_date": "",
+    "status": "published",
+    "visual_variant": "accent",
+    "created_at": "2026-06-29T18:00:00.000Z",
+    "updated_at": "2026-06-30T05:18:29.039Z",
+    "deleted_at": null
+  }
+]

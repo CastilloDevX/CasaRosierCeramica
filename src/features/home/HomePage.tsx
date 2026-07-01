@@ -7,12 +7,34 @@ import { classes, giftCards, workshops } from "@/data/classes";
 import { HomeGiftCardSection } from "@/features/home/HomeGiftCardSection";
 import { IdeaPromptSection } from "@/features/shared/contextual-sections/IdeaPromptSection";
 import { SitePage } from "@/features/shared/layout/SitePage";
+import { getPublicHomeContent } from "@/lib/cms/public-content";
 
-export function HomePage() {
+export async function HomePage() {
+  const { promoBanner, testimonials: cmsTestimonials } = await getPublicHomeContent();
+  const testimonials = cmsTestimonials
+    .map((item) => ({
+      image: item.avatar_id || "/img/avatar-1.jpg",
+      alt: `Foto de ${item.name}`,
+      quote: item.text,
+      author: item.role ? `${item.name} — ${item.role}` : item.name,
+    }));
+
   return (
     <SitePage
       bodyClass=""
-      beforeHeader={<PromoEntry />}
+      beforeHeader={
+        <PromoEntry
+          promo={promoBanner ? {
+            keyText: promoBanner.key_text || "Plazas limitadas",
+            title: promoBanner.title,
+            text: promoBanner.text || "Ven a probar el torno, tocar la arcilla y crear una pieza en el taller.",
+            detailText: promoBanner.detail_text || "No necesitas experiencia previa. Solo ganas de venir al taller y probar algo distinto.",
+            imageUrl: promoBanner.image_url || "/img/1766778567125-t8t5rt.png",
+            buttonText: promoBanner.button_text || "Reservar plaza",
+            href: promoBanner.link_url || "/clases",
+          } : null}
+        />
+      }
       header={<HeaderHome />}
     >
       <IntroSlider />
@@ -32,7 +54,7 @@ export function HomePage() {
       />
       <HomeGiftCardSection items={giftCards} />
       <IdeaPromptSection context="home" />
-      <TestimonialSlider />
+      <TestimonialSlider testimonials={testimonials} />
     </SitePage>
   );
 }

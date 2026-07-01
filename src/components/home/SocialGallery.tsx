@@ -7,7 +7,8 @@ export interface SocialGalleryPost {
   image: string;
   title: string;
   body: string;
-  date: string;
+  date?: string;
+  instagramUrl?: string;
 }
 
 export interface SocialGalleryProps {
@@ -18,6 +19,8 @@ export interface SocialGalleryProps {
   ariaLabel?: string;
   sourceHref?: string;
 }
+
+const DEFAULT_INSTAGRAM_URL = "https://www.instagram.com/casarosier";
 
 export const defaultSocialGalleryPosts: readonly SocialGalleryPost[] = [
   {
@@ -52,12 +55,14 @@ export function SocialGallery({
   subtitle = "siguenos en instagram - @casarosier",
   posts = defaultSocialGalleryPosts,
   ariaLabel = "Galeria continua de Instagram",
-  sourceHref = "https://www.facebook.com/casarosier"
+  sourceHref = DEFAULT_INSTAGRAM_URL
 }: SocialGalleryProps = {}) {
   const [active, setActive] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const postCount = posts.length;
   const current = active === null ? null : posts[active];
+  const currentLink =
+    current?.instagramUrl?.trim() || sourceHref?.trim() || DEFAULT_INSTAGRAM_URL;
 
   useEffect(() => {
     if (active === null) return;
@@ -119,6 +124,8 @@ export function SocialGallery({
                   <img
                     src={post.image}
                     alt={isDuplicate ? "" : `Post social ${realIndex + 1}`}
+                    loading="lazy"
+                    decoding="async"
                   />
                 </button>
             )}
@@ -150,7 +157,7 @@ export function SocialGallery({
               <span className="ig-modal__close-mark" aria-hidden="true" />
             </button>
             <section className="ig-modal__media">
-              <img src={current.image} alt="" />
+              <img src={current.image} alt="" loading="lazy" decoding="async" />
               <div className="ig-modal__overlay-text">Post</div>
             </section>
             <section className="ig-modal__content">
@@ -188,15 +195,19 @@ export function SocialGallery({
                 {current.title}
               </h3>
               <div className="ig-modal__body">{current.body}</div>
-              <a
-                className="ig-modal__link"
-                href={sourceHref}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Ver en Instagram
-              </a>
-              <p className="ig-modal__date">{current.date}</p>
+              {current.date ? <p className="ig-modal__date">{current.date}</p> : null}
+              {currentLink ? (
+                <a
+                  className="ig-modal__link"
+                  href={currentLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Ver post en Instagram"
+                >
+                  <img src="/img/icon-instagram.svg" alt="" aria-hidden="true" loading="lazy" decoding="async" />
+                  Ver en Instagram
+                </a>
+              ) : null}
             </section>
           </div>
         </div>

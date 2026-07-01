@@ -3,7 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Carousel } from "@/components/ui/Carousel";
 
-const testimonials = [
+export interface TestimonialSlide {
+  image: string;
+  alt: string;
+  quote: string;
+  author: string;
+}
+
+const defaultTestimonials: TestimonialSlide[] = [
   {
     image: "/img/avatar-1.jpg",
     alt: "Foto de Ana",
@@ -27,10 +34,15 @@ const testimonials = [
   }
 ];
 
-export function TestimonialSlider() {
+export function TestimonialSlider({
+  testimonials = defaultTestimonials,
+}: {
+  testimonials?: TestimonialSlide[];
+}) {
   const [active, setActive] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const current = active === null ? null : testimonials[active];
+  const testimonialCount = testimonials.length;
 
   useEffect(() => {
     if (active === null) return;
@@ -40,14 +52,14 @@ export function TestimonialSlider() {
       if (event.key === "Escape") setActive(null);
       if (event.key === "ArrowRight") {
         setActive((value) =>
-          value === null ? 0 : (value + 1) % testimonials.length
+          value === null ? 0 : (value + 1) % testimonialCount
         );
       }
       if (event.key === "ArrowLeft") {
         setActive((value) =>
           value === null
             ? 0
-            : (value - 1 + testimonials.length) % testimonials.length
+            : (value - 1 + testimonialCount) % testimonialCount
         );
       }
     };
@@ -56,7 +68,9 @@ export function TestimonialSlider() {
       document.body.classList.remove("modal-open");
       document.removeEventListener("keydown", onKey);
     };
-  }, [active]);
+  }, [active, testimonialCount]);
+
+  if (testimonialCount === 0) return null;
 
   return (
     <>
@@ -94,6 +108,8 @@ export function TestimonialSlider() {
                   className="testimonial__avatar"
                   src={testimonial.image}
                   alt={testimonial.alt}
+                  loading="lazy"
+                  decoding="async"
                 />
                 <div className="testimonial__body">
                   <p className="testimonial__quote">{testimonial.quote}</p>
@@ -130,8 +146,8 @@ export function TestimonialSlider() {
                 aria-label="Anterior"
                 onClick={() =>
                   setActive(
-                    ((active ?? 0) - 1 + testimonials.length) %
-                      testimonials.length
+                    ((active ?? 0) - 1 + testimonialCount) %
+                      testimonialCount
                   )
                 }
               >
@@ -143,7 +159,7 @@ export function TestimonialSlider() {
                 aria-label="Siguiente"
                 onClick={() =>
                   setActive(
-                    ((active ?? 0) + 1) % testimonials.length
+                    ((active ?? 0) + 1) % testimonialCount
                   )
                 }
               >
@@ -163,6 +179,8 @@ export function TestimonialSlider() {
                 className="testimonial-modal__avatar"
                 src={current.image}
                 alt={current.alt}
+                loading="lazy"
+                decoding="async"
               />
               <p className="testimonial-modal__quote">{current.quote}</p>
               <p className="testimonial-modal__author">{current.author}</p>

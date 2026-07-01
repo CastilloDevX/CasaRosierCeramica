@@ -33,7 +33,12 @@ export function GiftCarousel({ items }: GiftCarouselProps) {
             className="gift-carousel__media"
             href={experienceHref(item.kind, item.slug)}
           >
-            <img src={assetPath(item.coverImage)} alt={item.title} />
+            <img
+              src={assetPath(item.coverImage)}
+              alt={item.title}
+              loading="lazy"
+              decoding="async"
+            />
           </Link>
           <div className="gift-carousel__body">
             <p className="gift-carousel__text">{item.excerpt}</p>

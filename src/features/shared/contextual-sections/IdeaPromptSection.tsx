@@ -3,22 +3,34 @@ import {
   getIdeaPromptContent,
   type IdeaPromptContext
 } from "@/features/shared/contextual-sections/ideaPromptContent";
+import { getPublicSocialGallery } from "@/lib/cms/public-content";
 
-export function IdeaPromptSection({
+export async function IdeaPromptSection({
   context
 }: {
   context: IdeaPromptContext;
 }) {
   const content = getIdeaPromptContent(context);
+  const gallery = await getPublicSocialGallery();
+
+  const posts = gallery?.items
+    .filter((item) => item.image_url)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((item) => ({
+      image: item.image_url,
+      title: item.title,
+      body: item.description,
+      instagramUrl: item.instagram_url,
+    }));
 
   return (
     <SocialGallery
       id={content.id}
-      title={content.title}
-      subtitle={content.subtitle}
-      posts={content.posts}
+      title={gallery?.title || content.title}
+      subtitle={gallery?.description || content.subtitle}
+      posts={posts?.length ? posts : content.posts}
       ariaLabel={content.ariaLabel}
-      sourceHref={content.sourceHref}
+      sourceHref={gallery ? gallery.cta_url : content.sourceHref}
     />
   );
 }

@@ -3,9 +3,14 @@ import { HeaderInterno } from "@/components/layout/HeaderInterno";
 import type { BlogPost } from "@/data/types";
 import { IdeaPromptSection } from "@/features/shared/contextual-sections/IdeaPromptSection";
 import { SitePage } from "@/features/shared/layout/SitePage";
+import { getBlogNeighbors, getPublicBlogData, getRelatedBlogPosts } from "@/lib/cms/blog-public";
 import { formatDate } from "@/lib/utils";
 
-export function BlogPostPage({ post }: { post: BlogPost }) {
+export async function BlogPostPage({ post }: { post: BlogPost }) {
+  const { published } = await getPublicBlogData();
+  const adjacent = getBlogNeighbors(published, post);
+  const relatedPosts = getRelatedBlogPosts(published, post, 3);
+
   return (
     <SitePage
       bodyClass="blog-post-page"
@@ -28,7 +33,7 @@ export function BlogPostPage({ post }: { post: BlogPost }) {
         </HeaderInterno>
       }
     >
-      <BlogDetail post={post} />
+      <BlogDetail post={post} adjacent={adjacent} relatedPosts={relatedPosts} />
       <IdeaPromptSection context="blog-post" />
     </SitePage>
   );

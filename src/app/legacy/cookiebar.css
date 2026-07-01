@@ -7,6 +7,8 @@
   background: #ecebe8;
   border-top: 1px solid #d7d7d3;
   box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.08);
+  max-height: 100px;
+  overflow-y: auto;
 }
 
 body.cookiebar-visible {
@@ -14,9 +16,10 @@ body.cookiebar-visible {
 }
 
 .cookiebar__inner {
+  min-height: 64px;
   max-width: 1180px;
   margin: 0 auto;
-  padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: 10px 24px calc(10px + env(safe-area-inset-bottom, 0px));
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -25,36 +28,85 @@ body.cookiebar-visible {
 
 .cookiebar__text {
   margin: 0;
-  color: #5d5d5d;
-  font: 300 12px/1.5 var(--font-menu);
+  color: #404040;
+  font: 300 12px/1.4 var(--font-menu);
 }
 
-.cookiebar__text a { color: inherit; text-decoration: underline; }
-.cookiebar__actions { display: flex; gap: 8px; }
+.cookiebar__text a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cookiebar__actions {
+  display: flex;
+  gap: 8px;
+}
+
 .cookiebar__btn {
   border: 1px solid #bbb;
   background: #fff;
   color: #333;
-  font: 300 12px/1 var(--font-menu);
-  padding: 8px 12px;
+  min-height: 36px;
+  border-radius: 999px;
+  font: 700 11px/1 var(--font-menu);
+  letter-spacing: 0.08em;
+  padding: 8px 14px;
+  text-transform: uppercase;
   cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
-.cookiebar__btn--primary { background: #111; border-color: #111; color: #fff; }
+
+.cookiebar__btn:hover,
+.cookiebar__btn:focus-visible {
+  border-color: #8b7355;
+  color: #8b7355;
+  outline: none;
+}
+
+.cookiebar__btn--primary {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+}
+
+.cookiebar__btn--primary:hover,
+.cookiebar__btn--primary:focus-visible {
+  background: #8b7355;
+  border-color: #8b7355;
+  color: #fff;
+}
 
 #cookiebar[hidden] {
   display: none !important;
 }
 
 @media (max-width: 992px) {
-  .cookiebar__inner { padding: 12px 20px; }
+  .cookiebar__inner {
+    padding: 10px 20px;
+  }
 }
 
 @media (max-width: 640px) {
   .cookiebar__inner {
-    grid-template-columns: 1fr;
-    align-items: start;
+    min-height: 74px;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
-    padding: 10px 16px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
   }
-  .cookiebar__actions { justify-content: flex-start; }
+
+  .cookiebar__text {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .cookiebar__actions {
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .cookiebar__btn {
+    min-height: 32px;
+    padding: 7px 10px;
+  }
 }

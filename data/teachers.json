@@ -1,0 +1,28 @@
+[
+  {
+    "id": "0f61f90e-9c75-4c5c-a8af-000000000001",
+    "name": "Rosa Guayanay",
+    "bio": "Soy Rosa Guayanay, ceramista peruana afincada en Barcelona. Aqui encontre no solo una ciudad que me inspira, sino tambien el lugar donde seguir explorando y expandiendo mi universo creativo.\n\nMi relacion con la ceramica va mas alla del taller: me apasiona la quimica que hay detras de cada esmalte y la forma en que los materiales se transforman con el fuego. Esa mezcla entre arte y ciencia es lo que me mueve a seguir experimentando, combinando elementos y descubriendo nuevas texturas y colores.\n\nDespues de anos de estudio, trabajo e investigacion, he aprendido que la ceramica no tiene secretos inalcanzables, solo procesos que merecen ser comprendidos. Por eso, mi proposito es compartir lo que se, ensenar con honestidad y acercar a mas personas a esa alquimia maravillosa que ocurre cuando la tierra, el fuego y la curiosidad se encuentran.",
+    "image_id": "/img/social-1.jpg",
+    "instagram": "",
+    "specialty": "Ceramista y especialista en quimica ceramica",
+    "status": "published",
+    "sort_order": 1,
+    "created_at": "2026-06-29T18:05:00.000Z",
+    "updated_at": "2026-06-29T18:05:00.000Z",
+    "deleted_at": null
+  },
+  {
+    "id": "0f61f90e-9c75-4c5c-a8af-000000000002",
+    "name": "Julio Andrade",
+    "bio": "Soy Julio Andrade, ceramista y acompanante de procesos en el taller. Aqui encontre un espacio para compartir tecnica, observacion y una manera cercana de trabajar con la materia.\n\nMe interesa acompanar cada pieza desde el primer gesto: entender que pide la arcilla, sostener los tiempos del proceso y ayudar a que cada persona encuentre una forma propia de mirar y construir.\n\nEn el estudio trabajo desde la paciencia, la precision y la escucha. La ceramica tambien es aprender a leer lo que ocurre entre las manos, el material y el fuego.",
+    "image_id": "/img/social-1.jpg",
+    "instagram": "",
+    "specialty": "Ceramista y acompanante de procesos",
+    "status": "published",
+    "sort_order": 2,
+    "created_at": "2026-06-29T18:06:00.000Z",
+    "updated_at": "2026-06-29T18:06:00.000Z",
+    "deleted_at": null
+  }
+]

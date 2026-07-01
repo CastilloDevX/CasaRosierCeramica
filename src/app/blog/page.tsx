@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { BlogIndexPage } from "@/features/blog/BlogIndexPage";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: { absolute: "Blog | Casa Rosier Ceramica" },
   description:

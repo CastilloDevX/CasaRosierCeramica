@@ -77,6 +77,85 @@
   --header-interno-band-color: #dbc19a;
 }
 
+.header-interno--image-hero {
+  min-height: 620px;
+  background:
+    linear-gradient(to bottom, rgba(58, 48, 37, 0.2) 0%, rgba(251, 250, 246, 0.96) 100%),
+    var(--page-hero-image) center center / cover no-repeat;
+  --header-interno-band-color: transparent;
+}
+
+.header-interno--image-hero::before {
+  background: transparent;
+}
+
+.header-interno--image-hero .hero__logo-image {
+  filter: brightness(0) invert(1);
+}
+
+.header-interno--image-hero .hero__nav-link,
+.header-interno--image-hero .hero__nav-toggle,
+.header-interno--image-hero .nav-mobile {
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.header-interno--image-hero .hero__nav-link::after,
+.header-interno--image-hero .hero__nav-toggle::after {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.header-interno--image-hero .hero__nav-link:hover,
+.header-interno--image-hero .hero__nav-link:focus-visible,
+.header-interno--image-hero .hero__nav-toggle:hover,
+.header-interno--image-hero .hero__nav-toggle:focus-visible {
+  color: #ffffff;
+}
+
+.header-interno--image-hero .hero__nav-item--open .hero__nav-group,
+.header-interno--image-hero .hero__nav-item:hover .hero__nav-group,
+.header-interno--image-hero .hero__nav-item:focus-within .hero__nav-group {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.page-hero__script-stack {
+  position: relative;
+  width: min(520px, 78vw);
+  height: 170px;
+}
+
+.page-hero__script-image {
+  object-fit: contain;
+}
+
+.page-hero__script-image--back {
+  opacity: 0.48;
+  transform: scale(1.12);
+}
+
+.page-hero__script-image--front {
+  opacity: 0.95;
+}
+
+.page-hero__script-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-style: italic;
+  line-height: 1;
+}
+
+.page-hero__script-fallback--back {
+  color: rgba(63, 48, 40, 0.48);
+  font-size: clamp(72px, 10vw, 140px);
+}
+
+.page-hero__script-fallback--front {
+  color: rgba(255, 255, 255, 0.96);
+  font-size: clamp(36px, 5vw, 72px);
+}
+
 .page-hero__eyebrow {
   order: 2;
   margin: 0;

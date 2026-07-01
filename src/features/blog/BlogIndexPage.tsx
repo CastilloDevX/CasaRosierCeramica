@@ -1,11 +1,13 @@
 import { BlogGrid } from "@/components/blog/BlogGrid";
 import { FeaturedCarousel } from "@/components/blog/FeaturedCarousel";
 import { HeaderInterno } from "@/components/layout/HeaderInterno";
-import { categories, featured, published } from "@/data/blog";
 import { IdeaPromptSection } from "@/features/shared/contextual-sections/IdeaPromptSection";
 import { SitePage } from "@/features/shared/layout/SitePage";
+import { getPublicBlogData } from "@/lib/cms/blog-public";
 
-export function BlogIndexPage() {
+export async function BlogIndexPage() {
+  const { categories, featured, published } = await getPublicBlogData();
+
   return (
     <SitePage
       bodyClass="blog-page"

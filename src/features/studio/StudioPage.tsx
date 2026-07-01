@@ -3,8 +3,23 @@ import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
 import { IdeaPromptSection } from "@/features/shared/contextual-sections/IdeaPromptSection";
 import { SitePage } from "@/features/shared/layout/SitePage";
 import { StudioProfileBlock } from "@/features/studio/StudioProfileBlock";
+import { getPublicTestimonials } from "@/lib/cms/public-content";
+import { getTeachers } from "@/lib/cms/teachers";
+import { assetPath } from "@/lib/assets";
 
-export function StudioPage() {
+export async function StudioPage() {
+  const [cmsTestimonials, teachers] = await Promise.all([getPublicTestimonials(), getTeachers()]);
+  const testimonials = cmsTestimonials
+    .map((item) => ({
+      image: item.avatar_id || "/img/avatar-1.jpg",
+      alt: `Foto de ${item.name}`,
+      quote: item.text,
+      author: item.role ? `${item.name} — ${item.role}` : item.name,
+    }));
+  const specialists = teachers
+    .filter((teacher) => teacher.status === "published" && teacher.deleted_at === null)
+    .sort((a, b) => a.sort_order - b.sort_order);
+
   return (
     <SitePage
       bodyClass="studio-page"
@@ -50,20 +65,19 @@ export function StudioPage() {
         aria-label="Equipo del estudio"
       >
         <div className="container studio-narrative__container">
-          <StudioProfileBlock
-            name="Rosa Guayanay"
-            image="/img/social-1.jpg"
-            intro="Soy Rosa Guayanay, ceramista peruana afincada en Barcelona. Aqui encontre no solo una ciudad que me inspira, sino tambien el lugar donde seguir explorando y expandiendo mi universo creativo."
-          />
-          <StudioProfileBlock
-            name="Julio Andrade"
-            image="/img/social-1.jpg"
-            intro="Soy Julio Andrade, ceramista y acompanante de procesos en el taller. Aqui encontre un espacio para compartir tecnica, observacion y una manera cercana de trabajar con la materia."
-          />
+          {specialists.map((specialist) => (
+            <StudioProfileBlock
+              key={specialist.id}
+              name={specialist.name}
+              role={specialist.specialty}
+              image={assetPath(specialist.image_id || "/img/social-1.jpg")}
+              intro={specialist.bio}
+            />
+          ))}
         </div>
       </section>
       <IdeaPromptSection context="studio" />
-      <TestimonialSlider />
+      <TestimonialSlider testimonials={testimonials} />
     </SitePage>
   );
 }

@@ -1,0 +1,64 @@
+[
+  {
+    "id": "4a18f60a-5c43-4bfb-b8f9-2e967f6bd5d1",
+    "name": "Galeria social principal",
+    "slug": "galeria-social",
+    "status": "published",
+    "title": "Y tu, cuando tuviste\ntu ultima idea?",
+    "description": "siguenos en instagram - @casarosier",
+    "cta_text": "",
+    "cta_url": "",
+    "items": [
+      {
+        "id": "social-gallery-item-1",
+        "image_id": "",
+        "image_url": "/img/social-1.jpg",
+        "title": "Serie en proceso",
+        "description": "Hoy tuvimos sesión fotográfica y salí con esa sensación rara y buenísima de “sí, esto era”. Me sentí cómoda de verdad, sin poses forzadas ni teatro, y el resultado me encantó: se ve natural, sólido y con identidad. Estas sesiones no salen por magia, salen por equipo. Gracias a mis compañeros por el cuidado, la energía y el ojo para que todo funcione y se vea así de bien. Cuando hay confianza y trabajo en conjunto, pasan estas maravillas.",
+        "instagram_url": "",
+        "sort_order": 0,
+        "is_visible": true,
+        "created_at": "2026-06-30T00:00:00Z",
+        "updated_at": "2026-06-30T20:12:23.878Z"
+      },
+      {
+        "id": "social-gallery-item-2",
+        "image_id": "",
+        "image_url": "/img/social-2.jpg",
+        "title": "Materia y ritmo",
+        "description": "Nicolini es de esas alumnas que llegan con una idea clara… y salen con tres mejores. Diseñadora de profesión y espíritu meticuloso por naturaleza, convierte cada pieza en un pequeño sistema perfectamente pensado.",
+        "sort_order": 1,
+        "is_visible": true,
+        "created_at": "2026-06-30T00:01:00Z",
+        "updated_at": "2026-06-30T20:12:09.897Z"
+      },
+      {
+        "id": "social-gallery-item-3",
+        "image_id": "",
+        "image_url": "/img/social-3.jpg",
+        "title": "Color y superficie",
+        "description": "Un día en el taller se vive intensamente: modelas, creas y compartes. Nuestros profesores te acompañan paso a paso para que disfrutes el proceso y te lleves una pieza hecha por ti, con resultados que sorprenden.",
+        "instagram_url": "",
+        "sort_order": 2,
+        "is_visible": true,
+        "created_at": "2026-06-30T00:02:00Z",
+        "updated_at": "2026-06-30T20:11:40.116Z"
+      },
+      {
+        "id": "social-gallery-item-4",
+        "image_id": "",
+        "image_url": "/img/social-4.jpeg",
+        "title": "El taller por dentro",
+        "description": "Steff es esa profe que te pilla al vuelo y te lleva a tu ritmo.\nNada de líos: te mira, te entiende y te acompaña.\nCon ella las clases fluyen y tú te sientes a gusto creando.",
+        "instagram_url": "",
+        "sort_order": 3,
+        "is_visible": true,
+        "created_at": "2026-06-30T00:03:00Z",
+        "updated_at": "2026-06-30T20:11:54.828Z"
+      }
+    ],
+    "created_at": "2026-06-30T00:00:00.000Z",
+    "updated_at": "2026-06-30T20:12:25.245Z",
+    "deleted_at": null
+  }
+]

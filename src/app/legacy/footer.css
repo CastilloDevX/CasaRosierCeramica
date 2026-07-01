@@ -107,6 +107,25 @@
   cursor: pointer;
 }
 
+.contact-form__submit:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.contact-form__status {
+  margin: -0.25rem 0 0;
+  color: #4a4a4a;
+  font: 300 10px/1.4 var(--font-menu);
+}
+
+.contact-form__status--success {
+  color: #006d21;
+}
+
+.contact-form__status--error {
+  color: #9f1d1d;
+}
+
 .contact-info {
   display: grid;
   gap: 8px;
@@ -164,6 +183,33 @@
 .contact-info__social-link:hover,
 .contact-info__social-link:focus-visible {
   background: #8b7355;
+  transform: translateY(-1px);
+}
+
+.contact-info__legal-links {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.contact-info__legal-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  color: #4a4a4a;
+  font: 300 11px/1.2 var(--font-menu);
+  opacity: 0.8;
+  text-decoration: none;
+  transition: opacity 220ms ease, color 220ms ease, transform 220ms ease;
+}
+
+.contact-info__legal-link:hover,
+.contact-info__legal-link:focus-visible {
+  color: #8b7355;
+  opacity: 1;
+  outline: none;
   transform: translateY(-1px);
 }
 

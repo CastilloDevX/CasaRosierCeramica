@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { bySlug, published } from "@/data/blog";
+import { getPublicBlogData, getPublicBlogPostBySlug } from "@/lib/cms/blog-public";
 
-export function generateBlogStaticParams() {
+export async function generateBlogStaticParams() {
+  const { published } = await getPublicBlogData();
   return published.map((post) => ({ slug: post.slug }));
 }
 
 export async function generateBlogPostMetadata(
   params: Promise<{ slug: string }>
 ): Promise<Metadata> {
-  const post = bySlug((await params).slug);
+  const post = await getPublicBlogPostBySlug((await params).slug);
   return post
     ? {
         title: { absolute: post.seoTitle },
@@ -18,5 +19,5 @@ export async function generateBlogPostMetadata(
 }
 
 export async function getBlogPostRouteItem(params: Promise<{ slug: string }>) {
-  return bySlug((await params).slug) ?? null;
+  return getPublicBlogPostBySlug((await params).slug);
 }

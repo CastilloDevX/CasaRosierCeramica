@@ -6,11 +6,14 @@ import { WhatsAppFloat } from "@/components/layout/WhatsAppFloat";
 
 export function SiteChrome() {
   const pathname = usePathname();
-  if (pathname === "/politica-privacidad") return null;
+  if (pathname === "/auth" || pathname.startsWith("/admin")) {
+    return null;
+  }
+
   return (
     <>
       <CookieBar />
-      <WhatsAppFloat />
+      {pathname !== "/politica-privacidad" && <WhatsAppFloat />}
     </>
   );
 }

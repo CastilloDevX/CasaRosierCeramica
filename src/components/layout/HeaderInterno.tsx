@@ -5,6 +5,7 @@ import { classNames } from "@/lib/utils";
 
 interface HeaderInternoProps {
   image?: string;
+  variant?: "image" | "text";
   eyebrow?: string;
   title?: string;
   height?: "small" | "medium" | "large";
@@ -15,6 +16,7 @@ interface HeaderInternoProps {
 
 export function HeaderInterno({
   image = "img/hero-bg.jpg",
+  variant = "text",
   eyebrow,
   title,
   height = "medium",
@@ -39,6 +41,7 @@ export function HeaderInterno({
       <header
         className={classNames(
           "header-interno page-hero header-interno--ready header-interno--center header-interno--overlay-warm",
+          variant === "image" ? "header-interno--image-hero" : "header-interno--text-hero",
           `header-interno--${height}`,
           !overlayTitle && Boolean(titleContent) && "page-hero--nav-only",
           className

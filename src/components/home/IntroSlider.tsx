@@ -65,6 +65,8 @@ export function IntroSlider() {
               <img
                 src={assetPath(slide.image)}
                 alt={slide.imageAlt}
+                loading="lazy"
+                decoding="async"
                 className={
                   assetPath(slide.image) !== `/${slide.image}`
                     ? "asset-fallback"

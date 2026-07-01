@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { StudioPage as StudioScreen } from "@/features/studio/StudioPage";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: { absolute: "El estudio | Casa Rosier Ceramica" },
   description:

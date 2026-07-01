@@ -15,11 +15,17 @@ export function HeaderHome() {
           className="hero__overlay hero__overlay--1"
           src="/img/hero-overlay-1.png"
           alt=""
+          width={578}
+          height={224}
+          decoding="async"
         />
         <img
           className="hero__overlay hero__overlay--2"
           src="/img/hero-overlay-2.png"
           alt=""
+          width={501}
+          height={235}
+          decoding="async"
         />
       </div>
     </header>

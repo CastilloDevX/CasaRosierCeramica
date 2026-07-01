@@ -1,12 +1,16 @@
 import Link from "next/link";
 import type { BlogContentBlock, BlogPost } from "@/data/types";
 import { assetPath, internalHref } from "@/lib/assets";
-import { neighbors, related } from "@/data/blog";
 
-export function BlogDetail({ post }: { post: BlogPost }) {
-  const adjacent = neighbors(post);
-  const relatedPosts = related(post, 3);
-
+export function BlogDetail({
+  post,
+  adjacent,
+  relatedPosts,
+}: {
+  post: BlogPost;
+  adjacent: { previous: BlogPost | null; next: BlogPost | null };
+  relatedPosts: BlogPost[];
+}) {
   return (
     <>
       <section className="blog-post section">

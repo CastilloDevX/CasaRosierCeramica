@@ -3,7 +3,27 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-export function PromoEntry() {
+export interface PromoEntryData {
+  keyText: string;
+  title: string;
+  text: string;
+  detailText: string;
+  imageUrl: string;
+  buttonText: string;
+  href: string;
+}
+
+const defaultPromo: PromoEntryData = {
+  keyText: "Plazas limitadas",
+  title: "Regalate un dia de ceramica",
+  text: "Ven a probar el torno, tocar la arcilla y crear una pieza en el taller.",
+  detailText: "No necesitas experiencia previa. Solo ganas de venir al taller y probar algo distinto.",
+  imageUrl: "/img/1766778567125-t8t5rt.png",
+  buttonText: "Reservar plaza",
+  href: "/clases",
+};
+
+export function PromoEntry({ promo = defaultPromo }: { promo?: PromoEntryData | null }) {
   const [open, setOpen] = useState(true);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -21,7 +41,7 @@ export function PromoEntry() {
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !promo) return null;
 
   return (
     <section
@@ -44,21 +64,19 @@ export function PromoEntry() {
         </button>
         <div className="promo-entrada__content">
           <div className="promo-entrada__content-inner">
-            <p className="promo-entrada__eyebrow">Plazas limitadas</p>
+            <p className="promo-entrada__eyebrow">{promo.keyText}</p>
             <h2 className="promo-entrada__title" id="promo-entrada-title">
-              Regalate un dia de ceramica
+              {promo.title}
             </h2>
             <p className="promo-entrada__subtitle">
-              Ven a probar el torno, tocar la arcilla y crear una pieza
-              casarosierconcms\casarosierconcms.
+              {promo.text}
             </p>
             <p className="promo-entrada__text">
-              No necesitas experiencia previa. Solo ganas de venir al taller y
-              probar algo distinto.
+              {promo.detailText}
             </p>
             <div className="promo-entrada__actions">
-              <Link className="promo-entrada__cta" href="/clases">
-                Reservar plaza
+              <Link className="promo-entrada__cta" href={promo.href || "/clases"}>
+                {promo.buttonText}
               </Link>
             </div>
           </div>
@@ -67,8 +85,12 @@ export function PromoEntry() {
           <figure className="promo-entrada__figure">
             <img
               className="promo-entrada__image"
-              src="/img/1766778567125-t8t5rt.png"
+              src={promo.imageUrl}
               alt="Composicion promocional de piezas ceramicas y retrato editorial"
+              width={604}
+              height={516}
+              loading="eager"
+              decoding="async"
             />
           </figure>
         </div>
