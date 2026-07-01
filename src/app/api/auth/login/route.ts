@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       entity_title: data.user.email ?? normalizedEmail,
       user_id: data.user.id,
       user_email: data.user.email ?? normalizedEmail,
-    });
+    }).catch(() => undefined);
 
     return response;
   }
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     entity_title: normalizedEmail,
     user_id: "bootstrap-admin",
     user_email: normalizedEmail,
-  });
+  }).catch(() => undefined);
 
   return response;
 }
