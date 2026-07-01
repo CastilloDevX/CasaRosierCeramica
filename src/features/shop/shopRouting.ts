@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { bySlug, published } from "@/data/shop";
+import { getPublicShopData, getPublicShopItemBySlug } from "@/lib/cms/shop-public";
 
-export function generateShopStaticParams() {
+export async function generateShopStaticParams() {
+  const { published } = await getPublicShopData();
   return published.map((item) => ({ slug: item.slug }));
 }
 
 export async function generateShopItemMetadata(
   params: Promise<{ slug: string }>
 ): Promise<Metadata> {
-  const item = bySlug((await params).slug);
+  const item = await getPublicShopItemBySlug((await params).slug);
   return item
     ? {
         title: { absolute: item.seoTitle },
@@ -18,5 +19,5 @@ export async function generateShopItemMetadata(
 }
 
 export async function getShopRouteItem(params: Promise<{ slug: string }>) {
-  return bySlug((await params).slug) ?? null;
+  return getPublicShopItemBySlug((await params).slug);
 }

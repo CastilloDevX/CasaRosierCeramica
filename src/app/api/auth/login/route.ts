@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
   const normalizedEmail = email.trim().toLowerCase();
 
-  if (!validateLocalCredentials(email, password)) {
+  if (!(await validateLocalCredentials(email, password))) {
     if (!hasSupabaseAuthEnv()) {
       return NextResponse.json({ error: "Email o contraseña incorrectos" }, { status: 401 });
     }

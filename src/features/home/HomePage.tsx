@@ -3,14 +3,21 @@ import { IntroSlider } from "@/components/home/IntroSlider";
 import { HeaderHome } from "@/components/layout/HeaderHome";
 import { PromoEntry } from "@/components/ui/PromoEntry";
 import { TestimonialSlider } from "@/components/home/TestimonialSlider";
-import { classes, giftCards, workshops } from "@/data/classes";
+import type { GiftCardItem } from "@/data/types";
+import { getPublicExperienceItems } from "@/features/experiences/experienceDetailRouting";
 import { HomeGiftCardSection } from "@/features/home/HomeGiftCardSection";
 import { IdeaPromptSection } from "@/features/shared/contextual-sections/IdeaPromptSection";
 import { SitePage } from "@/features/shared/layout/SitePage";
 import { getPublicHomeContent } from "@/lib/cms/public-content";
 
 export async function HomePage() {
-  const { promoBanner, testimonials: cmsTestimonials } = await getPublicHomeContent();
+  const [{ promoBanner, testimonials: cmsTestimonials }, experienceItems] = await Promise.all([
+    getPublicHomeContent(),
+    getPublicExperienceItems(),
+  ]);
+  const classes = experienceItems.filter((item) => item.kind === "class");
+  const workshops = experienceItems.filter((item) => item.kind === "workshop");
+  const giftCards = experienceItems.filter((item): item is GiftCardItem => item.kind === "gift-card");
   const testimonials = cmsTestimonials
     .map((item) => ({
       image: item.avatar_id || "/img/avatar-1.jpg",

@@ -8,6 +8,9 @@
 # production
 /build
 
+# local CMS seed data
+/data
+
 # local logs and caches
 *.log
 *.tsbuildinfo

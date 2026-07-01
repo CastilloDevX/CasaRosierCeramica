@@ -1,6 +1,6 @@
 export const LOCAL_ADMIN_EMAIL = process.env.LOCAL_ADMIN_EMAIL ?? "name@admin.com";
-export const LOCAL_ADMIN_PASSWORD = process.env.LOCAL_ADMIN_PASSWORD ?? "admin123";
-export const LOCAL_AUTH_SECRET = process.env.LOCAL_AUTH_SECRET ?? "casa_rosier_local_secret_cambiar_despues";
+export const LOCAL_ADMIN_PASSWORD_HASH = process.env.LOCAL_ADMIN_PASSWORD_HASH ?? "";
+export const LOCAL_AUTH_SECRET = process.env.LOCAL_AUTH_SECRET ?? "";
 
 export const LOCAL_SESSION_COOKIE = "casa_rosier_admin_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 7;
@@ -31,6 +31,9 @@ function base64UrlToBytes(value: string) {
 }
 
 async function importSecretKey() {
+  if (!LOCAL_AUTH_SECRET) {
+    throw new Error("LOCAL_AUTH_SECRET is required for local bootstrap auth.");
+  }
   return crypto.subtle.importKey("raw", getEncoder().encode(LOCAL_AUTH_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
 }
 
@@ -68,11 +71,35 @@ async function verifySignature(payload: string, signature: string) {
   return crypto.subtle.verify("HMAC", key, base64UrlToBytes(signature), getEncoder().encode(payload));
 }
 
-export function validateLocalCredentials(email: string, password: string) {
-  return email.trim().toLowerCase() === LOCAL_ADMIN_EMAIL.trim().toLowerCase() && password === LOCAL_ADMIN_PASSWORD;
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", getEncoder().encode(value));
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function timingSafeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+export async function validateLocalCredentials(email: string, password: string) {
+  if (!LOCAL_ADMIN_PASSWORD_HASH || !LOCAL_AUTH_SECRET) return false;
+  const passwordHash = await sha256Hex(password);
+  return (
+    email.trim().toLowerCase() === LOCAL_ADMIN_EMAIL.trim().toLowerCase() &&
+    timingSafeEqual(passwordHash, LOCAL_ADMIN_PASSWORD_HASH.trim().toLowerCase())
+  );
 }
 
 export async function createLocalSessionToken(email: string) {
+  if (!LOCAL_AUTH_SECRET) {
+    throw new Error("LOCAL_AUTH_SECRET is required for local bootstrap auth.");
+  }
   const payload = encodePayload(toPayload(email.trim().toLowerCase()));
   const signature = await signPayload(payload);
   return `${payload}.${signature}`;
@@ -80,6 +107,9 @@ export async function createLocalSessionToken(email: string) {
 
 export async function readLocalSessionToken(token: string | undefined | null) {
   if (!token) {
+    return null;
+  }
+  if (!LOCAL_AUTH_SECRET) {
     return null;
   }
 

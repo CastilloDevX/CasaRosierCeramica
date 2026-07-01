@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { CmsAdminUser } from "@/lib/admin/users";
 
@@ -42,6 +42,10 @@ export default function UsersManager({ initialUsers }: { initialUsers: CmsAdminU
     setUsers(data.users);
     router.refresh();
   }
+
+  useEffect(() => {
+    void reloadUsers();
+  }, []);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

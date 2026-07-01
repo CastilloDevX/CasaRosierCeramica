@@ -3,12 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { navigation } from "@/data/navigation";
+import type { NavigationItem } from "@/data/types";
 import { classNames } from "@/lib/utils";
 
 const DESKTOP_SUBMENU_CLOSE_DELAY = 320;
 
-export function NavbarGlobal({ home = false }: { home?: boolean }) {
+export function NavbarGlobal({
+  home = false,
+  navigationItems,
+}: {
+  home?: boolean;
+  navigationItems: NavigationItem[];
+}) {
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
   const desktopCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -25,42 +31,13 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
     null
   );
   const [mobileAccordion, setMobileAccordion] = useState<string | null>(null);
-  const mobileItems = navigation
+  const mobileItems = navigationItems
     .filter((item) => item.visible)
     .sort((a, b) => a.order - b.order);
   const desktopItems = mobileItems.filter(
     (item) => !home || item.label !== "Inicio"
   );
-  const navigationByLabel = new Map(mobileItems.map((item) => [item.label, item]));
-  const visibleDropdownItems = (label: string) =>
-    (navigationByLabel.get(label)?.children ?? []).filter(
-      (child) => child.visible && child.href !== navigationByLabel.get(label)?.href
-    );
-  const scrollDesktopItems = [
-    { label: "Inicio", href: "/#hero", children: [] },
-    {
-      label: "Clases",
-      href: "/clases",
-      children: visibleDropdownItems("Clases")
-    },
-    {
-      label: "Workshops",
-      href: "/workshops",
-      children: visibleDropdownItems("Workshops")
-    },
-    {
-      label: "Reservas Privadas",
-      href: "/reservas-privadas",
-      children: visibleDropdownItems("Experiencias")
-    },
-    {
-      label: "Tarjeta de regalo",
-      href: "/gift-card",
-      children: visibleDropdownItems("Gift Card")
-    },
-    { label: "El Estudio", href: "/el-estudio", children: [] },
-    { label: "Blog", href: "/blog", children: [] }
-  ];
+  const scrollDesktopItems = desktopItems;
 
   const clearDesktopCloseTimeout = useCallback(() => {
     if (desktopCloseTimeoutRef.current) {
@@ -400,25 +377,26 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
             <ul className="scroll-desktop-nav__list">
               {scrollDesktopItems.map((item, index) => {
                 const open = scrollDesktopOpen === item.href;
+                const children = item.children ?? [];
                 return (
                   <li
                     className={classNames(
                       "scroll-desktop-nav__item",
-                      item.children.length > 0 &&
+                      children.length > 0 &&
                         "scroll-desktop-nav__item--has-children",
                       open && "is-open"
                     )}
                     key={item.href}
                     onMouseEnter={() =>
-                      item.children.length > 0 &&
+                      children.length > 0 &&
                       openScrollDesktopMenu(item.href)
                     }
                     onMouseLeave={() =>
-                      item.children.length > 0 &&
+                      children.length > 0 &&
                       scheduleScrollDesktopMenuClose()
                     }
                     onFocus={() =>
-                      item.children.length > 0 &&
+                      children.length > 0 &&
                       openScrollDesktopMenu(item.href)
                     }
                   >
@@ -429,7 +407,7 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
                       onClick={closeScrollDesktopMenu}
                     >
                       {item.label}
-                      {item.children.length > 0 && (
+                      {children.length > 0 && (
                         <span
                           className="scroll-desktop-nav__plus"
                           aria-hidden="true"
@@ -438,9 +416,9 @@ export function NavbarGlobal({ home = false }: { home?: boolean }) {
                         </span>
                       )}
                     </Link>
-                    {item.children.length > 0 && (
+                    {children.length > 0 && (
                       <ul className="scroll-desktop-submenu" role="menu">
-                        {item.children.map((child) => (
+                        {children.map((child) => (
                           <li
                             className="scroll-desktop-submenu__item"
                             role="none"

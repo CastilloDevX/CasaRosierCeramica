@@ -2,11 +2,17 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { published, shopCategories } from "@/data/shop";
+import type { ShopCategory, ShopItem } from "@/data/types";
 import { assetPath } from "@/lib/assets";
 import { classNames } from "@/lib/utils";
 
-export function ShopGrid() {
+export function ShopGrid({
+  published,
+  shopCategories,
+}: {
+  published: ShopItem[];
+  shopCategories: ShopCategory[];
+}) {
   const [category, setCategory] = useState("all");
   const items =
     category === "all"

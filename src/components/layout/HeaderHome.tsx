@@ -1,6 +1,9 @@
 import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
+import { getPublicNavigationItems } from "@/lib/cms/navigation-public";
 
-export function HeaderHome() {
+export async function HeaderHome() {
+  const navigationItems = await getPublicNavigationItems("main");
+
   return (
     <header
       id="hero"
@@ -8,7 +11,7 @@ export function HeaderHome() {
       data-header-component="HeaderHome"
     >
       <div className="hero__bg" />
-      <NavbarGlobal home />
+      <NavbarGlobal home navigationItems={navigationItems} />
       <h1 className="hero__title">Casa Rosier</h1>
       <div className="hero__overlays" aria-hidden="true">
         <img

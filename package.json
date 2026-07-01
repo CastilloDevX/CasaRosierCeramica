@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "supabase:push": "npx supabase db push",
+    "supabase:seed": "node scripts/seed-supabase.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

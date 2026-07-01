@@ -1,21 +1,7 @@
 import type { Metadata } from "next";
-import {
-  bySlug as staticBySlug,
-  classes,
-  giftCards,
-  privateExperiences,
-  workshops
-} from "@/data/classes";
 import type { ExperienceItem, ExperienceKind } from "@/data/types";
 import { getOfferings } from "@/lib/cms/offerings";
 import type { ClassOfferingDetails, Offering } from "@/lib/cms/types";
-
-const itemsByKind = {
-  class: classes,
-  workshop: workshops,
-  "private-booking": privateExperiences,
-  "gift-card": giftCards
-} satisfies Record<ExperienceKind, readonly ExperienceItem[]>;
 
 function splitParagraphs(value: string) {
   return value
@@ -106,7 +92,7 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
   };
 }
 
-async function getCmsItems() {
+export async function getPublicExperienceItems() {
   const offerings = await getOfferings();
   return offerings
     .filter((item) => item.status === "published")
@@ -114,17 +100,12 @@ async function getCmsItems() {
 }
 
 async function bySlug(slug: string) {
-  const cmsItem = (await getCmsItems()).find((item) => item.slug === slug);
-  return cmsItem ?? staticBySlug(slug);
+  return (await getPublicExperienceItems()).find((item) => item.slug === slug) ?? null;
 }
 
 export async function generateExperienceStaticParams(kind: ExperienceKind) {
-  const cmsItems = await getCmsItems();
-  const slugs = new Set([
-    ...itemsByKind[kind].map((item) => item.slug),
-    ...cmsItems.filter((item) => item.kind === kind).map((item) => item.slug),
-  ]);
-  return Array.from(slugs).map((slug) => ({ slug }));
+  const cmsItems = await getPublicExperienceItems();
+  return cmsItems.filter((item) => item.kind === kind).map((item) => ({ slug: item.slug }));
 }
 
 export async function generateExperienceMetadata(

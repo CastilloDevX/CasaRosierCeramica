@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ExperienceCollectionPage } from "@/features/experiences/ExperienceCollectionPage";
-import { experienceCollections } from "@/features/experiences/experienceRoutes";
+import { getExperienceCollectionConfig } from "@/features/experiences/experienceRoutes";
 
 export const metadata: Metadata = {
   title: "Experiencias",
@@ -8,8 +8,7 @@ export const metadata: Metadata = {
     "Reservas privadas y experiencias de ceramica de Casa Rosier en Barcelona."
 };
 
-export default function PrivateExperiencesPage() {
-  return (
-    <ExperienceCollectionPage config={experienceCollections.privateBookings} />
-  );
+export default async function PrivateExperiencesPage() {
+  const config = await getExperienceCollectionConfig("privateBookings");
+  return <ExperienceCollectionPage config={config} />;
 }

@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
+import { getPublicNavigationItems } from "@/lib/cms/navigation-public";
 import { assetPath } from "@/lib/assets";
 import { classNames } from "@/lib/utils";
 
@@ -14,7 +15,7 @@ interface HeaderInternoProps {
   children?: ReactNode;
 }
 
-export function HeaderInterno({
+export async function HeaderInterno({
   image = "img/hero-bg.jpg",
   variant = "text",
   eyebrow,
@@ -24,6 +25,7 @@ export function HeaderInterno({
   className,
   children
 }: HeaderInternoProps) {
+  const navigationItems = await getPublicNavigationItems("main");
   const style = {
     "--page-hero-image": `url("${assetPath(image)}")`
   } as CSSProperties;
@@ -51,7 +53,7 @@ export function HeaderInterno({
         data-header-alignment="center"
         data-header-overlay="warm"
       >
-        <NavbarGlobal />
+        <NavbarGlobal navigationItems={navigationItems} />
         {overlayTitle && titleContent && (
           <div
             className="header-interno__inner page-hero__inner container"

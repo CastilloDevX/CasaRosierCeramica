@@ -1,6 +1,4 @@
 import { randomUUID } from "crypto";
-import { readdir, stat } from "fs/promises";
-import path from "path";
 import { createAdminClient } from "../supabase/admin";
 import { addTrashItem, getCurrentUserEmail, getTrashItemByEntity, removeTrashItem } from "./trash";
 import { readJsonFile, writeJsonFile } from "./local-storage";
@@ -12,7 +10,6 @@ const TABLE = "media_assets";
 const STORAGE_BUCKET = "media";
 const FILE_NAME = "media.json";
 const MEDIA_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif", "svg", "avif", "mp4", "webm", "mov", "m4v", "pdf"]);
-const PUBLIC_MEDIA_DIRS = ["img", "uploads"];
 
 type MediaInput = Partial<Omit<MediaAsset, "id" | "created_at" | "updated_at" | "deleted_at">> & {
   id?: string;
@@ -127,58 +124,6 @@ async function listStorageFiles(prefix = ""): Promise<MediaAsset[]> {
   }
 }
 
-async function listPublicMediaFiles(): Promise<MediaAsset[]> {
-  const publicDir = path.join(process.cwd(), "public");
-
-  async function walk(relativeDir: string): Promise<MediaAsset[]> {
-    try {
-      const absoluteDir = path.join(publicDir, relativeDir);
-      const entries = await readdir(absoluteDir, { withFileTypes: true });
-      const nested = await Promise.all(entries.map(async (entry) => {
-        const relativePath = path.join(relativeDir, entry.name).replace(/\\/g, "/");
-        const absolutePath = path.join(publicDir, relativePath);
-
-        if (entry.isDirectory()) {
-          return walk(relativePath);
-        }
-
-        const ext = entry.name.split(".").pop()?.toLowerCase() || "";
-        if (!MEDIA_EXTENSIONS.has(ext)) return [];
-
-        const fileStat = await stat(absolutePath);
-        const updated = fileStat.mtime.toISOString();
-        const folder = path.dirname(relativePath).replace(/\\/g, "/");
-
-        return [{
-          id: `public:${relativePath}`,
-          file_name: relativePath,
-          original_name: entry.name,
-          file_url: `/${relativePath}`,
-          file_type: ext,
-          mime_type: "",
-          size: fileStat.size,
-          alt_text: "",
-          title: entry.name,
-          description: "",
-          folder,
-          tags: ["public"],
-          status: "active",
-          created_at: fileStat.birthtime.toISOString(),
-          updated_at: updated,
-          deleted_at: null,
-        } satisfies MediaAsset];
-      }));
-
-      return nested.flat();
-    } catch {
-      return [];
-    }
-  }
-
-  const results = await Promise.all(PUBLIC_MEDIA_DIRS.map((dir) => walk(dir)));
-  return results.flat();
-}
-
 function uniqueAssets(assets: MediaAsset[]) {
   const byKey = new Map<string, MediaAsset>();
 
@@ -233,12 +178,9 @@ async function deleteFileFromStorage(filePath: string): Promise<void> {
 export async function getMediaAssets() {
   const fromSupabase = await readAllFromSupabase();
   const registeredAssets = fromSupabase ?? await readJsonFile<MediaAsset[]>(FILE_NAME, []);
-  const [publicAssets, storageAssets] = await Promise.all([
-    listPublicMediaFiles(),
-    listStorageFiles(),
-  ]);
+  const storageAssets = await listStorageFiles();
 
-  return uniqueAssets([...registeredAssets, ...publicAssets, ...storageAssets]);
+  return uniqueAssets([...registeredAssets, ...storageAssets]);
 }
 
 export async function getMediaAssetById(id: string) {

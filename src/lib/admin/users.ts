@@ -12,6 +12,14 @@ export interface CmsAdminUser {
   last_sign_in_at: string | null;
 }
 
+type AdminProfileRow = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: string;
+  created_at: string;
+};
+
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
@@ -42,16 +50,24 @@ async function getAuthUsers() {
 }
 
 export async function getCmsAdminUsers(): Promise<CmsAdminUser[]> {
-  const supabase = createAdminClient();
-  const [authUsersResult, profilesResult] = await Promise.all([
-    getAuthUsers(),
-    supabase.from("profiles").select("id,email,full_name,role,created_at"),
-  ]);
+  let authUsersResult: User[] = [];
+  let profiles: AdminProfileRow[] = [];
 
-  if (profilesResult.error) throw profilesResult.error;
+  try {
+    const supabase = createAdminClient();
+    const [authUsers, profilesResult] = await Promise.all([
+      getAuthUsers(),
+      supabase.from("profiles").select("id,email,full_name,role,created_at"),
+    ]);
+    if (profilesResult.error) throw profilesResult.error;
+    authUsersResult = authUsers;
+    profiles = (profilesResult.data ?? []) as AdminProfileRow[];
+  } catch {
+    return [];
+  }
 
   const profilesById = new Map(
-    (profilesResult.data ?? []).map((profile) => [profile.id, profile]),
+    profiles.map((profile) => [profile.id, profile]),
   );
 
   return authUsersResult

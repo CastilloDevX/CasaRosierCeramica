@@ -4,11 +4,16 @@ import { IdeaPromptSection } from "@/features/shared/contextual-sections/IdeaPro
 import { SitePage } from "@/features/shared/layout/SitePage";
 import { StudioProfileBlock } from "@/features/studio/StudioProfileBlock";
 import { getPublicTestimonials } from "@/lib/cms/public-content";
+import { getPublicNavigationItems } from "@/lib/cms/navigation-public";
 import { getTeachers } from "@/lib/cms/teachers";
 import { assetPath } from "@/lib/assets";
 
 export async function StudioPage() {
-  const [cmsTestimonials, teachers] = await Promise.all([getPublicTestimonials(), getTeachers()]);
+  const [cmsTestimonials, teachers, navigationItems] = await Promise.all([
+    getPublicTestimonials(),
+    getTeachers(),
+    getPublicNavigationItems("main"),
+  ]);
   const testimonials = cmsTestimonials
     .map((item) => ({
       image: item.avatar_id || "/img/avatar-1.jpg",
@@ -25,7 +30,7 @@ export async function StudioPage() {
       bodyClass="studio-page"
       header={
         <header className="studio-header">
-          <NavbarGlobal />
+          <NavbarGlobal navigationItems={navigationItems} />
         </header>
       }
     >

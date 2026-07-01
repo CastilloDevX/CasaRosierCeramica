@@ -1,4 +1,3 @@
-import { blogPosts as fallbackBlogPosts } from "@/data/blog";
 import type { BlogContentBlock, BlogPost as PublicBlogPost } from "@/data/types";
 import { getBlogPosts } from "./blog";
 import type { BlogPost as CmsBlogPost, BlogPostBlock } from "./types";
@@ -124,8 +123,8 @@ function cmsToPublicPost(post: CmsBlogPost): PublicBlogPost {
 
 export async function getPublicBlogPosts() {
   const cmsPosts = await getBlogPosts();
-  const source = cmsPosts.length ? cmsPosts.map(cmsToPublicPost) : fallbackBlogPosts;
-  return source
+  return cmsPosts
+    .map(cmsToPublicPost)
     .filter((post) => post.status === "published")
     .sort((a, b) => normalizeDate(b.publishedAt) - normalizeDate(a.publishedAt) || a.manualOrder - b.manualOrder);
 }

@@ -1,5 +1,3 @@
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createMediaAsset } from "@/lib/cms/media";
@@ -50,13 +48,6 @@ export async function POST(request: NextRequest) {
   const storagePath = `${folder}/${safeName}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  // Save locally as fallback
-  const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
-  await mkdir(uploadDir, { recursive: true });
-  await writeFile(path.join(uploadDir, safeName), buffer);
-
-  // Upload to Supabase Storage (best-effort)
-  let fileUrl = `/uploads/${folder}/${safeName}`;
   try {
     const supabase = createAdminClient();
     const { error: uploadError } = await supabase.storage
@@ -65,30 +56,33 @@ export async function POST(request: NextRequest) {
         contentType: file.type,
         upsert: false,
       });
-    if (!uploadError) {
-      const { data: publicUrlData } = supabase.storage
-        .from(STORAGE_BUCKET)
-        .getPublicUrl(storagePath);
-      if (publicUrlData?.publicUrl) {
-        fileUrl = publicUrlData.publicUrl;
-      }
+    if (uploadError) {
+      return NextResponse.json({ error: uploadError.message }, { status: 500 });
     }
-  } catch { /* best-effort */ }
 
-  const asset = await createMediaAsset({
-    file_name: storagePath,
-    original_name: file.name,
-    file_url: fileUrl,
-    file_type: ext,
-    mime_type: file.type,
-    size: file.size,
-    alt_text: altText,
-    title: title || file.name,
-    description: "",
-    folder,
-    tags: [],
-    status: "active",
-  });
+    const { data: publicUrlData } = supabase.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(storagePath);
+    const fileUrl = publicUrlData.publicUrl;
 
-  return NextResponse.json({ asset });
+    const asset = await createMediaAsset({
+      file_name: storagePath,
+      original_name: file.name,
+      file_url: fileUrl,
+      file_type: ext,
+      mime_type: file.type,
+      size: file.size,
+      alt_text: altText,
+      title: title || file.name,
+      description: "",
+      folder,
+      tags: [],
+      status: "active",
+    });
+
+    return NextResponse.json({ asset });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo subir el archivo a Supabase Storage.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
