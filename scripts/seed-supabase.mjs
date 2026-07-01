@@ -329,14 +329,20 @@ async function seedForms(supabase) {
 
 async function seedMenus(supabase) {
   const menusSource = asArray(readJson("menus.json"));
+  const offerings = asArray(readJson("offerings.json")).filter((offering) => offering.status === "published");
   const menuItemIdMap = new Map();
-  for (const menu of menusSource) {
+  const menusWithItems = menusSource.map((menu) => ({
+    ...menu,
+    items: (menu.items?.length ? menu.items : defaultMenuItems(menu, offerings)),
+  }));
+
+  for (const menu of menusWithItems) {
     for (const item of menu.items ?? []) {
       if (item.id) menuItemIdMap.set(item.id, sqlId(item.id));
     }
   }
-  const menus = menusSource.map((menu) => normalizeSqlId(omit(menu, ["items"])));
-  const items = menusSource.flatMap((menu) =>
+  const menus = menusWithItems.map((menu) => normalizeSqlId(omit(menu, ["items"])));
+  const items = menusWithItems.flatMap((menu) =>
     (menu.items ?? []).map((item, index) => normalizeSqlId({
       ...item,
       menu_id: sqlId(menu.id),
@@ -348,6 +354,71 @@ async function seedMenus(supabase) {
   await replaceChildren(supabase, "menu_items", "menu_id", menus.map((menu) => menu.id), items);
   console.log(`menus: ${menus.length}; menu_items: ${items.length}`);
   return menus.length + items.length;
+}
+
+function routeForOffering(offering) {
+  if (offering.type === "workshop") return `/workshops/${offering.slug}`;
+  if (offering.type === "gift_card") return `/gift-card/${offering.slug}`;
+  if (offering.type === "experience") return `/reservas-privadas/${offering.slug}`;
+  return `/clases/${offering.slug}`;
+}
+
+function defaultMenuItems(menu, offerings) {
+  const now = new Date().toISOString();
+  const base = (key, label, url, order, parent_id = null) => ({
+    id: `${menu.id}:${key}`,
+    label,
+    type: "internal",
+    url,
+    linked_entity_type: "none",
+    linked_entity_id: "",
+    parent_id,
+    sort_order: order,
+    is_visible: true,
+    open_in_new_tab: false,
+    created_at: now,
+    updated_at: now,
+  });
+  const childrenFor = (parentKey, type, startOrder) =>
+    offerings
+      .filter((offering) => offering.type === type)
+      .sort((a, b) => String(a.title).localeCompare(String(b.title)))
+      .map((offering, index) => ({
+        ...base(`${parentKey}:${offering.slug}`, offering.title, routeForOffering(offering), startOrder + index, `${menu.id}:${parentKey}`),
+        linked_entity_type: "offering",
+        linked_entity_id: sqlId(offering.id),
+      }));
+
+  if (menu.location === "footer") {
+    return [
+      base("inicio", "Inicio", "/#hero", 0),
+      base("clases", "Clases", "/clases", 1),
+      base("workshops", "Workshops", "/workshops", 2),
+      base("experiencias", "Reservas Privadas", "/reservas-privadas", 3),
+      base("gift-card", "Tarjeta de regalo", "/gift-card", 4),
+      base("estudio", "El Estudio", "/el-estudio", 5),
+      base("blog", "Blog", "/blog", 6),
+      base("privacidad", "Privacidad", "/politica-privacidad", 7),
+    ];
+  }
+
+  const parents = [
+    base("inicio", "Inicio", "/#hero", 0),
+    base("clases", "Clases", "/clases", 1),
+    base("workshops", "Workshops", "/workshops", 2),
+    base("experiencias", "Reservas Privadas", "/reservas-privadas", 3),
+    base("gift-card", "Tarjeta de regalo", "/gift-card", 4),
+    base("estudio", "El Estudio", "/el-estudio", 5),
+    base("blog", "Blog", "/blog", 6),
+  ];
+
+  return [
+    ...parents,
+    ...childrenFor("clases", "class", 10),
+    ...childrenFor("workshops", "workshop", 30),
+    ...childrenFor("experiencias", "experience", 50),
+    ...childrenFor("gift-card", "gift_card", 70),
+  ];
 }
 
 async function seedSocialGalleries(supabase) {
@@ -441,20 +512,45 @@ async function uploadPublicMedia(supabase) {
   const mediaRoots = ["img", "uploads"].map((dir) => path.join(PUBLIC_DIR, dir)).filter((dir) => existsSync(dir));
   const mediaFiles = mediaRoots.flatMap(walkFiles);
   let count = 0;
+  const mediaRows = [];
 
   for (const file of mediaFiles) {
     const storagePath = path.relative(PUBLIC_DIR, file).replace(/\\/g, "/");
     const fileStat = statSync(file);
     if (fileStat.size > 10 * 1024 * 1024) continue;
+    const mimeType = contentTypeFor(file);
 
     const { error } = await supabase.storage.from(BUCKET).upload(storagePath, readFileSync(file), {
-      contentType: contentTypeFor(file),
+      contentType: mimeType,
       upsert: true,
     });
     if (error) throw new Error(`storage ${storagePath}: ${error.message}`);
+
+    const { data: publicUrlData } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
+    const originalName = path.basename(file);
+    const folder = path.dirname(storagePath) === "." ? "general" : path.dirname(storagePath).replace(/\\/g, "/");
+    mediaRows.push({
+      id: sqlId(`storage:${storagePath}`),
+      file_name: storagePath,
+      original_name: originalName,
+      file_url: publicUrlData.publicUrl,
+      file_type: path.extname(file).replace(/^\./, "").toLowerCase() || "file",
+      mime_type: mimeType,
+      size: fileStat.size,
+      alt_text: "",
+      title: originalName,
+      description: "",
+      folder,
+      tags: ["supabase-storage"],
+      status: "active",
+      created_at: new Date(fileStat.birthtimeMs || fileStat.mtimeMs).toISOString(),
+      updated_at: new Date(fileStat.mtimeMs).toISOString(),
+      deleted_at: null,
+    });
     count += 1;
   }
 
+  await upsertRows(supabase, "media_assets", mediaRows);
   console.log(`storage.${BUCKET}: ${count}`);
   return count;
 }

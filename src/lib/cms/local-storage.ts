@@ -10,6 +10,7 @@ const SIMPLE_FILES: Record<string, string> = {
   "headers.json": "headers",
   "history-logs.json": "history_logs",
   "media.json": "media_assets",
+  "offerings.json": "offerings",
   "pages.json": "pages",
   "product-categories.json": "product_categories",
   "products.json": "products",

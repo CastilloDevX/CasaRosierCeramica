@@ -9,7 +9,7 @@ import { logAction } from "./history-logs";
 
 const TABLE = "offerings";
 const FILE_NAME = "offerings.json";
-const SUPABASE_READ_TIMEOUT_MS = 900;
+const SUPABASE_READ_TIMEOUT_MS = 10_000;
 const OFFERINGS_CACHE_TTL_MS = 15_000;
 
 let offeringsCache: { items: Offering[]; expiresAt: number } | null = null;
