@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { CookieBar } from "@/components/layout/CookieBar";
+import MarketingPageViewTracker from "@/components/marketing/MarketingPageViewTracker";
 import { WhatsAppFloat } from "@/components/layout/WhatsAppFloat";
 
 export function SiteChrome() {
@@ -12,6 +13,7 @@ export function SiteChrome() {
 
   return (
     <>
+      <MarketingPageViewTracker />
       <CookieBar />
       {pathname !== "/politica-privacidad" && <WhatsAppFloat />}
     </>

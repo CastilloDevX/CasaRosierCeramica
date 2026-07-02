@@ -234,7 +234,7 @@ export interface Offering {
   deleted_at: string | null;
 }
 
-export const MEDIA_FOLDERS = ["home", "headers", "offerings", "shop", "bitacora", "estudio", "logos", "general"] as const;
+export const MEDIA_FOLDERS = ["home", "headers", "offerings", "shop", "bitacora", "estudio", "marketing", "logos", "general"] as const;
 export const MEDIA_STATUSES = ["active", "archived", "deleted"] as const;
 export const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif", "svg", "pdf"] as const;
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -899,6 +899,282 @@ export interface ShippingMethod {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+}
+
+/* ── Marketing Settings ── */
+export const MARKETING_EVENTS = [
+  "page_view", "lead", "contact_form", "newsletter_signup", "click_whatsapp", "click_instagram",
+  "click_external_link",
+  "class_booking", "workshop_booking", "experience_booking", "gift_card_purchase",
+  "add_to_cart", "initiate_checkout", "purchase",
+] as const;
+export type MarketingEvent = (typeof MARKETING_EVENTS)[number];
+
+export interface MarketingPublicButtonLink {
+  id: string;
+  label: string;
+  url: string;
+  eventName: Extract<MarketingEvent, "click_whatsapp" | "click_instagram" | "click_external_link">;
+}
+
+export interface MarketingSettings {
+  analytics_enabled: boolean;
+  ga4_measurement_id: string;
+  gtm_container_id: string;
+  google_search_console_id: string;
+  microsoft_clarity_id: string;
+  meta_pixel_enabled: boolean;
+  meta_pixel_id: string;
+  meta_conversion_api_enabled: boolean;
+  meta_access_token: string;
+  meta_dataset_id: string;
+  tiktok_pixel_enabled: boolean;
+  tiktok_pixel_id: string;
+  pinterest_tag_enabled: boolean;
+  pinterest_tag_id: string;
+  linkedin_insight_enabled: boolean;
+  linkedin_partner_id: string;
+  seo_global_title: string;
+  seo_global_description: string;
+  seo_og_image: string;
+  robots_enabled: boolean;
+  sitemap_enabled: boolean;
+  schema_enabled: boolean;
+  events: MarketingEvent[];
+  utm_builder_enabled: boolean;
+  automation_webhooks_enabled: boolean;
+  webhook_url: string;
+  whatsapp_button_url: string;
+  instagram_button_url: string;
+  public_button_links: MarketingPublicButtonLink[];
+  updated_at: string;
+}
+
+export function defaultMarketingSettings(): MarketingSettings {
+  return {
+    analytics_enabled: false, ga4_measurement_id: "", gtm_container_id: "", google_search_console_id: "", microsoft_clarity_id: "",
+    meta_pixel_enabled: false, meta_pixel_id: "", meta_conversion_api_enabled: false, meta_access_token: "", meta_dataset_id: "",
+    tiktok_pixel_enabled: false, tiktok_pixel_id: "", pinterest_tag_enabled: false, pinterest_tag_id: "", linkedin_insight_enabled: false, linkedin_partner_id: "",
+    seo_global_title: "", seo_global_description: "", seo_og_image: "", robots_enabled: true, sitemap_enabled: true, schema_enabled: true,
+    events: ["page_view", "contact_form", "click_whatsapp", "click_instagram"],
+    utm_builder_enabled: false, automation_webhooks_enabled: false, webhook_url: "", whatsapp_button_url: "", instagram_button_url: "", public_button_links: [
+      { id: "whatsapp", label: "WhatsApp", url: "", eventName: "click_whatsapp" },
+      { id: "instagram", label: "Instagram", url: "", eventName: "click_instagram" },
+    ], updated_at: new Date().toISOString(),
+  };
+}
+
+/* ── Marketing Campaigns (UTM) ── */
+export const MARKETING_CAMPAIGN_STATUSES = ["draft", "active", "paused", "finished", "archived"] as const;
+export type MarketingCampaignStatus = (typeof MARKETING_CAMPAIGN_STATUSES)[number];
+
+export interface MarketingCampaign {
+  id: string;
+  name: string;
+  slug: string;
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+  utm_content: string;
+  utm_term: string;
+  destination_url: string;
+  generated_url: string;
+  start_date: string;
+  end_date: string;
+  status: MarketingCampaignStatus;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/* ── Marketing Event Types ── */
+export const MARKETING_EVENT_CATEGORIES = ["conversion", "engagement", "navigation", "commerce", "content"] as const;
+export type MarketingEventCategory = (typeof MARKETING_EVENT_CATEGORIES)[number];
+
+export interface MarketingEventType {
+  id: string;
+  name: string;
+  label: string;
+  description: string;
+  category: MarketingEventCategory;
+  is_active: boolean;
+  last_triggered_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/* ── Marketing Event Logs ── */
+export interface MarketingEventLog {
+  id: string;
+  event_id: string;
+  event_name: string;
+  page_url: string;
+  page_title: string;
+  content_type: string;
+  content_id: string;
+  campaign_id: string;
+  source: string;
+  medium: string;
+  device: string;
+  country: string;
+  city: string;
+  metadata: Record<string, unknown>;
+  occurred_at: string;
+  created_at: string;
+}
+
+/* ── Marketing Page Metrics ── */
+export const MARKETING_CONTENT_TYPES = ["home", "page", "class", "workshop", "experience", "gift_card", "product", "blog_post"] as const;
+export type MarketingContentType = (typeof MARKETING_CONTENT_TYPES)[number];
+
+export interface MarketingPageMetric {
+  id: string;
+  page_path: string;
+  page_title: string;
+  content_type: MarketingContentType;
+  content_id: string;
+  date: string;
+  views: number;
+  active_users: number;
+  new_users: number;
+  sessions: number;
+  engagement_rate: number;
+  average_engagement_time: number;
+  bounce_rate: number;
+  conversions: number;
+  cta_clicks: number;
+  whatsapp_clicks: number;
+  form_submissions: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/* ── Marketing Traffic Sources ── */
+export interface MarketingTrafficSource {
+  id: string;
+  date: string;
+  source: string;
+  medium: string;
+  campaign: string;
+  sessions: number;
+  users: number;
+  new_users: number;
+  conversions: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/* ── Marketing Conversions ── */
+export const MARKETING_CONVERSION_TYPES = [
+  "whatsapp_click", "form_submit", "booking_click",
+  "purchase", "gift_card_purchase", "newsletter_signup", "email_click",
+] as const;
+export type MarketingConversionType = (typeof MARKETING_CONVERSION_TYPES)[number];
+
+export interface MarketingConversion {
+  id: string;
+  conversion_type: MarketingConversionType;
+  page_url: string;
+  page_title: string;
+  content_type: MarketingContentType;
+  content_id: string;
+  campaign_id: string;
+  source: string;
+  medium: string;
+  value: number;
+  currency: string;
+  metadata: Record<string, unknown>;
+  occurred_at: string;
+  created_at: string;
+}
+
+/* ── Marketing Reports ── */
+export const MARKETING_REPORT_TYPES = ["weekly", "monthly", "campaign", "page", "seo", "conversion"] as const;
+export const MARKETING_REPORT_STATUSES = ["pending", "generating", "ready", "failed"] as const;
+export type MarketingReportType = (typeof MARKETING_REPORT_TYPES)[number];
+export type MarketingReportStatus = (typeof MARKETING_REPORT_STATUSES)[number];
+
+export interface MarketingReport {
+  id: string;
+  name: string;
+  type: MarketingReportType;
+  date_from: string;
+  date_to: string;
+  file_url: string;
+  status: MarketingReportStatus;
+  generated_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/* ── Marketing Search Console ── */
+export interface MarketingSearchConsoleQuery {
+  id: string;
+  date: string;
+  query: string;
+  page: string;
+  country: string;
+  device: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MarketingSearchConsolePage {
+  id: string;
+  date: string;
+  page: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MarketingSearchConsoleSummary {
+  id: string;
+  date: string;
+  total_clicks: number;
+  total_impressions: number;
+  average_ctr: number;
+  average_position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/* ── Marketing SEO Audit ── */
+export const MARKETING_SEO_STATUSES = ["ok", "incomplete", "review", "error", "pending"] as const;
+export const MARKETING_SLUG_STATUSES = ["ok", "duplicate", "missing", "too_long", "review"] as const;
+export type MarketingSeoStatus = (typeof MARKETING_SEO_STATUSES)[number];
+export type MarketingSlugStatus = (typeof MARKETING_SLUG_STATUSES)[number];
+
+export interface MarketingSeoAudit {
+  id: string;
+  content_id?: string;
+  edit_url?: string;
+  page_url: string;
+  page_title: string;
+  content_type: MarketingContentType;
+  meta_title: string;
+  meta_description: string;
+  og_image: string;
+  canonical_url: string;
+  is_indexable: boolean;
+  has_meta_title: boolean;
+  has_meta_description: boolean;
+  has_og_image: boolean;
+  has_canonical: boolean;
+  slug_status: MarketingSlugStatus;
+  seo_status: MarketingSeoStatus;
+  issues: string[];
+  recommendations: string[];
+  last_checked_at: string;
+  created_at: string;
+  updated_at: string;
 }
 
 /* ── Legal Settings ── */

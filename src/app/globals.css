@@ -500,7 +500,7 @@ button:disabled {
 }
 
 .admin-sidebar__submenu-wrap--open {
-  max-height: 320px;
+  max-height: 460px;
   opacity: 1;
 }
 
@@ -997,6 +997,24 @@ button:disabled {
 
 .admin-table tr.is-unread-row td {
   background: #fbfaff;
+}
+
+.cms-admin .admin-marketing-input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #cac4d4;
+  border-radius: 8px;
+  background: #fff;
+  color: #0b1c30;
+  font: 400 14px/20px var(--font-manrope), Manrope, sans-serif;
+  outline: none;
+  padding: 10px 12px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.cms-admin .admin-marketing-input:focus {
+  border-color: #674bb5;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.34);
 }
 
 .row-actions {

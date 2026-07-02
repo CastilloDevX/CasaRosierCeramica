@@ -37,10 +37,18 @@
   --text-headline-sm: 16px;
   --text-headline-sm--line-height: 24px;
   --text-headline-sm--font-weight: 600;
+  --text-title-md: 16px;
+  --text-title-md--line-height: 24px;
+  --text-title-md--font-weight: 700;
   --text-body-md: 14px;
   --text-body-md--line-height: 20px;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
   --text-label-md: 12px;
   --text-label-md--line-height: 16px;
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 16px;
+  --text-label-sm--font-weight: 600;
   --text-label-caps: 11px;
   --text-label-caps--line-height: 16px;
   --spacing-touch-target: 3rem;
