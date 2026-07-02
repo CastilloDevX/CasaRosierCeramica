@@ -40,7 +40,6 @@ export const adminRoutes = {
   media: "/admin/media",
   users: "/admin/users",
   settings: "/admin/settings",
-  marketing: "/admin/marketing",
   legal: "/admin/legal-cookies",
   historyLogs: "/admin/history-logs",
   trash: "/admin/trash",
@@ -101,7 +100,6 @@ export const adminSections: AdminNavSection[] = [
     label: "Configuración",
     icon: "settings",
     children: [
-      { label: "Marketing y analíticas", href: adminRoutes.marketing },
       { label: "Políticas de privacidad", href: adminRoutes.legal },
       { label: "Historial de actividad", href: adminRoutes.historyLogs },
       { label: "Papelera", href: adminRoutes.trash },

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MarkdownContent, renderInlineMarkdown } from "@/components/ui/MarkdownContent";
 import type { BlogContentBlock, BlogPost } from "@/data/types";
 import { assetPath, internalHref } from "@/lib/assets";
 
@@ -89,17 +90,17 @@ export function BlogDetail({
 function ContentBlock({ block }: { block: BlogContentBlock }) {
   switch (block.type) {
     case "paragraph":
-      return <p>{block.content}</p>;
+      return <MarkdownContent source={block.content} />;
     case "heading":
       return block.level === 3 ? (
-        <h3>{block.content}</h3>
+        <h3>{renderInlineMarkdown(block.content)}</h3>
       ) : (
-        <h2>{block.content}</h2>
+        <h2>{renderInlineMarkdown(block.content)}</h2>
       );
     case "quote":
       return (
         <blockquote className="blog-post__quote">
-          <p>{block.content}</p>
+          <p>{renderInlineMarkdown(block.content)}</p>
         </blockquote>
       );
     case "image":
@@ -113,7 +114,7 @@ function ContentBlock({ block }: { block: BlogContentBlock }) {
       return (
         <ul>
           {block.items.map((item) => (
-            <li key={item}>{item}</li>
+            <li key={item}>{renderInlineMarkdown(item)}</li>
           ))}
         </ul>
       );

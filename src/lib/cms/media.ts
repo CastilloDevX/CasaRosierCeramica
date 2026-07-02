@@ -9,7 +9,16 @@ import { logAction } from "./history-logs";
 const TABLE = "media_assets";
 const STORAGE_BUCKET = "media";
 const FILE_NAME = "media.json";
+const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif", "svg", "avif"]);
 const MEDIA_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif", "svg", "avif", "mp4", "webm", "mov", "m4v", "pdf"]);
+
+export function isMediaImage(asset: Pick<MediaAsset, "file_type" | "mime_type">) {
+  return IMAGE_EXTENSIONS.has(asset.file_type.toLowerCase()) || asset.mime_type.toLowerCase().startsWith("image/");
+}
+
+function storagePathFromAssetId(id: string) {
+  return id.startsWith("storage:") ? id.slice("storage:".length) : null;
+}
 
 type MediaInput = Partial<Omit<MediaAsset, "id" | "created_at" | "updated_at" | "deleted_at">> & {
   id?: string;
@@ -152,6 +161,52 @@ async function readFromSupabase(query: (s: ReturnType<typeof createAdminClient>)
   return null;
 }
 
+async function getStorageAssetByPath(filePath: string): Promise<MediaAsset | null> {
+  try {
+    const supabase = createAdminClient();
+    const lastSlashIndex = filePath.lastIndexOf("/");
+    const prefix = lastSlashIndex >= 0 ? filePath.slice(0, lastSlashIndex) : "";
+    const fileName = lastSlashIndex >= 0 ? filePath.slice(lastSlashIndex + 1) : filePath;
+    const { data, error } = await supabase.storage.from(STORAGE_BUCKET).list(prefix, {
+      limit: 1000,
+      offset: 0,
+      sortBy: { column: "name", order: "asc" },
+    });
+    if (error || !data) return null;
+
+    const item = data.find((entry) => entry.name === fileName);
+    if (!item) return null;
+
+    const metadata = item.metadata as { mimetype?: string; size?: number } | null | undefined;
+    const ext = fileName.split(".").pop()?.toLowerCase() || "";
+    if (!MEDIA_EXTENSIONS.has(ext)) return null;
+
+    const { data: publicUrlData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(filePath);
+    const now = item.updated_at || item.created_at || new Date().toISOString();
+
+    return {
+      id: `storage:${filePath}`,
+      file_name: filePath,
+      original_name: fileName,
+      file_url: publicUrlData.publicUrl,
+      file_type: ext,
+      mime_type: metadata?.mimetype || "",
+      size: Number(metadata?.size || 0),
+      alt_text: "",
+      title: fileName,
+      description: "",
+      folder: prefix || "media",
+      tags: ["supabase-storage"],
+      status: "active",
+      created_at: item.created_at || now,
+      updated_at: now,
+      deleted_at: null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function upsertMediaAsset(a: MediaAsset): Promise<void> {
   try {
     const supabase = createAdminClient();
@@ -159,18 +214,24 @@ async function upsertMediaAsset(a: MediaAsset): Promise<void> {
   } catch { /* best-effort */ }
 }
 
-async function deleteAssetFromDb(id: string): Promise<void> {
+async function deleteAssetFromDb(id: string, fileName?: string): Promise<void> {
   try {
     const supabase = createAdminClient();
     await supabase.from(TABLE).delete().eq("id", id);
+    if (fileName) {
+      await supabase.from(TABLE).delete().eq("file_name", fileName);
+    }
   } catch { /* best-effort */ }
 }
 
-async function deleteFileFromStorage(filePath: string): Promise<void> {
+async function deleteFileFromStorage(filePath: string): Promise<boolean> {
   try {
     const supabase = createAdminClient();
-    await supabase.storage.from(STORAGE_BUCKET).remove([filePath]);
-  } catch { /* best-effort */ }
+    const { error } = await supabase.storage.from(STORAGE_BUCKET).remove([filePath]);
+    return !error;
+  } catch {
+    return false;
+  }
 }
 
 // ── Public API ──
@@ -184,6 +245,18 @@ export async function getMediaAssets() {
 }
 
 export async function getMediaAssetById(id: string) {
+  const storagePath = storagePathFromAssetId(id);
+  if (storagePath) {
+    const fromDb = await readFromSupabase(async (supabase) => {
+      const { data } = await supabase.from(TABLE).select("*").eq("file_name", storagePath).maybeSingle();
+      return data as Record<string, unknown> | null;
+    });
+    if (fromDb) return fromDb;
+
+    const fromStorage = await getStorageAssetByPath(storagePath);
+    if (fromStorage) return fromStorage;
+  }
+
   const result = await readFromSupabase(async (supabase) => {
     const { data } = await supabase.from(TABLE).select("*").eq("id", id).maybeSingle();
     return data as Record<string, unknown> | null;
@@ -216,16 +289,29 @@ export async function updateMediaAsset(id: string, data: MediaInput) {
 }
 
 export async function deleteMediaAsset(id: string) {
+  const storagePath = storagePathFromAssetId(id);
   const assets = await readJsonFile<MediaAsset[]>(FILE_NAME, []);
-  const item = assets.find((a) => a.id === id);
-  const next = assets.filter((a) => a.id !== id);
-  if (next.length === assets.length) return false;
-  await writeJsonFile(FILE_NAME, next);
-  await deleteAssetFromDb(id);
-  if (item) {
-    await deleteFileFromStorage(item.file_name);
-    await logAction({ action: "delete_permanently", entity_type: "media", entity_id: id, entity_title: item.original_name || item.file_name, old_data: item });
+  const localItem = assets.find((a) => a.id === id || (storagePath ? a.file_name === storagePath : false));
+  const asset = localItem ?? await getMediaAssetById(id);
+
+  if (!asset) return false;
+
+  const storageDeleted = await deleteFileFromStorage(asset.file_name);
+  if (!storageDeleted) return false;
+
+  const next = assets.filter((a) => a.id !== asset.id && a.id !== id && a.file_name !== asset.file_name);
+  if (next.length !== assets.length) {
+    await writeJsonFile(FILE_NAME, next);
   }
+
+  await deleteAssetFromDb(asset.id, asset.file_name);
+
+  const trashItem = await getTrashItemByEntity(asset.id);
+  if (trashItem) {
+    await removeTrashItem(trashItem.id);
+  }
+
+  await logAction({ action: "delete_permanently", entity_type: "media", entity_id: asset.id, entity_title: asset.original_name || asset.file_name, old_data: asset });
   return true;
 }
 

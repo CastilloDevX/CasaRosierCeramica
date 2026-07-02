@@ -1,9 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { deleteMediaAsset, getMediaAssetById, moveMediaToTrash, restoreMediaAsset } from "@/lib/cms/media";
+import { deleteMediaAsset, getMediaAssetById, isMediaImage, moveMediaToTrash, restoreMediaAsset } from "@/lib/cms/media";
 import { requireAdminApi } from "@/lib/auth/supabase-auth";
-import { createAdminClient } from "@/lib/supabase/admin";
-
-const STORAGE_BUCKET = "media";
 
 export async function POST(request: NextRequest) {
   const session = await requireAdminApi();
@@ -33,17 +30,17 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "permanent") {
-    // Get the file_name before deleting so we can remove from Storage
     const asset = await getMediaAssetById(id);
-    if (asset && asset.file_name) {
-      try {
-        const supabase = createAdminClient();
-        await supabase.storage.from(STORAGE_BUCKET).remove([asset.file_name]);
-      } catch { /* best-effort */ }
+    if (!asset) {
+      return NextResponse.json({ error: "Asset no encontrado." }, { status: 404 });
     }
+    if (!isMediaImage(asset)) {
+      return NextResponse.json({ error: "Solo las fotos se pueden eliminar desde Multimedia." }, { status: 400 });
+    }
+
     const deleted = await deleteMediaAsset(id);
     if (!deleted) {
-      return NextResponse.json({ error: "Asset no encontrado." }, { status: 404 });
+      return NextResponse.json({ error: "No se pudo eliminar la foto en Supabase." }, { status: 500 });
     }
     return NextResponse.json({ ok: true });
   }

@@ -234,7 +234,7 @@ export interface Offering {
   deleted_at: string | null;
 }
 
-export const MEDIA_FOLDERS = ["home", "headers", "offerings", "shop", "bitacora", "estudio", "marketing", "logos", "general"] as const;
+export const MEDIA_FOLDERS = ["home", "headers", "offerings", "shop", "bitacora", "estudio", "logos", "general"] as const;
 export const MEDIA_STATUSES = ["active", "archived", "deleted"] as const;
 export const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif", "svg", "pdf"] as const;
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -899,55 +899,6 @@ export interface ShippingMethod {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
-}
-
-/* ── Marketing Settings ── */
-export const MARKETING_EVENTS = [
-  "page_view", "lead", "contact_form", "newsletter_signup", "click_whatsapp", "click_instagram",
-  "class_booking", "workshop_booking", "experience_booking", "gift_card_purchase",
-  "add_to_cart", "initiate_checkout", "purchase",
-] as const;
-export type MarketingEvent = (typeof MARKETING_EVENTS)[number];
-
-export interface MarketingSettings {
-  analytics_enabled: boolean;
-  ga4_measurement_id: string;
-  gtm_container_id: string;
-  google_search_console_id: string;
-  microsoft_clarity_id: string;
-  meta_pixel_enabled: boolean;
-  meta_pixel_id: string;
-  meta_conversion_api_enabled: boolean;
-  meta_access_token: string;
-  meta_dataset_id: string;
-  tiktok_pixel_enabled: boolean;
-  tiktok_pixel_id: string;
-  pinterest_tag_enabled: boolean;
-  pinterest_tag_id: string;
-  linkedin_insight_enabled: boolean;
-  linkedin_partner_id: string;
-  seo_global_title: string;
-  seo_global_description: string;
-  seo_og_image: string;
-  robots_enabled: boolean;
-  sitemap_enabled: boolean;
-  schema_enabled: boolean;
-  events: MarketingEvent[];
-  utm_builder_enabled: boolean;
-  automation_webhooks_enabled: boolean;
-  webhook_url: string;
-  updated_at: string;
-}
-
-export function defaultMarketingSettings(): MarketingSettings {
-  return {
-    analytics_enabled: false, ga4_measurement_id: "", gtm_container_id: "", google_search_console_id: "", microsoft_clarity_id: "",
-    meta_pixel_enabled: false, meta_pixel_id: "", meta_conversion_api_enabled: false, meta_access_token: "", meta_dataset_id: "",
-    tiktok_pixel_enabled: false, tiktok_pixel_id: "", pinterest_tag_enabled: false, pinterest_tag_id: "", linkedin_insight_enabled: false, linkedin_partner_id: "",
-    seo_global_title: "", seo_global_description: "", seo_og_image: "", robots_enabled: true, sitemap_enabled: true, schema_enabled: true,
-    events: ["page_view", "contact_form", "click_whatsapp", "click_instagram"],
-    utm_builder_enabled: false, automation_webhooks_enabled: false, webhook_url: "", updated_at: new Date().toISOString(),
-  };
 }
 
 /* ── Legal Settings ── */

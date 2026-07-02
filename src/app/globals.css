@@ -23,6 +23,10 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.primary-btn {
+  color: white !important;
+}
+
 .site-legal {
   display: flex;
   align-items: center;
@@ -409,13 +413,19 @@ button:disabled {
 }
 
 .admin-sidebar__user span {
+  overflow: hidden;
   color: #0b1c30;
   font: 600 16px/24px var(--font-manrope), Manrope, sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-sidebar__user small {
+  overflow: hidden;
   color: #494552;
   font: 500 12px/16px var(--font-inter), Inter, sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-sidebar__nav {
@@ -522,6 +532,21 @@ button:disabled {
 .admin-sidebar__footer {
   padding: 16px;
   border-top: 1px solid #cac4d4;
+}
+
+.admin-sidebar__footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-sidebar__version {
+  flex: 0 0 auto;
+  color: #8a8492;
+  font: 700 11px/16px var(--font-inter), Inter, sans-serif;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .admin-topbar {
@@ -1306,7 +1331,7 @@ button:disabled {
 .redirects-create-form__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-  align-items: end;
+  align-items: center;
   gap: 14px;
 }
 
@@ -1318,7 +1343,7 @@ button:disabled {
 
 .redirects-create-form__actions {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
 }
 
 .redirects-create-form__actions .primary-btn {
@@ -3032,6 +3057,10 @@ body {
 
   .class-detail__copy p,
   .class-detail__text-block p,
+  .class-detail__copy li,
+  .class-detail__text-block li,
+  .course-accordion__content p,
+  .course-accordion__content li,
   .class-detail__schedule-item p,
   .class-sidecard p,
   .class-sidecard li {
@@ -3053,7 +3082,12 @@ body {
   .class-sidecard h3,
   .class-detail__fact-block h2,
   .class-detail__includes h2,
+  .class-detail__copy h2,
+  .class-detail__copy h3,
   .class-detail__text-block h2,
+  .class-detail__text-block h3,
+  .course-accordion__content h2,
+  .course-accordion__content h3,
   .class-detail__program h2 {
     font-size: 22px;
     line-height: 1.08;
@@ -4410,5 +4444,169 @@ body {
     min-height: 44px;
     margin-top: auto;
     padding: 10px 14px 10px 12px;
+  }
+}
+
+.cms-admin .cms-public-preview {
+  overflow: hidden;
+  background: #fbfaf6;
+  color: #4f4943;
+  font-family: var(--font-display);
+}
+
+.cms-admin .cms-public-preview__topbar {
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 32px;
+  padding: 12px 44px;
+  background: #947b5f;
+  color: #fffaf2;
+  font-family: var(--font-menu);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cms-admin .cms-public-preview__topbar img {
+  width: auto;
+  height: 46px;
+  display: block;
+}
+
+.cms-admin .cms-public-preview__topbar nav {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 14px;
+  white-space: nowrap;
+}
+
+.cms-admin .cms-public-preview__hero {
+  position: relative;
+  min-height: 176px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-align: center;
+}
+
+.cms-admin .cms-public-preview__hero--image {
+  min-height: 300px;
+  background-position: center;
+  background-size: cover;
+  color: #fffaf4;
+}
+
+.cms-admin .cms-public-preview__hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.82));
+}
+
+.cms-admin .cms-public-preview__hero-content {
+  position: relative;
+  z-index: 1;
+  padding: 32px 24px;
+}
+
+.cms-admin .cms-public-preview__hero h1 {
+  margin: 0;
+  color: #54504c;
+  font-family: var(--font-display);
+  font-size: clamp(44px, 6vw, 72px);
+  font-weight: 400;
+  line-height: 0.98;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.cms-admin .cms-public-preview__hero p {
+  margin: 16px 0 0;
+  color: #b0a196;
+  font-family: var(--font-menu);
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.cms-admin .cms-public-preview__script-stack {
+  position: relative;
+  width: min(520px, 80vw);
+  height: 170px;
+}
+
+.cms-admin .cms-public-preview__script-fallback {
+  position: absolute;
+  inset-inline: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: var(--font-display);
+  font-style: italic;
+  line-height: 1;
+}
+
+.cms-admin .cms-public-preview__script-fallback--back {
+  top: 20px;
+  font-size: 72px;
+  opacity: 0.65;
+}
+
+.cms-admin .cms-public-preview__script-fallback--front {
+  top: 70px;
+  font-size: 42px;
+}
+
+.cms-admin .cms-public-preview__body {
+  pointer-events: none;
+}
+
+.cms-admin .cms-public-preview .class-detail {
+  padding-top: 46px;
+}
+
+.cms-admin .cms-public-preview .class-detail__title,
+.cms-admin .cms-public-preview .class-detail__highlight,
+.cms-admin .cms-public-preview .class-detail__includes h2,
+.cms-admin .cms-public-preview .class-detail__text-block h2,
+.cms-admin .cms-public-preview .class-detail__text-block h3,
+.cms-admin .cms-public-preview .class-detail__program h2,
+.cms-admin .cms-public-preview .class-detail__fact-block h2,
+.cms-admin .cms-public-preview .class-sidecard h3,
+.cms-admin .cms-public-preview .course-accordion__content h2,
+.cms-admin .cms-public-preview .course-accordion__content h3 {
+  font-family: var(--font-display);
+}
+
+.cms-admin .cms-public-preview .class-detail__question,
+.cms-admin .cms-public-preview .class-detail__copy p,
+.cms-admin .cms-public-preview .class-detail__copy li,
+.cms-admin .cms-public-preview .class-detail__text-block p,
+.cms-admin .cms-public-preview .class-detail__text-block li,
+.cms-admin .cms-public-preview .class-detail__duration,
+.cms-admin .cms-public-preview .class-detail__price-row,
+.cms-admin .cms-public-preview .class-detail__schedule-item h4,
+.cms-admin .cms-public-preview .class-detail__schedule-item p,
+.cms-admin .cms-public-preview .class-sidecard p,
+.cms-admin .cms-public-preview .class-sidecard li,
+.cms-admin .cms-public-preview .course-accordion__trigger,
+.cms-admin .cms-public-preview .course-accordion__content p,
+.cms-admin .cms-public-preview .course-accordion__content li {
+  font-family: var(--font-menu);
+}
+
+@media (max-width: 900px) {
+  .cms-admin .cms-public-preview__topbar {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 12px;
+    padding-inline: 20px;
+  }
+
+  .cms-admin .cms-public-preview__topbar nav {
+    justify-content: center;
+    flex-wrap: wrap;
+    white-space: normal;
   }
 }

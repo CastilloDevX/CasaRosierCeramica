@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MarkdownContent, renderInlineMarkdown } from "@/components/ui/MarkdownContent";
 import type { ProgramItem } from "@/data/types";
 
 export function Accordion({ items }: { items: ProgramItem[] }) {
@@ -43,11 +44,11 @@ export function Accordion({ items }: { items: ProgramItem[] }) {
               hidden={!open}
             >
               <div className="course-accordion__content">
-                <p>{item.content}</p>
+                <MarkdownContent source={item.content} />
                 {item.points?.length ? (
                   <ul>
                     {item.points.map((point) => (
-                      <li key={point}>{point}</li>
+                      <li key={point}>{renderInlineMarkdown(point)}</li>
                     ))}
                   </ul>
                 ) : null}

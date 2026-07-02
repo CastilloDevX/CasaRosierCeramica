@@ -151,13 +151,6 @@ async function deleteGalleryFromDb(id: string): Promise<void> {
   } catch { /* best-effort */ }
 }
 
-async function upsertGalleryItem(galleryId: string, item: SocialGalleryItem): Promise<void> {
-  try {
-    const supabase = createAdminClient();
-    await supabase.from("social_gallery_items").upsert(mapTsItemToDb(galleryId, item), { onConflict: "id" });
-  } catch { /* best-effort */ }
-}
-
 async function replaceGalleryItems(galleryId: string, items: SocialGalleryItem[]): Promise<void> {
   try {
     const supabase = createAdminClient();
@@ -277,11 +270,12 @@ export async function addSocialGalleryItem(galleryId: string, item: SocialGaller
   const all = await readJsonFile<SocialGallery[]>(FILE_NAME, []);
   const idx = all.findIndex((x) => x.id === galleryId);
   if (idx === -1) return null;
-  const entry: SocialGalleryItem = { ...item, id: item.id || randomUUID(), is_visible: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-  all[idx].items.push(entry);
+  const now = new Date().toISOString();
+  const entry: SocialGalleryItem = { ...item, id: item.id || randomUUID(), sort_order: 0, is_visible: true, created_at: now, updated_at: now };
+  all[idx].items = [entry, ...all[idx].items].map((galleryItem, order) => ({ ...galleryItem, sort_order: order, updated_at: galleryItem.id === entry.id ? now : galleryItem.updated_at }));
   all[idx].updated_at = new Date().toISOString();
   await writeJsonFile(FILE_NAME, all);
-  await upsertGalleryItem(galleryId, entry);
+  await replaceGalleryItems(galleryId, all[idx].items);
   return entry;
 }
 

@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Offering } from "@/lib/cms/types";
+
+type Toast = { type: "success" | "error"; message: string };
 
 function formatCurrency(value: number | null, currency: string) {
   if (value === null) return "0€";
@@ -29,35 +31,63 @@ export default function ClassOfferingsTable({
   typeLabel?: string;
 }) {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  function successMessage(action: string) {
+    if (action === "duplicate") return `${typeLabel} duplicado correctamente.`;
+    if (action === "publish") return `${typeLabel} publicado correctamente.`;
+    if (action === "draft") return `${typeLabel} pasado a borrador correctamente.`;
+    if (action === "trash") return `${typeLabel} enviado a la papelera correctamente.`;
+    return "Acción completada correctamente.";
+  }
 
   async function patchOffering(id: string, action: string) {
     if (action === "trash" && !window.confirm("¿Mover este registro a la papelera?")) return;
 
-    setError(null);
+    setToast(null);
     setPendingId(id);
-    const response = await fetch(`/api/admin/offerings/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
+    try {
+      const response = await fetch(`/api/admin/offerings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
 
-    setPendingId(null);
-    if (response.ok) {
-      router.refresh();
-      return;
+      if (response.ok) {
+        setToast({ type: "success", message: successMessage(action) });
+        router.refresh();
+        return;
+      }
+
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      setToast({ type: "error", message: data.error || "No se pudo completar la acción." });
+    } catch {
+      setToast({ type: "error", message: "No se pudo conectar con el servidor. Intenta nuevamente." });
+    } finally {
+      setPendingId(null);
     }
-
-    const data = (await response.json().catch(() => ({}))) as { error?: string };
-    setError(data.error || "No se pudo completar la acción.");
   }
 
   return (
     <div className="space-y-4">
-      {error ? (
-        <div className="rounded-xl border border-error bg-error-container px-4 py-3 text-label-md text-on-error-container">
-          {error}
+      {toast ? (
+        <div
+          className={`rounded-xl border px-4 py-3 text-label-md ${
+            toast.type === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+              : "border-error bg-error-container text-on-error-container"
+          }`}
+          role={toast.type === "error" ? "alert" : "status"}
+          aria-live="polite"
+        >
+          {toast.message}
         </div>
       ) : null}
 
@@ -132,8 +162,29 @@ export default function ClassOfferingsTable({
                 className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-label-md font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-lg">content_copy</span>
-                Duplicar
+                {isPending ? "Procesando..." : "Duplicar"}
               </button>
+              {offering.status === "published" ? (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => patchOffering(offering.id, "draft")}
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-label-md font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-lg">edit_note</span>
+                  Borrador
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => patchOffering(offering.id, "publish")}
+                  className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-label-md font-semibold text-secondary transition-colors hover:bg-secondary-container/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-lg">publish</span>
+                  Publicar
+                </button>
+              )}
               <button
                 type="button"
                 disabled={isPending}

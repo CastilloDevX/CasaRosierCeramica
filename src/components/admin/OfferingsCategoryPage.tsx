@@ -80,7 +80,11 @@ export default async function OfferingsCategoryPage({
 
   return (
     <AdminShell>
-      <TopBar title={title} subtitle={subtitle} />
+      <TopBar
+        title={title}
+        subtitle={subtitle}
+        actions={<Button href={`${basePath}/new`} icon="add">{createLabel}</Button>}
+      />
 
       <Card padding="md" className="mb-6">
         <form method="get" className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto] lg:items-center">

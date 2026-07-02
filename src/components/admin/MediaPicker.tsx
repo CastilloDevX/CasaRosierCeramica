@@ -40,6 +40,15 @@ export default function MediaPicker({
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-headline-sm text-on-surface">Biblioteca del proyecto</h3>
+          <p className="text-label-md text-on-surface-variant">Selecciona una imagen activa.</p>
+        </div>
+        <button type="button" className="secondary-btn" onClick={onClose}>
+          Cerrar
+        </button>
+      </div>
       {isLoading ? (
         <Loader />
       ) : assets.filter((a) => a.status === "active" && isImage(a)).length === 0 ? (

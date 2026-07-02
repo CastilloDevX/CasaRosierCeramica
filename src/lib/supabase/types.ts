@@ -19,7 +19,6 @@ export interface Database {
       landing_page_blocks: { Row: LandingPageBlockRow; Insert: LandingPageBlockInsert; Update: LandingPageBlockUpdate; };
       landing_pages: { Row: LandingPageRow; Insert: LandingPageInsert; Update: LandingPageUpdate; };
       legal_settings: { Row: LegalSettingRow; Insert: LegalSettingInsert; Update: LegalSettingUpdate; };
-      marketing_settings: { Row: MarketingSettingRow; Insert: MarketingSettingInsert; Update: MarketingSettingUpdate; };
       media_assets: { Row: MediaAssetRow; Insert: MediaAssetInsert; Update: MediaAssetUpdate; };
       menu_items: { Row: MenuItemRow; Insert: MenuItemInsert; Update: MenuItemUpdate; };
       menus: { Row: MenuRow; Insert: MenuInsert; Update: MenuUpdate; };
@@ -812,102 +811,6 @@ export interface LegalSettingUpdate {
   consent_mode_enabled?: boolean;
   google_consent_mode_enabled?: boolean;
   meta_consent_mode_enabled?: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface MarketingSettingRow {
-  id: string;
-  analytics_enabled: boolean;
-  google_analytics_id: string | null;
-  gtm_container_id: string | null;
-  google_search_console_id: string | null;
-  microsoft_clarity_id: string | null;
-  meta_pixel_enabled: boolean;
-  meta_pixel_id: string | null;
-  meta_conversion_api_enabled: boolean;
-  meta_access_token: string | null;
-  meta_dataset_id: string | null;
-  tiktok_pixel_enabled: boolean;
-  tiktok_pixel_id: string | null;
-  pinterest_tag_enabled: boolean;
-  pinterest_tag_id: string | null;
-  linkedin_insight_enabled: boolean;
-  linkedin_partner_id: string | null;
-  seo_global_title: string | null;
-  seo_global_description: string | null;
-  seo_og_image: string | null;
-  robots_enabled: boolean;
-  sitemap_enabled: boolean;
-  schema_enabled: boolean;
-  events: Json;
-  utm_builder_enabled: boolean;
-  automation_webhooks_enabled: boolean;
-  webhook_url: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface MarketingSettingInsert {
-  id?: string;
-  analytics_enabled?: boolean;
-  google_analytics_id?: string | null;
-  gtm_container_id?: string | null;
-  google_search_console_id?: string | null;
-  microsoft_clarity_id?: string | null;
-  meta_pixel_enabled?: boolean;
-  meta_pixel_id?: string | null;
-  meta_conversion_api_enabled?: boolean;
-  meta_access_token?: string | null;
-  meta_dataset_id?: string | null;
-  tiktok_pixel_enabled?: boolean;
-  tiktok_pixel_id?: string | null;
-  pinterest_tag_enabled?: boolean;
-  pinterest_tag_id?: string | null;
-  linkedin_insight_enabled?: boolean;
-  linkedin_partner_id?: string | null;
-  seo_global_title?: string | null;
-  seo_global_description?: string | null;
-  seo_og_image?: string | null;
-  robots_enabled?: boolean;
-  sitemap_enabled?: boolean;
-  schema_enabled?: boolean;
-  events: Json;
-  utm_builder_enabled?: boolean;
-  automation_webhooks_enabled?: boolean;
-  webhook_url?: string | null;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface MarketingSettingUpdate {
-  id?: string;
-  analytics_enabled?: boolean;
-  google_analytics_id?: string | null;
-  gtm_container_id?: string | null;
-  google_search_console_id?: string | null;
-  microsoft_clarity_id?: string | null;
-  meta_pixel_enabled?: boolean;
-  meta_pixel_id?: string | null;
-  meta_conversion_api_enabled?: boolean;
-  meta_access_token?: string | null;
-  meta_dataset_id?: string | null;
-  tiktok_pixel_enabled?: boolean;
-  tiktok_pixel_id?: string | null;
-  pinterest_tag_enabled?: boolean;
-  pinterest_tag_id?: string | null;
-  linkedin_insight_enabled?: boolean;
-  linkedin_partner_id?: string | null;
-  seo_global_title?: string | null;
-  seo_global_description?: string | null;
-  seo_og_image?: string | null;
-  robots_enabled?: boolean;
-  sitemap_enabled?: boolean;
-  schema_enabled?: boolean;
-  events?: Json;
-  utm_builder_enabled?: boolean;
-  automation_webhooks_enabled?: boolean;
-  webhook_url?: string | null;
   created_at?: string;
   updated_at?: string;
 }

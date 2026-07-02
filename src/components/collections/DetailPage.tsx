@@ -4,13 +4,17 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Accordion } from "@/components/collections/Accordion";
 import { Gallery } from "@/components/collections/Gallery";
+import { MarkdownContent, renderInlineMarkdown } from "@/components/ui/MarkdownContent";
 import type { ExperienceItem } from "@/data/types";
 import { assetPath } from "@/lib/assets";
 import { addCartItem } from "@/lib/cart";
 
+function includedText(value: string) {
+  return value.replace(/^\s*(?:[-*]\s+|\d+\.\s+)/, "");
+}
+
 export function DetailPage({ item }: { item: ExperienceItem }) {
   const isGiftCard = item.kind === "gift-card";
-  const [giftType, setGiftType] = useState("");
   const [added, setAdded] = useState(false);
   const defaultPrice = useMemo(
     () =>
@@ -23,7 +27,6 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
   );
 
   const addGiftCard = () => {
-    if (!giftType) return;
     addCartItem({
       cartItemId: `${item.id}-${Date.now()}`,
       productId: item.id,
@@ -33,10 +36,6 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
       subtitle: item.subtitle,
       price: defaultPrice,
       quantity: 1,
-      giftCardType: giftType,
-      orderSummary: [
-        { label: "Tarjeta digital o fisica", value: giftType }
-      ],
       addedAt: new Date().toISOString()
     });
     setAdded(true);
@@ -89,16 +88,10 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                 Te apasiona la creatividad y deseas explorar el mundo de la
                 ceramica?
               </p>
-              <p className="class-detail__highlight">
-                {item.introHighlight}
-              </p>
+              <MarkdownContent source={item.introHighlight} className="class-detail__highlight" />
             </header>
 
-            <div className="class-detail__copy">
-              {item.description.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
-              ))}
-            </div>
+            <MarkdownContent source={item.description} className="class-detail__copy" />
 
             <section className="class-detail__info-column">
               <section className="class-detail__facts">
@@ -116,38 +109,6 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                     ))}
                   </div>
                 </div>
-                {isGiftCard && (
-                  <div className="class-detail__fact-block class-detail__fact-block--selector">
-                    <h2>Tipo de tarjeta</h2>
-                    <div className="gift-card-selector">
-                      <label
-                        className="gift-card-selector__label"
-                        htmlFor="gift-card-type-select"
-                      >
-                        {item.giftCardTypeLabel ??
-                          "Tarjeta digital o fisica?"}
-                      </label>
-                      <div className="gift-card-selector__control">
-                        <select
-                          id="gift-card-type-select"
-                          className="gift-card-selector__input"
-                          value={giftType}
-                          onChange={(event) => {
-                            setGiftType(event.target.value);
-                            setAdded(false);
-                          }}
-                        >
-                          <option value="">Elige una opcion</option>
-                          {item.giftCardTypeOptions?.map((option) => (
-                            <option value={option} key={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
                 <div className="class-detail__fact-block">
                   <h2>Duracion</h2>
                   <p className="class-detail__duration">{item.duration}</p>
@@ -173,7 +134,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                 <h2>Incluye</h2>
                 <ul>
                   {item.included.map((included) => (
-                    <li key={included}>{included}</li>
+                    <li key={included}>{renderInlineMarkdown(includedText(included))}</li>
                   ))}
                 </ul>
                 <a
@@ -188,16 +149,12 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
 
               <section className="class-detail__text-block">
                 <h2>Que aprenderas?</h2>
-                {item.whatYouWillLearn.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
+                <MarkdownContent source={item.whatYouWillLearn} />
               </section>
 
               <section className="class-detail__text-block">
                 <h2>Quien puede participar?</h2>
-                {item.whoCanJoin.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
+                <MarkdownContent source={item.whoCanJoin} />
               </section>
 
               <section className="class-detail__program">
@@ -206,41 +163,29 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                 {isGiftCard ? (
                   <>
                     <button
-                      className={`class-detail__button class-detail__button--primary ${
-                        giftType ? "" : "class-detail__button--disabled"
-                      }`}
+                      className="class-detail__button class-detail__button--primary"
                       type="button"
-                      disabled={!giftType}
-                      aria-disabled={!giftType}
                       onClick={addGiftCard}
                     >
                       Anadir al carrito
                     </button>
-                    {(added || !giftType) && (
+                    {added && (
                       <div className="gift-card-cart-feedback">
                         <p className="gift-card-cart-feedback__message">
-                          {added
-                            ? `Tarjeta digital o fisica: ${giftType}`
-                            : "Selecciona un tipo de tarjeta para continuar."}
+                          Gift card anadida al carrito.
                         </p>
-                        {added && (
-                          <div className="gift-card-cart-feedback__summary">
-                            <div className="gift-card-cart-feedback__row">
-                              <span>Producto</span>
-                              <strong>{item.title}</strong>
-                            </div>
-                            {defaultPrice && (
-                              <div className="gift-card-cart-feedback__row">
-                                <span>Precio</span>
-                                <strong>{defaultPrice}</strong>
-                              </div>
-                            )}
-                            <div className="gift-card-cart-feedback__row">
-                              <span>Tarjeta digital o fisica</span>
-                              <strong>{giftType}</strong>
-                            </div>
+                        <div className="gift-card-cart-feedback__summary">
+                          <div className="gift-card-cart-feedback__row">
+                            <span>Producto</span>
+                            <strong>{item.title}</strong>
                           </div>
-                        )}
+                          {defaultPrice && (
+                            <div className="gift-card-cart-feedback__row">
+                              <span>Precio</span>
+                              <strong>{defaultPrice}</strong>
+                            </div>
+                          )}
+                        </div>
                         <Link className="class-detail__button" href="/carrito">
                           Ver carrito
                         </Link>

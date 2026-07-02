@@ -52,8 +52,13 @@ export default function MediaSelectField({
           onChange={(e) => onChange(e.target.value)}
           placeholder="Selecciona o sube una imagen"
         />
-        <button type="button" className="secondary-btn" onClick={() => setShowPicker(true)}>
-          Biblioteca
+        <button
+          type="button"
+          className="secondary-btn"
+          aria-expanded={showPicker}
+          onClick={() => setShowPicker((open) => !open)}
+        >
+          {showPicker ? "Cerrar biblioteca" : "Biblioteca"}
         </button>
         <label className="secondary-btn" style={{ cursor: isUploading ? "wait" : "pointer" }}>
           {isUploading ? "Subiendo..." : "Subir"}
@@ -87,13 +92,15 @@ export default function MediaSelectField({
       ) : null}
 
       {showPicker ? (
-        <MediaPicker
-          onSelect={(url) => {
-            onChange(url);
-            setShowPicker(false);
-          }}
-          onClose={() => setShowPicker(false)}
-        />
+        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
+          <MediaPicker
+            onSelect={(url) => {
+              onChange(url);
+              setShowPicker(false);
+            }}
+            onClose={() => setShowPicker(false)}
+          />
+        </div>
       ) : null}
     </div>
   );

@@ -12,7 +12,6 @@ const folderLabels: Record<string, string> = {
   shop: "Shop",
   bitacora: "Bitácora",
   estudio: "Estudio",
-  marketing: "Marketing",
   logos: "Logos",
   general: "General",
 };

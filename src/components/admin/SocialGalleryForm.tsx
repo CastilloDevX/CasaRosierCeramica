@@ -36,7 +36,9 @@ export default function SocialGalleryForm({
   const [isLoading, setIsLoading] = useState(false);
 
   function addItem() {
-    setItems((current) => [...current, createGalleryItem(current.length)]);
+    setItems((current) =>
+      [createGalleryItem(0), ...current].map((galleryItem, order) => ({ ...galleryItem, sort_order: order })),
+    );
   }
 
   function updateItem(index: number, field: keyof SocialGalleryItem, value: SocialGalleryItem[keyof SocialGalleryItem]) {

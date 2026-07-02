@@ -6,10 +6,17 @@ import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/admin/LogoutButton";
 import { adminSections } from "@/lib/admin/navigation";
 
-export default function Sidebar() {
+interface SidebarProps {
+  userName: string;
+  userEmail: string;
+  appVersion: string;
+}
+
+export default function Sidebar({ userName, userEmail, appVersion }: SidebarProps) {
   const pathname = usePathname();
   const [expanded, setExpanded] = useState<string[]>([]);
   const [collapsedActive, setCollapsedActive] = useState<string[]>([]);
+  const userInitial = (userName || userEmail || "A").trim().charAt(0).toUpperCase();
 
   const toggleGroup = (key: string) => {
     const section = adminSections.find((item) => item.label === key);
@@ -40,13 +47,13 @@ export default function Sidebar() {
       <header className="admin-sidebar__header">
         <div className="admin-sidebar__avatar-wrap">
           <div className="admin-sidebar__avatar">
-            A
+            {userInitial}
           </div>
           <span className="admin-sidebar__online" />
         </div>
         <div className="admin-sidebar__user">
-          <span>Admin User</span>
-          <small>name@admin.com</small>
+          <span title={userName}>{userName}</span>
+          <small title={userEmail}>{userEmail}</small>
         </div>
       </header>
 
@@ -126,7 +133,10 @@ export default function Sidebar() {
       </nav>
 
       <footer className="admin-sidebar__footer">
-        <LogoutButton />
+        <div className="admin-sidebar__footer-row">
+          <LogoutButton />
+          <span className="admin-sidebar__version">{appVersion}</span>
+        </div>
       </footer>
     </aside>
   );

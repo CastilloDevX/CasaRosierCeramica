@@ -80,10 +80,10 @@ export async function EditProductOfferingPage({
             <Button href={basePath} variant="ghost">
               Volver
             </Button>
-            <Button type="submit" form="class-edit-form" name="intent" value="draft" variant="outlined">
+            <Button type="submit" form="class-edit-form" name="intent" value="draft" variant="outlined" data-default-label="Guardar boceto">
               Guardar boceto
             </Button>
-            <Button type="submit" form="class-edit-form" name="intent" value="publish">
+            <Button type="submit" form="class-edit-form" name="intent" value="publish" data-default-label="Publicar">
               Publicar
             </Button>
           </>
@@ -114,10 +114,10 @@ export function NewProductOfferingPage({
             <Button href={basePath} variant="ghost">
               Volver
             </Button>
-            <Button type="submit" form="class-edit-form" name="intent" value="draft" variant="outlined">
+            <Button type="submit" form="class-edit-form" name="intent" value="draft" variant="outlined" data-default-label="Guardar boceto">
               Guardar boceto
             </Button>
-            <Button type="submit" form="class-edit-form" name="intent" value="publish">
+            <Button type="submit" form="class-edit-form" name="intent" value="publish" data-default-label="Publicar">
               Publicar
             </Button>
           </>

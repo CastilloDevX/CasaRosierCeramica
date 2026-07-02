@@ -25,7 +25,6 @@ const SIMPLE_FILES: Record<string, string> = {
 
 const SINGLETON_IDS = {
   settings: "00000000-0000-0000-0000-000000000001",
-  marketing: "00000000-0000-0000-0000-000000000002",
   legal: "00000000-0000-0000-0000-000000000003",
 };
 
@@ -162,39 +161,6 @@ function settingsToRow(settings: JsonRecord) {
   };
 }
 
-function marketingToRow(settings: JsonRecord) {
-  return {
-    id: SINGLETON_IDS.marketing,
-    analytics_enabled: settings.analytics_enabled ?? false,
-    google_analytics_id: nilToNull(settings.ga4_measurement_id),
-    gtm_container_id: nilToNull(settings.gtm_container_id),
-    google_search_console_id: nilToNull(settings.google_search_console_id),
-    microsoft_clarity_id: nilToNull(settings.microsoft_clarity_id),
-    meta_pixel_enabled: settings.meta_pixel_enabled ?? false,
-    meta_pixel_id: nilToNull(settings.meta_pixel_id),
-    meta_conversion_api_enabled: settings.meta_conversion_api_enabled ?? false,
-    meta_access_token: nilToNull(settings.meta_access_token),
-    meta_dataset_id: nilToNull(settings.meta_dataset_id),
-    tiktok_pixel_enabled: settings.tiktok_pixel_enabled ?? false,
-    tiktok_pixel_id: nilToNull(settings.tiktok_pixel_id),
-    pinterest_tag_enabled: settings.pinterest_tag_enabled ?? false,
-    pinterest_tag_id: nilToNull(settings.pinterest_tag_id),
-    linkedin_insight_enabled: settings.linkedin_insight_enabled ?? false,
-    linkedin_partner_id: nilToNull(settings.linkedin_partner_id),
-    seo_global_title: nilToNull(settings.seo_global_title),
-    seo_global_description: nilToNull(settings.seo_global_description),
-    seo_og_image: nilToNull(settings.seo_og_image),
-    robots_enabled: settings.robots_enabled ?? true,
-    sitemap_enabled: settings.sitemap_enabled ?? true,
-    schema_enabled: settings.schema_enabled ?? true,
-    events: settings.events ?? [],
-    utm_builder_enabled: settings.utm_builder_enabled ?? false,
-    automation_webhooks_enabled: settings.automation_webhooks_enabled ?? false,
-    webhook_url: nilToNull(settings.webhook_url),
-    updated_at: settings.updated_at ?? new Date().toISOString(),
-  };
-}
-
 function legalToRow(settings: JsonRecord) {
   return {
     id: SINGLETON_IDS.legal,
@@ -250,7 +216,6 @@ export async function writeJsonFile<T>(filename: string, value: T) {
   if (filename === "social-galleries.json") return writeWithChildren("social_galleries", "social_gallery_items", "social_gallery_id", "items", value);
   if (filename === "orders.json") return writeWithChildren("orders", "order_items", "order_id", "items", value);
   if (filename === "settings.json") return upsertRows("site_settings", [settingsToRow(value as JsonRecord)]);
-  if (filename === "marketing.json") return upsertRows("marketing_settings", [marketingToRow(value as JsonRecord)]);
   if (filename === "legal-settings.json") return upsertRows("legal_settings", [legalToRow(value as JsonRecord)]);
 
   const table = SIMPLE_FILES[filename];

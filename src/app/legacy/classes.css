@@ -581,12 +581,41 @@
   font: 300 16px/1.7 var(--font-menu);
 }
 
+.class-detail__copy h2,
+.class-detail__copy h3,
+.class-detail__text-block h3,
+.course-accordion__content h2,
+.course-accordion__content h3 {
+  margin: 18px 0 10px;
+  color: #4f4943;
+  font: 400 22px/1.15 var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.class-detail__copy h3,
+.class-detail__text-block h3,
+.course-accordion__content h3 {
+  font-size: 19px;
+}
+
 .class-sidecard ul,
-.class-detail__includes ul {
+.class-detail__includes ul,
+.class-detail__copy ul,
+.class-detail__copy ol,
+.class-detail__text-block ul,
+.class-detail__text-block ol {
   margin: 0;
   padding-left: 18px;
   color: #68615a;
   font: 300 16px/1.7 var(--font-menu);
+}
+
+.class-detail__copy ul,
+.class-detail__copy ol,
+.class-detail__text-block ul,
+.class-detail__text-block ol {
+  margin-bottom: 14px;
 }
 
 .class-detail__eyebrow {
@@ -616,6 +645,12 @@
   margin: 0 0 22px;
   color: #c27649;
   font: italic 400 20px/1.55 var(--font-display);
+}
+
+.class-detail__highlight p {
+  margin: 0;
+  color: inherit;
+  font: inherit;
 }
 
 .class-detail__facts {

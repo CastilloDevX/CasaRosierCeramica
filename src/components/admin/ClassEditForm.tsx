@@ -3,11 +3,13 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { DetailPage } from "@/components/collections/DetailPage";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Modal from "@/components/ui/Modal";
 import Switch from "@/components/ui/Switch";
 import { SocialGallery } from "@/components/home/SocialGallery";
+import type { ExperienceItem, ExperienceKind } from "@/data/types";
 import MediaPicker from "./MediaPicker";
 import RichTextField from "./RichTextField";
 import ClassContentTab, { defaultContent } from "./ClassContentTab";
@@ -21,6 +23,19 @@ import type {
 
 type TabKey = "hero" | "basic" | "schedule" | "content" | "seo" | "additions" | "preview";
 type PickerTarget = "hero" | "title" | "titleSecondary" | "gallery" | "seo" | "videoPoster" | null;
+type SaveIntent = "draft" | "publish";
+type FormNotice = { type: "success" | "error"; message: string };
+type LegacyOfferingDetails = Partial<ClassOfferingDetails> & {
+  additionalInfo?: unknown;
+  category?: unknown;
+  included?: unknown;
+  introHighlight?: unknown;
+  paymentMethods?: unknown;
+  program?: unknown;
+  videoCardImage?: unknown;
+  whatYouWillLearn?: unknown;
+  whoCanJoin?: unknown;
+};
 
 const DEFAULT_HERO_IMAGE = "/img/hero-bg.jpg";
 
@@ -85,14 +100,96 @@ function menuPlacementForType(type: Offering["type"]) {
 }
 
 function toLines(value: string) {
+  return value.split(/\r?\n/);
+}
+
+function textValue(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function firstText(...values: unknown[]) {
+  for (const value of values) {
+    const text = textValue(value);
+    if (text) return text;
+  }
+  return "";
+}
+
+function textList(value: unknown) {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  if (typeof value === "string") return value.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean);
+  return [] as string[];
+}
+
+function textBlock(value: unknown) {
+  return textList(value).join("\n");
+}
+
+function legacyModules(value: unknown): ClassOfferingDetails["content"]["modules"] {
+  if (!Array.isArray(value)) return [];
+
   return value
-    .split(/\r?\n/)
-    .map((item) => item.trim())
-    .filter(Boolean);
+    .map((item, index) => {
+      const source = item && typeof item === "object" ? item as Record<string, unknown> : {};
+      const title = firstText(source.title, `Módulo ${index + 1}`);
+      const content = firstText(source.content, source.description);
+      const points = textList(source.points);
+
+      return {
+        id: firstText(source.id) || createId("module"),
+        title,
+        description: [content, ...points.map((point) => `- ${point}`)].filter(Boolean).join("\n"),
+        duration: firstText(source.duration),
+        image: firstText(source.image),
+        order: typeof source.order === "number" ? source.order : index,
+      };
+    })
+    .filter((item) => item.title || item.description);
+}
+
+function legacyScheduleDays(schedule: string[]): ClassScheduleDay[] {
+  return schedule.map((item, index) => {
+    const [title, ...descriptionParts] = item.split(":");
+    return {
+      id: `schedule-${index}`,
+      date: "",
+      startTime: "",
+      endTime: "",
+      title: title?.trim() || "Disponible",
+      description: descriptionParts.join(":").trim() || "Consultar disponibilidad",
+      location: "",
+      availableSeats: null,
+      order: index,
+    };
+  });
 }
 
 function toClassDetails(offering: Offering): ClassOfferingDetails {
-  const fromDetails = offering.details.class ?? {};
+  const legacyDetails = (offering.details ?? {}) as LegacyOfferingDetails;
+  const fromDetails = { ...legacyDetails, ...(offering.details.class ?? {}) } as LegacyOfferingDetails;
+  const legacyContent = defaultContent();
+  legacyContent.learningContent = textBlock(fromDetails.whatYouWillLearn);
+  legacyContent.participationContent = textBlock(fromDetails.whoCanJoin);
+  legacyContent.paymentMethods = textBlock(fromDetails.paymentMethods);
+  legacyContent.extraInfo = firstText(fromDetails.additionalInfo);
+  legacyContent.modules = legacyModules(fromDetails.program);
+
+  const persistedContent = fromDetails.content ?? {};
+  const mergedContent = {
+    ...legacyContent,
+    ...persistedContent,
+    learningContent: firstText((persistedContent as Partial<ClassOfferingDetails["content"]>).learningContent, legacyContent.learningContent),
+    participationContent: firstText((persistedContent as Partial<ClassOfferingDetails["content"]>).participationContent, legacyContent.participationContent),
+    paymentMethods: firstText((persistedContent as Partial<ClassOfferingDetails["content"]>).paymentMethods, legacyContent.paymentMethods),
+    extraInfo: firstText((persistedContent as Partial<ClassOfferingDetails["content"]>).extraInfo, legacyContent.extraInfo),
+    modules: Array.isArray((persistedContent as Partial<ClassOfferingDetails["content"]>).modules) && (persistedContent as Partial<ClassOfferingDetails["content"]>).modules?.length
+      ? (persistedContent as ClassOfferingDetails["content"]).modules
+      : legacyContent.modules,
+    activitiesSection: {
+      ...legacyContent.activitiesSection,
+      ...((persistedContent as Partial<ClassOfferingDetails["content"]>).activitiesSection ?? {}),
+    },
+  };
   const galleryImages: OfferingGalleryImage[] = Array.isArray(fromDetails.galleryImages) && fromDetails.galleryImages.length
     ? fromDetails.galleryImages
     : offering.gallery.map((image, index) => ({ image, alt: "", order: index }));
@@ -103,8 +200,8 @@ function toClassDetails(offering: Offering): ClassOfferingDetails {
       ? [{ description: "Precio base", price: offering.price, order: 0 }]
       : [];
 
-  const scheduleDays = Array.isArray(fromDetails.scheduleDays) ? fromDetails.scheduleDays : [];
-  const includedItems = Array.isArray(fromDetails.includedItems) ? fromDetails.includedItems : [];
+  const scheduleDays = Array.isArray(fromDetails.scheduleDays) && fromDetails.scheduleDays.length ? fromDetails.scheduleDays : legacyScheduleDays(offering.schedule);
+  const includedItems = Array.isArray(fromDetails.includedItems) && fromDetails.includedItems.length ? fromDetails.includedItems : textList(fromDetails.included);
   const heroVariant = fromDetails.heroVariant === "image" || fromDetails.heroVariant === "text"
     ? fromDetails.heroVariant
     : "text";
@@ -114,15 +211,15 @@ function toClassDetails(offering: Offering): ClassOfferingDetails {
     ...fromDetails,
     heroVariant,
     heroMenuTone: heroVariant === "image" ? "light" : "dark",
-    heroTitle: fromDetails.heroTitle ?? offering.title ?? "",
-    heroSubtitle: fromDetails.heroSubtitle ?? offering.subtitle ?? "",
-    highlightDescription: fromDetails.highlightDescription ?? offering.excerpt ?? "",
-    durationText: fromDetails.durationText ?? offering.duration ?? "",
+    heroTitle: firstText(fromDetails.heroTitle, offering.title),
+    heroSubtitle: firstText(fromDetails.heroSubtitle, fromDetails.category, offering.subtitle),
+    highlightDescription: firstText(fromDetails.highlightDescription, fromDetails.introHighlight, offering.excerpt),
+    durationText: firstText(fromDetails.durationText, offering.duration),
     heroImage: fromDetails.heroImage || offering.cover_image_url || DEFAULT_HERO_IMAGE,
     titleImage: fromDetails.titleImage ?? "",
     titleImageSecondary: fromDetails.titleImageSecondary ?? "",
     videoUrl: fromDetails.videoUrl ?? "",
-    videoPoster: fromDetails.videoPoster ?? "",
+    videoPoster: firstText(fromDetails.videoPoster, fromDetails.videoCardImage),
     includedItems,
     galleryImages: galleryImages
       .map((item, index) => ({
@@ -134,7 +231,7 @@ function toClassDetails(offering: Offering): ClassOfferingDetails {
       }))
       .sort((a, b) => a.order - b.order),
     pricing: pricing.map((item, index) => ({ description: item.description || "", price: item.price ?? null, order: item.order ?? index })),
-    scheduleDescription: fromDetails.scheduleDescription ?? "",
+    scheduleDescription: firstText(fromDetails.scheduleDescription, offering.schedule.join("\n")),
     showScheduleOnFrontend: fromDetails.showScheduleOnFrontend ?? true,
     scheduleDays: scheduleDays
       .map((item, index) => ({
@@ -149,8 +246,9 @@ function toClassDetails(offering: Offering): ClassOfferingDetails {
         order: item.order ?? index,
       }))
       .sort((a, b) => (a.date || "9999-12-31").localeCompare(b.date || "9999-12-31") || a.order - b.order),
+    whatsappNumber: firstText(fromDetails.whatsappNumber, fromDetails.content && typeof fromDetails.content === "object" ? (fromDetails.content as Partial<ClassOfferingDetails["content"]>).contactWhatsapp : ""),
     seoImage: fromDetails.seoImage ?? "",
-    content: { ...defaultContent(), ...(fromDetails.content ?? {}) },
+    content: mergedContent,
   };
 }
 
@@ -224,114 +322,193 @@ function renderPlainText(value: string) {
     .trim();
 }
 
-function PreviewPane({
+function kindForOfferingType(type: Offering["type"]): ExperienceKind {
+  if (type === "workshop") return "workshop";
+  if (type === "gift_card") return "gift-card";
+  if (type === "experience") return "private-booking";
+  return "class";
+}
+
+function formatPreviewPrice(value: number | null) {
+  return value === null ? "" : `${value} EUR`;
+}
+
+function previewSchedule(details: ClassOfferingDetails) {
+  if (!details.showScheduleOnFrontend) return [];
+  return details.scheduleDays.map((item) => ({
+    day: item.title || item.date || "Disponible",
+    slots: [
+      item.startTime && item.endTime
+        ? `${item.startTime} a ${item.endTime}`
+        : item.description || "Consultar disponibilidad",
+    ].filter(Boolean),
+  }));
+}
+
+function previewProgram(details: ClassOfferingDetails) {
+  return [...details.content.modules]
+    .sort((a, b) => a.order - b.order)
+    .map((item, index) => ({
+      title: item.title || `Módulo ${index + 1}`,
+      content: item.description,
+    }))
+    .filter((item) => item.title || item.content);
+}
+
+function buildPreviewItem({
+  offeringType,
   title,
+  slug,
+  subtitle,
+  description,
+  details,
+}: {
+  offeringType: Offering["type"];
+  title: string;
+  slug: string;
+  subtitle: string;
+  description: string;
+  details: ClassOfferingDetails;
+}): ExperienceItem {
+  const kind = kindForOfferingType(offeringType);
+  const galleryImages = details.galleryImages
+    .filter((item) => item.image)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((item) => item.image);
+  const fallbackImage = details.heroImage || details.videoPoster || DEFAULT_HERO_IMAGE;
+  const priceOptions = details.pricing
+    .filter((item) => item.description.trim() || item.price !== null)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((item) => ({
+      label: item.description || "Precio",
+      price: formatPreviewPrice(item.price),
+    }));
+  const paymentMethods = toLines(details.content.paymentMethods.replace(/,/g, "\n"));
+
+  return {
+    id: "preview",
+    kind,
+    slug: slugify(slug || title || "vista-previa"),
+    title: title || "Título del producto",
+    subtitle: subtitle || title || "Título del producto",
+    category: details.heroSubtitle || offeringType,
+    excerpt: details.highlightDescription,
+    description: toLines(description),
+    coverImage: galleryImages[0] || fallbackImage,
+    heroImage: fallbackImage,
+    heroVariant: details.heroVariant,
+    heroMenuTone: details.heroVariant === "image" ? "light" : "dark",
+    heroTitleImage: details.titleImage,
+    heroTitleImageSecondary: details.titleImageSecondary,
+    heroTitle: details.heroTitle || title || "Título del hero",
+    listingTitle: title || "Título del producto",
+    listingSubtitle: details.heroSubtitle || "",
+    introHighlight: details.highlightDescription || "Texto remarcado color café.",
+    galleryImages: galleryImages.length ? galleryImages : [fallbackImage],
+    videoCardImage: details.videoPoster || galleryImages[0] || fallbackImage,
+    videoCardLabel: details.videoUrl ? "VIDEO" : "IMAGEN",
+    priceOptions: priceOptions.length ? priceOptions : [{ label: "Precio", price: "0 EUR" }],
+    duration: details.durationText || "Duración pendiente",
+    schedule: previewSchedule(details),
+    included: details.includedItems.filter((item) => item.trim()),
+    program: previewProgram(details),
+    whatYouWillLearn: toLines(details.content.learningContent),
+    whoCanJoin: toLines(details.content.participationContent),
+    paymentMethods: paymentMethods.length ? paymentMethods : ["Transferencia bancaria", "Tarjeta", "Efectivo"],
+    additionalInfo:
+      details.content.extraInfo ||
+      `Cualquier consulta o información adicional que necesites, puedes escribir al WhatsApp ${details.whatsappNumber || details.content.contactWhatsapp || "633788860"}.`,
+    showIdeaPromptSection: details.showIdeaPromptSection,
+    ctaHref: details.whatsappNumber ? `https://wa.me/${details.whatsappNumber}` : "https://wa.me/34633788860",
+    seoTitle: title || "Vista previa",
+    seoDescription: details.highlightDescription || renderPlainText(description),
+    isPublished: false,
+    order: 0,
+  };
+}
+
+function PreviewPane({
+  offeringType,
+  title,
+  slug,
   subtitle,
   description,
   status,
   details,
 }: {
+  offeringType: Offering["type"];
   title: string;
+  slug: string;
   subtitle: string;
   description: string;
   status: "draft" | "published";
   details: ClassOfferingDetails;
 }) {
   const heroIsImage = details.heroVariant === "image";
-  const galleryImage = details.galleryImages[0]?.image || details.videoPoster || details.heroImage;
-  const paymentMethods = toLines(details.content.paymentMethods.replace(/,/g, "\n"));
+  const previewItem = buildPreviewItem({ offeringType, title, slug, subtitle, description, details });
+  const promoPage = previewItem.kind === "private-booking" ? undefined : previewItem.kind.replace("-card", "");
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-outline-variant bg-white text-[#3d3833] shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-sm">
       <div className="border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-md font-semibold text-on-surface-variant">
         Vista previa de escritorio · {status === "published" ? "Publicado" : "Borrador"}
       </div>
-      <div className="origin-top bg-white">
-        <section
-          className={`relative flex min-h-[210px] flex-col items-center justify-start overflow-hidden ${heroIsImage ? "text-white" : "text-[#28231f]"}`}
-          style={heroIsImage ? { backgroundImage: `url(${details.heroImage || DEFAULT_HERO_IMAGE})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+      <div
+        className="cms-public-preview class-detail-page"
+        data-promo-page={promoPage}
+      >
+        <div className="cms-public-preview__topbar">
+          <img src="/img/logo-header.png" alt="Casa Rosier" />
+          <nav aria-label="Vista previa">
+            <span>Inicio</span>
+            <span>|</span>
+            <span>Clases +</span>
+            <span>|</span>
+            <span>Workshops +</span>
+            <span>|</span>
+            <span>Reservas Privadas +</span>
+            <span>|</span>
+            <span>Tarjeta de regalo +</span>
+            <span>|</span>
+            <span>El Estudio</span>
+            <span>|</span>
+            <span>Blog</span>
+          </nav>
+        </div>
+
+        <header
+          className={`cms-public-preview__hero ${heroIsImage ? "cms-public-preview__hero--image" : "cms-public-preview__hero--text"}`}
+          style={heroIsImage ? { backgroundImage: `url(${details.heroImage || DEFAULT_HERO_IMAGE})` } : undefined}
         >
           {heroIsImage ? (
-            <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.16),rgba(255,255,255,0.82))]" />
+            <div className="cms-public-preview__hero-overlay" />
           ) : null}
-          <div className="relative z-10 mt-6 text-center text-[10px] font-semibold">
-            CASA ROSIER
-            <div className="mt-5 flex justify-center gap-3 text-[9px]">
-              <span>Clases</span><span>|</span><span>Workshops</span><span>|</span><span>Experiencias</span><span>|</span><span>Gift Card</span>
-            </div>
-          </div>
-          <div className="relative z-10 flex flex-1 items-center justify-center px-8 text-center">
+          <div className="cms-public-preview__hero-content">
             {heroIsImage ? (
-              <div className="relative h-24 w-[320px] max-w-full">
+              <div className="cms-public-preview__script-stack">
                 {details.titleImage ? (
-                  <Image src={details.titleImage} alt="Texto principal del hero" fill sizes="320px" className="object-contain opacity-80" unoptimized />
+                  <Image src={details.titleImage} alt="Texto principal del hero" fill sizes="520px" className="object-contain opacity-80" unoptimized />
                 ) : (
-                  <p className="font-serif text-5xl italic text-white/80">Casa Rosier</p>
+                  <span className="cms-public-preview__script-fallback cms-public-preview__script-fallback--back">Casa Rosier</span>
                 )}
                 {details.titleImageSecondary ? (
-                  <Image src={details.titleImageSecondary} alt="Texto secundario del hero" fill sizes="320px" className="object-contain" unoptimized />
+                  <Image src={details.titleImageSecondary} alt="Texto secundario del hero" fill sizes="520px" className="object-contain" unoptimized />
                 ) : (
-                  <p className="absolute inset-x-0 top-7 font-serif text-3xl italic text-white">Estudio Cerámica</p>
+                  <span className="cms-public-preview__script-fallback cms-public-preview__script-fallback--front">{details.heroTitle || title || "Casa Rosier"}</span>
                 )}
               </div>
             ) : (
               <div>
-                <h1 className="font-serif text-4xl uppercase leading-none tracking-normal text-[#5b554f]">{details.heroTitle || title || "Título del hero"}</h1>
-                <p className="mt-3 text-[11px] uppercase tracking-[0.28em] text-[#a99b90]">{details.heroSubtitle || subtitle || "Clases - Iniciación"}</p>
+                <h1>{details.heroTitle || title || "Título del hero"}</h1>
+                <p>{details.heroSubtitle || subtitle || "Clases - Iniciación"}</p>
               </div>
             )}
           </div>
-        </section>
+        </header>
 
-        <section className="grid gap-5 px-8 py-8 md:grid-cols-[280px_1fr]">
-          <div>
-            <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-[#eee8e2]">
-              {galleryImage ? <Image src={galleryImage} alt={title || "Imagen principal"} fill sizes="280px" className="object-cover" unoptimized /> : null}
-            </div>
-            <div className="mt-4 rounded-xl bg-[#f5f1ed] p-4 text-sm">
-              <h3 className="font-semibold uppercase">Métodos de pago</h3>
-              <ul className="mt-2 space-y-1 text-[#6f6258]">
-                {(paymentMethods.length ? paymentMethods : ["Transferencia bancaria", "Tarjeta", "Efectivo"]).map((method) => <li key={method}>{method}</li>)}
-              </ul>
-            </div>
-          </div>
-          <div className="space-y-5">
-            <header>
-              <h2 className="font-serif text-3xl leading-tight text-[#5a514a]">{subtitle || title || "Título de producto"}</h2>
-              <p className="mt-3 text-base text-[#8b6b55]">{details.highlightDescription || "Texto remarcado color café."}</p>
-            </header>
-            <p className="text-sm leading-7 text-[#685f58]">{renderPlainText(description) || "Texto descriptivo del producto."}</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-[#e2d8cf] p-4">
-                <h3 className="font-semibold uppercase">Precio</h3>
-                {details.pricing.slice(0, 2).map((price) => (
-                  <p key={`${price.description}-${price.price}`} className="mt-2 flex justify-between text-sm"><span>{price.description || "Opción"}</span><strong>{price.price ?? 0} EUR</strong></p>
-                ))}
-              </div>
-              <div className="rounded-xl border border-[#e2d8cf] p-4">
-                <h3 className="font-semibold uppercase">Duración</h3>
-                <p className="mt-2 text-sm">{details.durationText || "Duración pendiente"}</p>
-              </div>
-            </div>
-            <div className="rounded-xl bg-[#f5f1ed] p-4">
-              <h3 className="font-semibold uppercase">Contenido del curso</h3>
-              <p className="mt-2 text-sm text-[#685f58]">{details.content.modules[0]?.title || "Módulos del producto"}</p>
-            </div>
-          </div>
-        </section>
-        {details.showIdeaPromptSection ? (
-          <section className="border-t border-[#eadfd5] bg-[#fbf8f5] px-8 py-8 text-center">
-            <h2 className="font-serif text-3xl leading-tight uppercase text-[#5b554f]">Y tu, cuando tuviste<br />tu ultima idea?</h2>
-            <p className="mt-3 text-[11px] uppercase tracking-[0.2em] text-[#9b8a7d]">siguenos en instagram - @casarosier</p>
-            <div className="mt-5 grid grid-cols-4 gap-2">
-              {(details.galleryImages.length ? details.galleryImages : [{ image: details.heroImage, alt: "" }]).slice(0, 4).map((item, index) => (
-                <div key={`${item.image}-${index}`} className="relative aspect-square overflow-hidden rounded-lg bg-[#eee8e2]">
-                  {item.image ? <Image src={item.image} alt={item.alt || `Galería social ${index + 1}`} fill sizes="120px" className="object-cover" unoptimized /> : null}
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
+        <div className="cms-public-preview__body">
+          <DetailPage item={previewItem} />
+        </div>
       </div>
     </div>
   );
@@ -357,8 +534,9 @@ export default function ClassEditForm({
   const [seoDescription, setSeoDescription] = useState(offering.seo_description);
   const [details, setDetails] = useState<ClassOfferingDetails>(() => toClassDetails(offering));
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<FormNotice | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [savingIntent, setSavingIntent] = useState<SaveIntent | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
   const [draggedGalleryIndex, setDraggedGalleryIndex] = useState<number | null>(null);
@@ -372,6 +550,29 @@ export default function ClassEditForm({
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
+
+  useEffect(() => {
+    const buttons = document.querySelectorAll<HTMLButtonElement>('button[form="class-edit-form"][name="intent"]');
+
+    buttons.forEach((button) => {
+      if (!button.dataset.defaultLabel) button.dataset.defaultLabel = button.textContent ?? "";
+      const intent = button.value === "publish" ? "publish" : "draft";
+      button.disabled = isSaving;
+      button.setAttribute("aria-busy", isSaving && savingIntent === intent ? "true" : "false");
+      button.textContent =
+        isSaving && savingIntent === intent
+          ? intent === "publish"
+            ? "Publicando..."
+            : "Guardando..."
+      : button.dataset.defaultLabel ?? "";
+    });
+  }, [isSaving, savingIntent]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   function updateDetails(next: Partial<ClassOfferingDetails>) {
     setDetails((current) => ({ ...current, ...next }));
@@ -486,7 +687,7 @@ export default function ClassEditForm({
       if (item.image && !item.alt.trim()) nextErrors[`gallery-${index}`] = "El texto alternativo es obligatorio.";
     });
     details.scheduleDays.forEach((item, index) => {
-      if (!item.date) nextErrors[`schedule-date-${index}`] = "La fecha es obligatoria.";
+      if (!item.date && !item.title.trim()) nextErrors[`schedule-date-${index}`] = "Agrega una fecha o un título del día.";
       if (item.startTime && !item.endTime) nextErrors[`schedule-end-${index}`] = "Agrega una hora de fin.";
       if (item.startTime && item.endTime && item.endTime < item.startTime) nextErrors[`schedule-end-${index}`] = "La hora de fin no puede ser anterior a la hora de inicio.";
       if (item.availableSeats !== null && Number(item.availableSeats) < 0) nextErrors[`schedule-seats-${index}`] = "Las plazas no pueden ser negativas.";
@@ -500,98 +701,112 @@ export default function ClassEditForm({
     setToast(null);
 
     const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
-    const intent = submitter?.value === "publish" ? "publish" : submitter?.value === "draft" ? "draft" : status;
+    const intent: SaveIntent = submitter?.value === "publish" ? "publish" : "draft";
     const nextStatus = intent === "publish" ? "published" : "draft";
 
-    if (!validate()) return;
-
-    setIsSaving(true);
-    const pricing = details.pricing.filter((item) => item.description.trim() || item.price !== null).map((item, order) => ({ ...item, order }));
-    const galleryImages = details.galleryImages.filter((item) => item.image).map((item, order) => ({ ...item, order }));
-    const scheduleDays = details.scheduleDays.map((item, order) => ({ ...item, order }));
-    const primaryPrice = pricing.find((item) => item.price !== null)?.price ?? null;
-    const coverImage = details.heroVariant === "image" ? details.heroImage || DEFAULT_HERO_IMAGE : galleryImages[0]?.image || details.videoPoster || offering.cover_image_url;
-
-    const response = await fetch(mode === "create" ? "/api/admin/offerings" : `/api/admin/offerings/${offering.id}`, {
-      method: mode === "create" ? "POST" : "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: title.trim(),
-        slug: slugify(slug),
-        subtitle: subtitle.trim(),
-        excerpt: details.highlightDescription.trim(),
-        description,
-        duration: details.durationText.trim(),
-        type: offering.type,
-        status: nextStatus,
-        price: primaryPrice,
-        currency: "EUR",
-        cover_image_url: coverImage,
-        gallery: galleryImages.map((item) => item.image),
-        seo_title: seoTitle.trim(),
-        seo_description: seoDescription.trim(),
-        details: {
-          ...offering.details,
-          class: {
-            ...details,
-            heroMenuTone: details.heroVariant === "image" ? "light" : "dark",
-            heroImage: details.heroVariant === "image" ? details.heroImage || DEFAULT_HERO_IMAGE : details.heroImage,
-            menuPlacement: menuPlacementForType(offering.type),
-            homeSections: [],
-            pricing,
-            galleryImages,
-            scheduleDays,
-            includedItems: details.includedItems.map((item) => item.trim()).filter(Boolean),
-            heroTitle: details.heroTitle.trim(),
-            heroSubtitle: details.heroSubtitle.trim(),
-            highlightDescription: details.highlightDescription.trim(),
-            homeExcerpt: details.homeExcerpt.trim(),
-            durationText: details.durationText.trim(),
-            whatsappNumber: details.whatsappNumber.trim(),
-            scheduleDescription: details.scheduleDescription.trim(),
-            showScheduleOnFrontend: details.showScheduleOnFrontend,
-            seoImage: details.seoImage,
-            videoUrl: details.videoUrl.trim(),
-            videoPoster: details.videoPoster.trim(),
-            content: {
-              ...details.content,
-              learningSectionTitle: details.content.learningSectionTitle.trim(),
-              learningContent: details.content.learningContent.trim(),
-              participationSectionTitle: details.content.participationSectionTitle.trim(),
-              participationContent: details.content.participationContent.trim(),
-              paymentMethods: details.content.paymentMethods.trim(),
-              contactWhatsapp: details.content.contactWhatsapp.trim(),
-              contactEmail: details.content.contactEmail.trim(),
-              extraInfo: details.content.extraInfo.trim(),
-              modulesSectionTitle: details.content.modulesSectionTitle.trim(),
-              modulesAccordionTitle: details.content.modulesAccordionTitle.trim(),
-              modules: details.content.modules.map((mod, order) => ({ ...mod, title: mod.title.trim(), description: mod.description.trim(), order })),
-              activitiesSection: {
-                ...details.content.activitiesSection,
-                title: details.content.activitiesSection.title.trim(),
-                content: details.content.activitiesSection.content.trim(),
-                items: details.content.activitiesSection.items.map((item, order) => ({ ...item, title: item.title.trim(), description: item.description.trim(), order })),
-              },
-            },
-          },
-        },
-      }),
-    });
-
-    setIsSaving(false);
-    const data = (await response.json().catch(() => ({}))) as { offering?: Offering; error?: string };
-    if (!response.ok) {
-      setToast(data.error || "No se pudieron guardar los cambios.");
+    if (!validate()) {
+      setToast({ type: "error", message: "Revisa los campos marcados antes de guardar o publicar." });
       return;
     }
 
-    setStatus(nextStatus);
-    setIsDirty(false);
-    setToast(nextStatus === "published" ? "Cambios publicados correctamente." : "Borrador guardado correctamente.");
-    if (mode === "create" && data.offering?.id) {
-      router.push(`${basePath}/${data.offering.id}/edit`);
-    } else {
-      router.refresh();
+    setIsSaving(true);
+    setSavingIntent(intent);
+
+    try {
+      const pricing = details.pricing.filter((item) => item.description.trim() || item.price !== null).map((item, order) => ({ ...item, order }));
+      const galleryImages = details.galleryImages.filter((item) => item.image).map((item, order) => ({ ...item, order }));
+      const scheduleDays = details.scheduleDays.map((item, order) => ({ ...item, order }));
+      const primaryPrice = pricing.find((item) => item.price !== null)?.price ?? null;
+      const coverImage = details.heroVariant === "image" ? details.heroImage || DEFAULT_HERO_IMAGE : galleryImages[0]?.image || details.videoPoster || offering.cover_image_url;
+
+      const response = await fetch(mode === "create" ? "/api/admin/offerings" : `/api/admin/offerings/${offering.id}`, {
+        method: mode === "create" ? "POST" : "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          slug: slugify(slug),
+          subtitle: subtitle.trim(),
+          excerpt: details.highlightDescription.trim(),
+          description,
+          duration: details.durationText.trim(),
+          type: offering.type,
+          status: nextStatus,
+          price: primaryPrice,
+          currency: "EUR",
+          cover_image_url: coverImage,
+          gallery: galleryImages.map((item) => item.image),
+          seo_title: seoTitle.trim(),
+          seo_description: seoDescription.trim(),
+          details: {
+            ...offering.details,
+            class: {
+              ...details,
+              heroMenuTone: details.heroVariant === "image" ? "light" : "dark",
+              heroImage: details.heroVariant === "image" ? details.heroImage || DEFAULT_HERO_IMAGE : details.heroImage,
+              menuPlacement: menuPlacementForType(offering.type),
+              homeSections: [],
+              pricing,
+              galleryImages,
+              scheduleDays,
+              includedItems: details.includedItems.map((item) => item.trim()).filter(Boolean),
+              heroTitle: details.heroTitle.trim(),
+              heroSubtitle: details.heroSubtitle.trim(),
+              highlightDescription: details.highlightDescription.trim(),
+              homeExcerpt: details.homeExcerpt.trim(),
+              durationText: details.durationText.trim(),
+              whatsappNumber: details.whatsappNumber.trim(),
+              scheduleDescription: details.scheduleDescription.trim(),
+              showScheduleOnFrontend: details.showScheduleOnFrontend,
+              seoImage: details.seoImage,
+              videoUrl: details.videoUrl.trim(),
+              videoPoster: details.videoPoster.trim(),
+              content: {
+                ...details.content,
+                learningSectionTitle: details.content.learningSectionTitle.trim(),
+                learningContent: details.content.learningContent.trim(),
+                participationSectionTitle: details.content.participationSectionTitle.trim(),
+                participationContent: details.content.participationContent.trim(),
+                paymentMethods: details.content.paymentMethods.trim(),
+                contactWhatsapp: details.content.contactWhatsapp.trim(),
+                contactEmail: details.content.contactEmail.trim(),
+                extraInfo: details.content.extraInfo.trim(),
+                modulesSectionTitle: details.content.modulesSectionTitle.trim(),
+                modulesAccordionTitle: details.content.modulesAccordionTitle.trim(),
+                modules: details.content.modules.map((mod, order) => ({ ...mod, title: mod.title.trim(), description: mod.description.trim(), order })),
+                activitiesSection: {
+                  ...details.content.activitiesSection,
+                  title: details.content.activitiesSection.title.trim(),
+                  content: details.content.activitiesSection.content.trim(),
+                  items: details.content.activitiesSection.items.map((item, order) => ({ ...item, title: item.title.trim(), description: item.description.trim(), order })),
+                },
+              },
+            },
+          },
+        }),
+      });
+
+      const data = (await response.json().catch(() => ({}))) as { offering?: Offering; error?: string };
+      if (!response.ok) {
+        setToast({ type: "error", message: data.error || "No se pudieron guardar los cambios." });
+        return;
+      }
+
+      setStatus(nextStatus);
+      setIsDirty(false);
+      setToast({
+        type: "success",
+        message: nextStatus === "published" ? "Publicado exitosamente." : "Borrador guardado correctamente.",
+      });
+      if (mode === "create" && data.offering?.id) {
+        router.push(`${basePath}/${data.offering.id}/edit`);
+      } else {
+        router.refresh();
+      }
+    } catch {
+      setToast({ type: "error", message: "No se pudo conectar con el servidor. Intenta nuevamente." });
+    } finally {
+      setIsSaving(false);
+      setSavingIntent(null);
     }
   }
 
@@ -620,8 +835,16 @@ export default function ClassEditForm({
       </div>
 
       {toast ? (
-        <div className="mb-6 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-label-md text-on-surface">
-          {toast}
+        <div
+          className={`mb-6 rounded-xl border px-4 py-3 text-label-md ${
+            toast.type === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+              : "border-error bg-error-container text-on-error-container"
+          }`}
+          role={toast.type === "error" ? "alert" : "status"}
+          aria-live="polite"
+        >
+          {toast.message}
         </div>
       ) : null}
 
@@ -813,11 +1036,12 @@ export default function ClassEditForm({
           <>
             <Card padding="lg" className="space-y-5 rounded-2xl">
               <h2 className="text-headline-sm text-on-surface">Galería, video e incluye</h2>
-              <TextAreaField
+              <RichTextField
                 label="Qué incluye"
                 value={details.includedItems.join("\n")}
-                help="Un elemento por línea."
-                onChange={(event) => updateIncludedItems(event.target.value)}
+                onChange={updateIncludedItems}
+                minHeight="150px"
+                placeholder="Un elemento por línea. Puedes usar negritas, itálica, listas y enlaces."
               />
               <div className="grid gap-4 md:grid-cols-[1fr_260px]">
                 <TextField label="Video URL" value={details.videoUrl} placeholder="https://..." onChange={(event) => updateDetails({ videoUrl: event.target.value })} />
@@ -941,16 +1165,16 @@ export default function ClassEditForm({
 
         {activeTab === "preview" ? (
           <>
-            <PreviewPane title={title} subtitle={subtitle} description={description} status={status} details={details} />
+            <PreviewPane offeringType={offering.type} title={title} slug={slug} subtitle={subtitle} description={description} status={status} details={details} />
             <Card padding="lg" className="space-y-5 rounded-2xl">
               <h2 className="text-headline-sm text-on-surface">Publicación</h2>
               <p className="text-body-md text-on-surface-variant">Guarda como borrador o publica esta página. Al publicar, este producto queda listo para mostrarse en su categoría correspondiente.</p>
               <div className="flex flex-wrap gap-3">
-                <Button type="submit" name="intent" value="draft" variant="outlined" disabled={isSaving}>
-                  {isSaving ? "Guardando..." : "Guardar como boceto"}
+                <Button type="submit" name="intent" value="draft" variant="outlined" disabled={isSaving} aria-busy={isSaving && savingIntent === "draft"}>
+                  {isSaving && savingIntent === "draft" ? "Guardando..." : "Guardar como boceto"}
                 </Button>
-                <Button type="submit" name="intent" value="publish" disabled={isSaving}>
-                  {isSaving ? "Publicando..." : "Publicar"}
+                <Button type="submit" name="intent" value="publish" disabled={isSaving} aria-busy={isSaving && savingIntent === "publish"}>
+                  {isSaving && savingIntent === "publish" ? "Publicando..." : "Publicar"}
                 </Button>
               </div>
             </Card>
