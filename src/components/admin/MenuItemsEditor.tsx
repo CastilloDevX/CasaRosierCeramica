@@ -27,6 +27,10 @@ function getChildren(itemId: string, items: MenuItem[]): MenuItem[] {
   return items.filter((i) => i.parent_id === itemId).sort((a, b) => a.sort_order - b.sort_order);
 }
 
+function isProtectedHomeMenuItem(item: MenuItem) {
+  return !item.parent_id && ["/#hero", "/", "/home"].includes(item.url);
+}
+
 export default function MenuItemsEditor({ menu, onItemsChange }: Props) {
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -101,18 +105,19 @@ export default function MenuItemsEditor({ menu, onItemsChange }: Props) {
 
   function renderItem(item: MenuItem, depth = 0): React.ReactNode {
     const children = getChildren(item.id, menu.items);
+    const protectedHome = isProtectedHomeMenuItem(item);
     return (
       <div key={item.id} className={`menu-editor-item ${!item.is_visible ? "menu-item-hidden" : ""}`} style={{ marginLeft: depth * 24 }}>
         <div className="menu-item-row">
           <span className="menu-item-label">{item.label}</span>
           <span className="menu-item-meta">{item.type} · {item.url || "—"}</span>
-          <span className="menu-item-badge">{!item.is_visible ? "oculto" : children.length > 0 ? `${children.length} sub` : ""}</span>
+          <span className="menu-item-badge">{protectedHome ? "bloqueado" : !item.is_visible ? "oculto" : children.length > 0 ? `${children.length} sub` : ""}</span>
           <div className="row-actions">
             <button className="secondary-btn" onClick={() => handleMove(item.id, "up")} disabled={depth === 0 && menu.items.filter((i) => i.parent_id === item.parent_id).sort((a, b) => a.sort_order - b.sort_order)[0]?.id === item.id}>▲</button>
             <button className="secondary-btn" onClick={() => handleMove(item.id, "down")} disabled={depth === 0 && menu.items.filter((i) => i.parent_id === item.parent_id).sort((a, b) => a.sort_order - b.sort_order).slice(-1)[0]?.id === item.id}>▼</button>
-            <button className="secondary-btn" onClick={() => { setEditingItem(item); setShowNewForm(false); }}>Editar</button>
-            <button className="secondary-btn" onClick={() => handleToggle(item.id)}>{item.is_visible ? "Ocultar" : "Mostrar"}</button>
-            <button className="danger-btn" onClick={() => handleDelete(item.id)}>Eliminar</button>
+            <button className="secondary-btn" onClick={() => { setEditingItem(item); setShowNewForm(false); }} disabled={protectedHome}>Editar</button>
+            <button className="secondary-btn" onClick={() => handleToggle(item.id)} disabled={protectedHome}>{item.is_visible ? "Ocultar" : "Mostrar"}</button>
+            <button className="danger-btn" onClick={() => handleDelete(item.id)} disabled={protectedHome}>Eliminar</button>
           </div>
         </div>
         {children.map((child) => renderItem(child, depth + 1))}

@@ -2,15 +2,15 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { DetailPage } from "@/components/collections/DetailPage";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
-import Modal from "@/components/ui/Modal";
 import Switch from "@/components/ui/Switch";
 import { SocialGallery } from "@/components/home/SocialGallery";
 import type { ExperienceItem, ExperienceKind } from "@/data/types";
-import MediaPicker from "./MediaPicker";
+import AdminActionModal from "./AdminActionModal";
+import MediaLibraryModal from "./MediaLibraryModal";
 import RichTextField from "./RichTextField";
 import ClassContentTab, { defaultContent } from "./ClassContentTab";
 import type {
@@ -24,7 +24,8 @@ import type {
 type TabKey = "hero" | "basic" | "schedule" | "content" | "seo" | "additions" | "preview";
 type PickerTarget = "hero" | "title" | "titleSecondary" | "gallery" | "seo" | "videoPoster" | null;
 type SaveIntent = "draft" | "publish";
-type FormNotice = { type: "success" | "error"; message: string };
+type FormNotice = { type: "success" | "error"; message: string; details?: string[] };
+type HeroPreviewDevice = "phone" | "tablet" | "desktop";
 type LegacyOfferingDetails = Partial<ClassOfferingDetails> & {
   additionalInfo?: unknown;
   category?: unknown;
@@ -38,6 +39,17 @@ type LegacyOfferingDetails = Partial<ClassOfferingDetails> & {
 };
 
 const DEFAULT_HERO_IMAGE = "/img/hero-bg.jpg";
+
+const heroPreviewDevices: Array<{
+  key: HeroPreviewDevice;
+  label: string;
+  width: number;
+  height: number;
+}> = [
+  { key: "phone", label: "Teléfono", width: 390, height: 520 },
+  { key: "tablet", label: "Tablet", width: 760, height: 540 },
+  { key: "desktop", label: "Desktop", width: 1180, height: 620 },
+];
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "hero", label: "Hero" },
@@ -54,6 +66,21 @@ const defaultClassDetails: ClassOfferingDetails = {
   heroTitle: "",
   heroSubtitle: "",
   heroMenuTone: "dark",
+  heroLogoPositionX: "50%",
+  heroLogoPositionY: "46px",
+  heroLogoWidth: "118px",
+  heroLogoTabletPositionX: "50%",
+  heroLogoTabletPositionY: "42px",
+  heroLogoTabletWidth: "106px",
+  heroLogoMobilePositionX: "50%",
+  heroLogoMobilePositionY: "34px",
+  heroLogoMobileWidth: "92px",
+  heroMenuPositionY: "132px",
+  heroMenuTabletPositionY: "118px",
+  heroMenuMobilePositionY: "96px",
+  ctaHref: "",
+  ctaConsultHref: "",
+  ctaEnrollHref: "",
   highlightDescription: "",
   homeExcerpt: "",
   durationText: "",
@@ -113,6 +140,11 @@ function firstText(...values: unknown[]) {
     if (text) return text;
   }
   return "";
+}
+
+function defaultCtaHref(details: Pick<ClassOfferingDetails, "whatsappNumber" | "content">) {
+  const whatsapp = firstText(details.whatsappNumber, details.content?.contactWhatsapp, "34633788860").replace(/\D/g, "");
+  return `https://wa.me/${whatsapp || "34633788860"}`;
 }
 
 function textList(value: unknown) {
@@ -210,7 +242,24 @@ function toClassDetails(offering: Offering): ClassOfferingDetails {
     ...defaultClassDetails,
     ...fromDetails,
     heroVariant,
-    heroMenuTone: heroVariant === "image" ? "light" : "dark",
+    heroMenuTone: fromDetails.heroMenuTone === "light" || fromDetails.heroMenuTone === "dark"
+      ? fromDetails.heroMenuTone
+      : heroVariant === "image" ? "light" : "dark",
+    heroLogoPositionX: firstText(fromDetails.heroLogoPositionX, defaultClassDetails.heroLogoPositionX),
+    heroLogoPositionY: firstText(fromDetails.heroLogoPositionY, defaultClassDetails.heroLogoPositionY),
+    heroLogoWidth: firstText(fromDetails.heroLogoWidth, defaultClassDetails.heroLogoWidth),
+    heroLogoTabletPositionX: firstText(fromDetails.heroLogoTabletPositionX, fromDetails.heroLogoPositionX, defaultClassDetails.heroLogoTabletPositionX),
+    heroLogoTabletPositionY: firstText(fromDetails.heroLogoTabletPositionY, fromDetails.heroLogoPositionY, defaultClassDetails.heroLogoTabletPositionY),
+    heroLogoTabletWidth: firstText(fromDetails.heroLogoTabletWidth, fromDetails.heroLogoWidth, defaultClassDetails.heroLogoTabletWidth),
+    heroLogoMobilePositionX: firstText(fromDetails.heroLogoMobilePositionX, fromDetails.heroLogoPositionX, defaultClassDetails.heroLogoMobilePositionX),
+    heroLogoMobilePositionY: firstText(fromDetails.heroLogoMobilePositionY, defaultClassDetails.heroLogoMobilePositionY),
+    heroLogoMobileWidth: firstText(fromDetails.heroLogoMobileWidth, defaultClassDetails.heroLogoMobileWidth),
+    heroMenuPositionY: firstText(fromDetails.heroMenuPositionY, defaultClassDetails.heroMenuPositionY),
+    heroMenuTabletPositionY: firstText(fromDetails.heroMenuTabletPositionY, fromDetails.heroMenuPositionY, defaultClassDetails.heroMenuTabletPositionY),
+    heroMenuMobilePositionY: firstText(fromDetails.heroMenuMobilePositionY, defaultClassDetails.heroMenuMobilePositionY),
+    ctaHref: firstText(fromDetails.ctaHref),
+    ctaConsultHref: firstText(fromDetails.ctaConsultHref, fromDetails.ctaHref),
+    ctaEnrollHref: firstText(fromDetails.ctaEnrollHref, fromDetails.ctaHref),
     heroTitle: firstText(fromDetails.heroTitle, offering.title),
     heroSubtitle: firstText(fromDetails.heroSubtitle, fromDetails.category, offering.subtitle),
     highlightDescription: firstText(fromDetails.highlightDescription, fromDetails.introHighlight, offering.excerpt),
@@ -265,6 +314,7 @@ function TextField({
   required,
   error,
   help,
+  value,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; required?: boolean; error?: string; help?: string }) {
   return (
@@ -272,6 +322,7 @@ function TextField({
       <FieldLabel required={required}>{label}</FieldLabel>
       <input
         {...props}
+        value={value ?? ""}
         className={`block w-full rounded-xl border bg-surface-container-lowest px-4 py-3 text-body-md text-on-surface transition-colors placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-secondary-container ${
           error ? "border-error" : "border-outline-variant"
         } ${props.className ?? ""}`}
@@ -286,6 +337,7 @@ function TextAreaField({
   label,
   error,
   help,
+  value,
   ...props
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; error?: string; help?: string }) {
   return (
@@ -293,6 +345,7 @@ function TextAreaField({
       <FieldLabel>{label}</FieldLabel>
       <textarea
         {...props}
+        value={value ?? ""}
         className={`block min-h-[110px] w-full rounded-xl border bg-surface-container-lowest px-4 py-3 text-body-md text-on-surface transition-colors placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-secondary-container ${
           error ? "border-error" : "border-outline-variant"
         } ${props.className ?? ""}`}
@@ -309,6 +362,252 @@ function ImagePreview({ src, alt, aspect = "aspect-video" }: { src: string; alt:
     <div className={`relative overflow-hidden rounded-xl border border-outline-variant bg-surface-container-high ${aspect}`}>
       <Image src={src} alt={alt} fill sizes="720px" className="object-cover" unoptimized />
     </div>
+  );
+}
+
+function heroDeviceKeys(device: HeroPreviewDevice) {
+  if (device === "phone") {
+    return {
+      logoX: "heroLogoMobilePositionX",
+      logoY: "heroLogoMobilePositionY",
+      logoWidth: "heroLogoMobileWidth",
+      menuY: "heroMenuMobilePositionY",
+    } as const;
+  }
+
+  if (device === "tablet") {
+    return {
+      logoX: "heroLogoTabletPositionX",
+      logoY: "heroLogoTabletPositionY",
+      logoWidth: "heroLogoTabletWidth",
+      menuY: "heroMenuTabletPositionY",
+    } as const;
+  }
+
+  return {
+    logoX: "heroLogoPositionX",
+    logoY: "heroLogoPositionY",
+    logoWidth: "heroLogoWidth",
+    menuY: "heroMenuPositionY",
+  } as const;
+}
+
+function heroValue(details: ClassOfferingDetails, key: keyof ClassOfferingDetails) {
+  const value = details[key];
+  return typeof value === "string" ? value : "";
+}
+
+function HeroPositionEditor({
+  details,
+  activeDevice,
+  onDeviceChange,
+  onChange,
+}: {
+  details: ClassOfferingDetails;
+  activeDevice: HeroPreviewDevice;
+  onDeviceChange: (device: HeroPreviewDevice) => void;
+  onChange: (next: Partial<ClassOfferingDetails>) => void;
+}) {
+  const keys = heroDeviceKeys(activeDevice);
+
+  const updateField = (key: keyof ClassOfferingDetails, value: string) => {
+    onChange({ [key]: value } as Partial<ClassOfferingDetails>);
+  };
+
+  return (
+    <Card padding="lg" className="space-y-5 rounded-2xl">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h2 className="text-headline-sm text-on-surface">Posición responsive del hero</h2>
+          <p className="mt-1 text-body-md text-on-surface-variant">
+            Ajusta el logotipo y el menú inicial por dispositivo. Los valores aceptan %, px o rem.
+          </p>
+        </div>
+        <div className="inline-flex rounded-xl border border-outline-variant bg-surface-container-low p-1">
+          {heroPreviewDevices.map((device) => (
+            <button
+              type="button"
+              key={device.key}
+              onClick={() => onDeviceChange(device.key)}
+              className={`min-h-11 rounded-lg px-4 text-label-md font-bold transition-colors ${
+                activeDevice === device.key
+                  ? "bg-[#9d4300] text-white shadow-sm"
+                  : "text-on-surface-variant hover:bg-white"
+              }`}
+            >
+              {device.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <fieldset className="space-y-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+          <legend className="px-2 text-label-md font-bold uppercase tracking-wide text-on-surface-variant">
+            Propiedades del logo
+          </legend>
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+            <TextField
+              label="Logo X"
+              value={heroValue(details, keys.logoX)}
+              placeholder="50%"
+              onChange={(event) => updateField(keys.logoX, event.target.value)}
+            />
+            <TextField
+              label="Logo Y"
+              value={heroValue(details, keys.logoY)}
+              placeholder="46px"
+              onChange={(event) => updateField(keys.logoY, event.target.value)}
+            />
+            <TextField
+              label="Tamaño logo"
+              value={heroValue(details, keys.logoWidth)}
+              placeholder="118px"
+              onChange={(event) => updateField(keys.logoWidth, event.target.value)}
+            />
+          </div>
+        </fieldset>
+
+        <fieldset className="space-y-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+          <legend className="px-2 text-label-md font-bold uppercase tracking-wide text-on-surface-variant">
+            Posicionamiento del menú
+          </legend>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <FieldLabel>Color del menú inicial</FieldLabel>
+              <select
+                className="w-full rounded-xl border border-outline-variant bg-white px-4 py-3 text-body-md text-on-surface shadow-sm outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary-container"
+                value={details.heroMenuTone ?? "dark"}
+                onChange={(event) => onChange({ heroMenuTone: event.target.value as "light" | "dark" })}
+              >
+                <option value="light">Blanco</option>
+                <option value="dark">Negro</option>
+              </select>
+            </div>
+            <TextField
+              label="Menú inicial Y"
+              value={heroValue(details, keys.menuY)}
+              placeholder="132px"
+              help="También define cuándo aparece la barra secundaria en este dispositivo."
+              onChange={(event) => updateField(keys.menuY, event.target.value)}
+            />
+          </div>
+        </fieldset>
+      </div>
+    </Card>
+  );
+}
+
+function HeroResponsivePreview({
+  details,
+  title,
+  subtitle,
+  device,
+}: {
+  details: ClassOfferingDetails;
+  title: string;
+  subtitle: string;
+  device: HeroPreviewDevice;
+}) {
+  const preset = heroPreviewDevices.find((item) => item.key === device) ?? heroPreviewDevices[2];
+  const keys = heroDeviceKeys(device);
+  const isImageHero = details.heroVariant === "image";
+  const isLight = details.heroMenuTone === "light";
+  const navColor = isLight ? "rgba(255,255,255,0.95)" : "#3f3933";
+  const logoFilter = isLight ? "brightness(0) invert(1)" : "brightness(0) saturate(100%)";
+  const logoStyle = {
+    left: heroValue(details, keys.logoX) || "50%",
+    top: heroValue(details, keys.logoY) || "46px",
+    width: heroValue(details, keys.logoWidth) || "118px",
+    filter: logoFilter,
+  } as CSSProperties;
+  const menuStyle = {
+    top: heroValue(details, keys.menuY) || "132px",
+    color: navColor,
+  } as CSSProperties;
+  const frameStyle = {
+    width: `${preset.width}px`,
+    height: `${preset.height}px`,
+    maxWidth: "100%",
+    background: isImageHero
+      ? `linear-gradient(to bottom, rgba(58,48,37,.2), rgba(251,250,246,.94)), url("${details.heroImage || DEFAULT_HERO_IMAGE}") center / cover no-repeat`
+      : "#fbfaf6",
+  } as CSSProperties;
+
+  return (
+    <Card padding="lg" className="space-y-5 rounded-2xl">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-headline-sm text-on-surface">Renderizado del hero</h2>
+        <p className="text-body-md text-on-surface-variant">
+          Vista {preset.label.toLowerCase()} con las posiciones configuradas para ese dispositivo.
+        </p>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-low p-4">
+        <div className="relative mx-auto overflow-hidden rounded-xl border border-outline-variant bg-[#fbfaf6] shadow-sm" style={frameStyle}>
+          <img
+            src="/img/logo-header.png"
+            alt="Casa Rosier"
+            className="absolute z-20 h-auto -translate-x-1/2"
+            style={logoStyle}
+          />
+
+          <div
+            className="absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center whitespace-nowrap text-[12px] font-bold"
+            style={menuStyle}
+          >
+            {device === "phone" ? (
+              <button
+                type="button"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-current/30"
+                aria-label="Vista de botón de menú móvil"
+              >
+                <span className="material-symbols-outlined text-[22px]">menu</span>
+              </button>
+            ) : (
+              <nav aria-label="Vista previa menú hero">
+                <ul className="flex list-none items-center gap-4 p-0">
+                  {["Inicio", "Clases", "Workshops", "Experiencias", "Gift Cards", "El Estudio", "Shop"].map((item) => (
+                    <li key={item} className="flex items-center gap-2">
+                      <span>{item}</span>
+                      {item !== "Inicio" && item !== "Shop" ? <span aria-hidden="true">+</span> : null}
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            )}
+          </div>
+
+          <div className="absolute inset-x-8 top-1/2 z-10 -translate-y-1/2 text-center">
+            {isImageHero ? (
+              <div className="relative mx-auto h-[150px] w-[min(520px,72%)]">
+                {details.titleImage ? (
+                  <Image src={details.titleImage} alt="Texto principal del hero" fill sizes="520px" className="object-contain opacity-80" unoptimized />
+                ) : (
+                  <span className="font-serif text-[clamp(32px,5vw,56px)] italic text-white/80">Casa Rosier</span>
+                )}
+                {details.titleImageSecondary ? (
+                  <Image src={details.titleImageSecondary} alt="Texto secundario del hero" fill sizes="520px" className="object-contain" unoptimized />
+                ) : (
+                  <span className="absolute inset-0 grid place-items-center font-serif text-[clamp(28px,4vw,48px)] italic text-white">
+                    {details.heroTitle || title || "Casa Rosier"}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div>
+                <h3 className="font-serif text-[clamp(30px,4vw,54px)] uppercase leading-none tracking-normal text-[#5b554f]">
+                  {details.heroTitle || title || "Un día de cerámica"}
+                </h3>
+                <p className="mt-4 text-label-md uppercase text-[#a99b90]">
+                  {details.heroSubtitle || subtitle || "Clases - Iniciación"}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -376,6 +675,9 @@ function buildPreviewItem({
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .map((item) => item.image);
   const fallbackImage = details.heroImage || details.videoPoster || DEFAULT_HERO_IMAGE;
+  const fallbackCta = defaultCtaHref(details);
+  const consultHref = details.ctaConsultHref || details.ctaHref || fallbackCta;
+  const enrollHref = details.ctaEnrollHref || details.ctaHref || fallbackCta;
   const priceOptions = details.pricing
     .filter((item) => item.description.trim() || item.price !== null)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
@@ -397,7 +699,19 @@ function buildPreviewItem({
     coverImage: galleryImages[0] || fallbackImage,
     heroImage: fallbackImage,
     heroVariant: details.heroVariant,
-    heroMenuTone: details.heroVariant === "image" ? "light" : "dark",
+    heroMenuTone: details.heroMenuTone,
+    heroLogoPositionX: details.heroLogoPositionX,
+    heroLogoPositionY: details.heroLogoPositionY,
+    heroLogoWidth: details.heroLogoWidth,
+    heroLogoTabletPositionX: details.heroLogoTabletPositionX,
+    heroLogoTabletPositionY: details.heroLogoTabletPositionY,
+    heroLogoTabletWidth: details.heroLogoTabletWidth,
+    heroLogoMobilePositionX: details.heroLogoMobilePositionX,
+    heroLogoMobilePositionY: details.heroLogoMobilePositionY,
+    heroLogoMobileWidth: details.heroLogoMobileWidth,
+    heroMenuPositionY: details.heroMenuPositionY,
+    heroMenuTabletPositionY: details.heroMenuTabletPositionY,
+    heroMenuMobilePositionY: details.heroMenuMobilePositionY,
     heroTitleImage: details.titleImage,
     heroTitleImageSecondary: details.titleImageSecondary,
     heroTitle: details.heroTitle || title || "Título del hero",
@@ -419,7 +733,9 @@ function buildPreviewItem({
       details.content.extraInfo ||
       `Cualquier consulta o información adicional que necesites, puedes escribir al WhatsApp ${details.whatsappNumber || details.content.contactWhatsapp || "633788860"}.`,
     showIdeaPromptSection: details.showIdeaPromptSection,
-    ctaHref: details.whatsappNumber ? `https://wa.me/${details.whatsappNumber}` : "https://wa.me/34633788860",
+    ctaHref: consultHref,
+    ctaConsultHref: consultHref,
+    ctaEnrollHref: enrollHref,
     seoTitle: title || "Vista previa",
     seoDescription: details.highlightDescription || renderPlainText(description),
     isPublished: false,
@@ -525,6 +841,7 @@ export default function ClassEditForm({
 }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("hero");
+  const [heroPreviewDevice, setHeroPreviewDevice] = useState<HeroPreviewDevice>("desktop");
   const [title, setTitle] = useState(offering.title);
   const [slug, setSlug] = useState(offering.slug);
   const [subtitle, setSubtitle] = useState(offering.subtitle);
@@ -567,12 +884,6 @@ export default function ClassEditForm({
       : button.dataset.defaultLabel ?? "";
     });
   }, [isSaving, savingIntent]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 3000);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
 
   function updateDetails(next: Partial<ClassOfferingDetails>) {
     setDetails((current) => ({ ...current, ...next }));
@@ -674,6 +985,36 @@ export default function ClassEditForm({
     setPickerTarget(null);
   }
 
+  function errorTab(errorKey: string): TabKey {
+    if (errorKey === "heroTitle") return "hero";
+    if (errorKey.startsWith("schedule-")) return "schedule";
+    if (errorKey.startsWith("pricing-") || errorKey === "title" || errorKey === "slug" || errorKey === "whatsappNumber") return "basic";
+    if (errorKey.startsWith("gallery-")) return "additions";
+    return "basic";
+  }
+
+  function errorLabel(errorKey: string) {
+    if (errorKey === "title") return "Información básica - Título interno";
+    if (errorKey === "slug") return "Información básica - Slug (URL)";
+    if (errorKey === "heroTitle") return "Hero - Título del hero";
+    if (errorKey === "whatsappNumber") return "Información básica - WhatsApp";
+
+    const pricing = errorKey.match(/^pricing-(\d+)$/);
+    if (pricing) return `Información básica - Precio ${Number(pricing[1]) + 1}`;
+
+    const gallery = errorKey.match(/^gallery-(\d+)$/);
+    if (gallery) return `Adiciones - Imagen de galería ${Number(gallery[1]) + 1}`;
+
+    const schedule = errorKey.match(/^schedule-(date|end|seats)-(\d+)$/);
+    if (schedule) return `Horario - Día ${Number(schedule[2]) + 1}`;
+
+    return errorKey;
+  }
+
+  function validationDetails(nextErrors: Record<string, string>) {
+    return Object.entries(nextErrors).map(([key, message]) => `${errorLabel(key)}: ${message}`);
+  }
+
   function validate() {
     const nextErrors: Record<string, string> = {};
     if (!title.trim()) nextErrors.title = "El título es obligatorio.";
@@ -693,7 +1034,7 @@ export default function ClassEditForm({
       if (item.availableSeats !== null && Number(item.availableSeats) < 0) nextErrors[`schedule-seats-${index}`] = "Las plazas no pueden ser negativas.";
     });
     setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
+    return nextErrors;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -704,8 +1045,15 @@ export default function ClassEditForm({
     const intent: SaveIntent = submitter?.value === "publish" ? "publish" : "draft";
     const nextStatus = intent === "publish" ? "published" : "draft";
 
-    if (!validate()) {
-      setToast({ type: "error", message: "Revisa los campos marcados antes de guardar o publicar." });
+    const validationErrors = validate();
+    const validationKeys = Object.keys(validationErrors);
+    if (validationKeys.length > 0) {
+      setActiveTab(errorTab(validationKeys[0]));
+      setToast({
+        type: "error",
+        message: `Encontré ${validationKeys.length === 1 ? "1 campo que necesita atención" : `${validationKeys.length} campos que necesitan atención`}.`,
+        details: validationDetails(validationErrors),
+      });
       return;
     }
 
@@ -741,8 +1089,23 @@ export default function ClassEditForm({
             ...offering.details,
             class: {
               ...details,
-              heroMenuTone: details.heroVariant === "image" ? "light" : "dark",
+              heroMenuTone: details.heroMenuTone,
               heroImage: details.heroVariant === "image" ? details.heroImage || DEFAULT_HERO_IMAGE : details.heroImage,
+              heroLogoPositionX: details.heroLogoPositionX.trim() || defaultClassDetails.heroLogoPositionX,
+              heroLogoPositionY: details.heroLogoPositionY.trim() || defaultClassDetails.heroLogoPositionY,
+              heroLogoWidth: details.heroLogoWidth.trim() || defaultClassDetails.heroLogoWidth,
+              heroLogoTabletPositionX: details.heroLogoTabletPositionX.trim() || defaultClassDetails.heroLogoTabletPositionX,
+              heroLogoTabletPositionY: details.heroLogoTabletPositionY.trim() || defaultClassDetails.heroLogoTabletPositionY,
+              heroLogoTabletWidth: details.heroLogoTabletWidth.trim() || defaultClassDetails.heroLogoTabletWidth,
+              heroLogoMobilePositionX: details.heroLogoMobilePositionX.trim() || defaultClassDetails.heroLogoMobilePositionX,
+              heroLogoMobilePositionY: details.heroLogoMobilePositionY.trim() || defaultClassDetails.heroLogoMobilePositionY,
+              heroLogoMobileWidth: details.heroLogoMobileWidth.trim() || defaultClassDetails.heroLogoMobileWidth,
+              heroMenuPositionY: details.heroMenuPositionY.trim() || defaultClassDetails.heroMenuPositionY,
+              heroMenuTabletPositionY: details.heroMenuTabletPositionY.trim() || defaultClassDetails.heroMenuTabletPositionY,
+              heroMenuMobilePositionY: details.heroMenuMobilePositionY.trim() || defaultClassDetails.heroMenuMobilePositionY,
+              ctaHref: details.ctaConsultHref.trim() || details.ctaHref.trim(),
+              ctaConsultHref: details.ctaConsultHref.trim(),
+              ctaEnrollHref: details.ctaEnrollHref.trim(),
               menuPlacement: menuPlacementForType(offering.type),
               homeSections: [],
               pricing,
@@ -817,6 +1180,16 @@ export default function ClassEditForm({
 
   return (
     <>
+      <AdminActionModal
+        open={Boolean(toast)}
+        type={toast?.type}
+        title={toast?.type === "success" ? "Acción completada" : "Revisa la edición"}
+        message={toast?.message}
+        details={toast?.details}
+        confirmLabel="Entendido"
+        onClose={() => setToast(null)}
+      />
+
       <div className="mb-6 border-b border-outline-variant">
         <div className="flex gap-6 overflow-x-auto">
           {tabs.map((tab) => (
@@ -834,20 +1207,6 @@ export default function ClassEditForm({
         </div>
       </div>
 
-      {toast ? (
-        <div
-          className={`mb-6 rounded-xl border px-4 py-3 text-label-md ${
-            toast.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-              : "border-error bg-error-container text-on-error-container"
-          }`}
-          role={toast.type === "error" ? "alert" : "status"}
-          aria-live="polite"
-        >
-          {toast.message}
-        </div>
-      ) : null}
-
       <form id="class-edit-form" onSubmit={handleSubmit} className="space-y-6">
         {activeTab === "hero" ? (
           <>
@@ -864,7 +1223,7 @@ export default function ClassEditForm({
                 >
                   <span className="block text-title-md font-bold text-on-surface">Hero con imagen</span>
                   <span className="mt-1 block text-body-md text-on-surface-variant">Imagen de fondo, gradiente blanco y dos imágenes de texto cursivo.</span>
-                  <span className="mt-3 block text-label-md font-semibold text-secondary">Menú blanco automático</span>
+                  <span className="mt-3 block text-label-md font-semibold text-secondary">Menú configurable sobre imagen</span>
                 </button>
                 <button
                   type="button"
@@ -873,7 +1232,7 @@ export default function ClassEditForm({
                 >
                   <span className="block text-title-md font-bold text-on-surface">Hero tipográfico</span>
                   <span className="mt-1 block text-body-md text-on-surface-variant">Fondo blanco con título y subtítulo usando la tipografía definida.</span>
-                  <span className="mt-3 block text-label-md font-semibold text-secondary">Menú negro automático</span>
+                  <span className="mt-3 block text-label-md font-semibold text-secondary">Menú configurable sobre fondo claro</span>
                 </button>
               </div>
             </Card>
@@ -920,6 +1279,20 @@ export default function ClassEditForm({
                 </div>
               </Card>
             )}
+
+            <HeroPositionEditor
+              details={details}
+              activeDevice={heroPreviewDevice}
+              onDeviceChange={setHeroPreviewDevice}
+              onChange={updateDetails}
+            />
+
+            <HeroResponsivePreview
+              details={details}
+              title={title}
+              subtitle={subtitle}
+              device={heroPreviewDevice}
+            />
           </>
         ) : null}
 
@@ -956,6 +1329,31 @@ export default function ClassEditForm({
                   error={errors.whatsappNumber}
                   help="Formato internacional sin espacios. Ej: 34633788860"
                   onChange={(event) => updateDetails({ whatsappNumber: event.target.value })}
+                />
+              </div>
+            </Card>
+
+            <Card padding="lg" className="space-y-5 rounded-2xl">
+              <div>
+                <h2 className="text-headline-sm text-on-surface">Botones CTA</h2>
+                <p className="mt-1 text-body-md text-on-surface-variant">
+                  Define a dónde dirige cada botón de la página pública. Si un campo queda vacío, se usará WhatsApp.
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <TextField
+                  label="Consultar"
+                  value={details.ctaConsultHref}
+                  placeholder={defaultCtaHref(details)}
+                  help="Aparece en los botones Consultar o Comprar."
+                  onChange={(event) => updateDetails({ ctaConsultHref: event.target.value, ctaHref: event.target.value })}
+                />
+                <TextField
+                  label="Inscribirme"
+                  value={details.ctaEnrollHref}
+                  placeholder={defaultCtaHref(details)}
+                  help="Aparece en el CTA final de la ficha."
+                  onChange={(event) => updateDetails({ ctaEnrollHref: event.target.value })}
                 />
               </div>
             </Card>
@@ -1184,11 +1582,23 @@ export default function ClassEditForm({
         <div className="border-t border-outline-variant pt-5">
           <Button type="button" variant="ghost" onClick={handleCancel}>Cancelar</Button>
         </div>
+
+        <div className="admin-sticky-actionbar">
+          <span className="admin-sticky-actionbar__meta">{isDirty ? "Cambios sin guardar" : "Cambios al día"}</span>
+          <Button type="submit" name="intent" value="draft" variant="outlined" disabled={isSaving} aria-busy={isSaving && savingIntent === "draft"}>
+            {isSaving && savingIntent === "draft" ? "Guardando..." : "Guardar boceto"}
+          </Button>
+          <Button type="submit" name="intent" value="publish" disabled={isSaving} aria-busy={isSaving && savingIntent === "publish"}>
+            {isSaving && savingIntent === "publish" ? "Publicando..." : "Publicar"}
+          </Button>
+        </div>
       </form>
 
-      <Modal open={pickerTarget !== null} onClose={() => setPickerTarget(null)} title="Seleccionar imagen">
-        <MediaPicker onSelect={handleSelectImage} onClose={() => setPickerTarget(null)} />
-      </Modal>
+      <MediaLibraryModal
+        open={pickerTarget !== null}
+        onSelect={handleSelectImage}
+        onClose={() => setPickerTarget(null)}
+      />
     </>
   );
 }

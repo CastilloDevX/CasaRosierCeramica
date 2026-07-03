@@ -7,7 +7,9 @@ import EmptyState from "@/components/ui/EmptyState";
 import type { MediaAsset } from "@/lib/cms/types";
 
 function isImage(asset: MediaAsset) {
-  return ["jpg", "jpeg", "png", "webp", "gif", "svg", "avif"].includes(asset.file_type);
+  const extension = asset.file_type.toLowerCase();
+  const mimeType = asset.mime_type.toLowerCase();
+  return ["jpg", "jpeg", "png", "webp", "gif", "svg", "avif"].includes(extension) || mimeType.startsWith("image/");
 }
 
 function isAbsoluteUrl(url: string) {
@@ -39,11 +41,11 @@ export default function MediaPicker({
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="media-library-picker space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-headline-sm text-on-surface">Biblioteca del proyecto</h3>
-          <p className="text-label-md text-on-surface-variant">Selecciona una imagen activa.</p>
+          <h3 className="media-library-picker__title text-headline-sm text-on-surface">Biblioteca del proyecto</h3>
+          <p className="media-library-picker__copy text-label-md text-on-surface-variant">Selecciona una imagen activa.</p>
         </div>
         <button type="button" className="secondary-btn" onClick={onClose}>
           Cerrar
@@ -65,7 +67,7 @@ export default function MediaPicker({
               <button
                 key={asset.id}
                 type="button"
-                className="group text-left rounded-xl border border-outline-variant bg-surface-container-lowest overflow-hidden hover:border-primary-container hover:shadow-lg transition-all"
+                className="media-library-picker__asset group text-left rounded-xl border border-outline-variant bg-surface-container-lowest overflow-hidden hover:border-primary-container hover:shadow-lg transition-all"
                 onClick={() => {
                   onSelect(asset.file_url);
                   onClose();
@@ -79,8 +81,8 @@ export default function MediaPicker({
                   )}
                 </div>
                 <div className="p-3">
-                  <div className="text-label-md text-on-surface font-medium truncate">{asset.original_name}</div>
-                  <div className="text-[11px] text-on-surface-variant/70 truncate">{asset.folder}</div>
+                  <div className="media-library-picker__name text-label-md text-on-surface font-medium truncate">{asset.original_name}</div>
+                  <div className="media-library-picker__folder text-[11px] text-on-surface-variant/70 truncate">{asset.folder}</div>
                 </div>
               </button>
             ))}

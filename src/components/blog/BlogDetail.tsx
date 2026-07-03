@@ -21,7 +21,7 @@ export function BlogDetail({
               {post.title}
             </h1>
             <div className="article-intro blog-post__intro">
-              <p className="blog-post__excerpt">{post.excerpt}</p>
+              <MarkdownContent className="blog-post__excerpt" source={post.excerpt} />
             </div>
           </div>
           <figure className="blog-post__cover-figure" aria-label={post.title}>

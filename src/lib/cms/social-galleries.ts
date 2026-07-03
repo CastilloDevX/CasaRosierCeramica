@@ -9,20 +9,26 @@ const FILE_NAME = "social-galleries.json";
 const SINGLE_GALLERY_SLUG = "galeria-social";
 const DEFAULT_GALLERY_ID = "4a18f60a-5c43-4bfb-b8f9-2e967f6bd5d1";
 
+function ensureUuid(value: string | undefined, fallbackSeed: string) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (value && uuidPattern.test(value)) return value;
+  return fallbackSeed;
+}
+
 function getDefaultSocialGallery(): SocialGallery {
   return {
     id: DEFAULT_GALLERY_ID,
     name: "Galeria social principal",
     slug: SINGLE_GALLERY_SLUG,
     status: "published",
-    title: "Y tu, cuando tuviste\ntu ultima idea?",
-    description: "siguenos en instagram - @casarosier",
+    title: "Y tu, cuando tuviste\ntu ultima faena?",
+    description: "Se parte de nuestra comunidad en indastagram - @casarosier",
     cta_text: "",
     cta_url: "",
     items: [
       {
-        id: "social-gallery-item-1",
-        image_id: "",
+        id: "c8256425-1a6b-46db-a0cc-99cba2d80001",
+        image_id: "img/social-1.jpg",
         image_url: "/img/social-1.jpg",
         title: "Serie en proceso",
         description: "Pieza en estudio: pruebas de forma, secado y acabados de superficie.",
@@ -33,8 +39,8 @@ function getDefaultSocialGallery(): SocialGallery {
         updated_at: "2026-06-30T00:00:00.000Z",
       },
       {
-        id: "social-gallery-item-2",
-        image_id: "",
+        id: "c8256425-1a6b-46db-a0cc-99cba2d80002",
+        image_id: "img/social-2.jpg",
         image_url: "/img/social-2.jpg",
         title: "Materia y ritmo",
         description: "Una mirada al proceso cotidiano dentro del taller.",
@@ -45,8 +51,8 @@ function getDefaultSocialGallery(): SocialGallery {
         updated_at: "2026-06-30T00:01:00.000Z",
       },
       {
-        id: "social-gallery-item-3",
-        image_id: "",
+        id: "c8256425-1a6b-46db-a0cc-99cba2d80003",
+        image_id: "img/social-3.jpg",
         image_url: "/img/social-3.jpg",
         title: "Color y superficie",
         description: "Pruebas de esmaltes, capas y pequenas decisiones de acabado.",
@@ -57,8 +63,8 @@ function getDefaultSocialGallery(): SocialGallery {
         updated_at: "2026-06-30T00:02:00.000Z",
       },
       {
-        id: "social-gallery-item-4",
-        image_id: "",
+        id: "c8256425-1a6b-46db-a0cc-99cba2d80004",
+        image_id: "img/social-4.jpeg",
         image_url: "/img/social-4.jpeg",
         title: "El taller por dentro",
         description: "Herramientas, piezas y momentos de trabajo compartido.",
@@ -101,14 +107,36 @@ function normalize(input: Input, existing?: SocialGallery, all: SocialGallery[] 
   return { id: existing?.id ?? input.id ?? randomUUID(), name, slug, status, title: String(input.title ?? existing?.title ?? "").trim(), description: String(input.description ?? existing?.description ?? "").trim(), cta_text: "", cta_url: "", items: galleryItems, created_at: existing?.created_at ?? now, updated_at: now, deleted_at: null } satisfies SocialGallery;
 }
 
-function mapDbItemToTs(item: Record<string, unknown>): SocialGalleryItem {
-  const { social_gallery_id, platform, url, ...rest } = item;
+function mapDbItemToTs(item: Record<string, unknown>, mediaUrlByFile = new Map<string, string>()): SocialGalleryItem {
+  const rest = { ...item };
+  const url = rest.url;
+  const imageId = typeof rest.image_id === "string" ? rest.image_id : "";
+  const imageUrl = typeof rest.image_url === "string" ? rest.image_url : "";
+  if (imageId && mediaUrlByFile.has(imageId)) {
+    rest.image_url = mediaUrlByFile.get(imageId);
+  } else if (imageUrl.startsWith("/")) {
+    const fileName = imageUrl.replace(/^\/+/, "");
+    rest.image_url = mediaUrlByFile.get(fileName) ?? imageUrl;
+  }
+  delete rest.social_gallery_id;
+  delete rest.platform;
+  delete rest.url;
   return { ...rest, instagram_url: (url as string) ?? "" } as SocialGalleryItem;
 }
 
 function mapTsItemToDb(galleryId: string, item: SocialGalleryItem): Record<string, unknown> {
   const { instagram_url, ...rest } = item;
-  return { ...rest, is_visible: true, social_gallery_id: galleryId, url: instagram_url, platform: "instagram" };
+  const imageUrl = typeof item.image_url === "string" ? item.image_url : "";
+  const fallbackImageId = imageUrl.startsWith("/") ? imageUrl.replace(/^\/+/, "") : "";
+  return {
+    ...rest,
+    id: ensureUuid(item.id, randomUUID()),
+    image_id: item.image_id || fallbackImageId,
+    is_visible: true,
+    social_gallery_id: galleryId,
+    url: instagram_url,
+    platform: "instagram",
+  };
 }
 
 async function readAllFromSupabase(): Promise<SocialGallery[] | null> {
@@ -119,12 +147,19 @@ async function readAllFromSupabase(): Promise<SocialGallery[] | null> {
     if (!galleries || galleries.length === 0) return null;
     const { data: items, error: ie } = await supabase.from("social_gallery_items").select("*").order("sort_order");
     if (ie) throw ie;
+    const { data: mediaRows } = await supabase.from("media_assets").select("file_name,file_url");
+    const mediaUrlByFile = new Map<string, string>();
+    for (const row of (mediaRows ?? []) as Array<Record<string, unknown>>) {
+      if (typeof row.file_name === "string" && typeof row.file_url === "string") {
+        mediaUrlByFile.set(row.file_name, row.file_url);
+      }
+    }
     const byGallery: Record<string, SocialGalleryItem[]> = {};
     if (items) {
       for (const row of items as Array<Record<string, unknown>>) {
         const gid = row.social_gallery_id as string;
         if (!byGallery[gid]) byGallery[gid] = [];
-        byGallery[gid].push(mapDbItemToTs(row));
+        byGallery[gid].push(mapDbItemToTs(row, mediaUrlByFile));
       }
     }
     return (galleries as Array<Record<string, unknown>>).map((row) => ({
@@ -137,11 +172,11 @@ async function readAllFromSupabase(): Promise<SocialGallery[] | null> {
 }
 
 async function upsertGallery(gallery: SocialGallery): Promise<void> {
-  try {
-    const supabase = createAdminClient();
-    const { items, ...data } = gallery;
-    await supabase.from("social_galleries").upsert(data as unknown as Record<string, unknown>, { onConflict: "id" });
-  } catch { /* best-effort */ }
+  const supabase = createAdminClient();
+  const data = { ...gallery } as Partial<SocialGallery>;
+  delete data.items;
+  const { error } = await supabase.from("social_galleries").upsert(data as unknown as Record<string, unknown>, { onConflict: "id" });
+  if (error) throw error;
 }
 
 async function deleteGalleryFromDb(id: string): Promise<void> {
@@ -152,13 +187,13 @@ async function deleteGalleryFromDb(id: string): Promise<void> {
 }
 
 async function replaceGalleryItems(galleryId: string, items: SocialGalleryItem[]): Promise<void> {
-  try {
-    const supabase = createAdminClient();
-    await supabase.from("social_gallery_items").delete().eq("social_gallery_id", galleryId);
-    if (items.length > 0) {
-      await supabase.from("social_gallery_items").insert(items.map((item) => mapTsItemToDb(galleryId, item)));
-    }
-  } catch { /* best-effort */ }
+  const supabase = createAdminClient();
+  const { error: deleteError } = await supabase.from("social_gallery_items").delete().eq("social_gallery_id", galleryId);
+  if (deleteError) throw deleteError;
+  if (items.length > 0) {
+    const { error: insertError } = await supabase.from("social_gallery_items").insert(items.map((item) => mapTsItemToDb(galleryId, item)));
+    if (insertError) throw insertError;
+  }
 }
 
 async function seedSupabase(items: SocialGallery[]): Promise<void> {
@@ -169,15 +204,47 @@ async function seedSupabase(items: SocialGallery[]): Promise<void> {
   }
 }
 
+async function ensureDefaultSocialGalleryInSupabase(): Promise<void> {
+  const gallery = getDefaultSocialGallery();
+  const supabase = createAdminClient();
+  const { data: mediaRows } = await supabase
+    .from("media_assets")
+    .select("file_name,file_url")
+    .in("file_name", gallery.items.map((item) => item.image_id).filter(Boolean));
+  const mediaUrlByFile = new Map<string, string>();
+  for (const row of (mediaRows ?? []) as Array<Record<string, unknown>>) {
+    if (typeof row.file_name === "string" && typeof row.file_url === "string") {
+      mediaUrlByFile.set(row.file_name, row.file_url);
+    }
+  }
+  const { items, ...galleryRow } = gallery;
+  await supabase.from("social_galleries").upsert(galleryRow as unknown as Record<string, unknown>, { onConflict: "id" });
+  await supabase.from("social_gallery_items").upsert(
+    items.map((item) => ({
+      ...mapTsItemToDb(gallery.id, item),
+      image_url: mediaUrlByFile.get(item.image_id) ?? item.image_url,
+    })),
+    { onConflict: "id" },
+  );
+}
+
 export async function getSocialGalleries() {
   const fromSupabase = await readAllFromSupabase();
-  if (fromSupabase?.some((gallery) => gallery.items.length > 0)) {
+  if (fromSupabase && fromSupabase.length > 0) {
+    if (!fromSupabase.some((gallery) => gallery.items.length > 0)) {
+      await ensureDefaultSocialGalleryInSupabase();
+      const refreshed = await readAllFromSupabase();
+      if (refreshed && refreshed.length > 0) {
+        return refreshed.map((gallery) => ({ ...gallery, status: "published" as const, deleted_at: null }));
+      }
+    }
     return fromSupabase.map((gallery) => ({ ...gallery, status: "published" as const, deleted_at: null }));
   }
   const localGalleries = await readJsonFile<SocialGallery[]>(FILE_NAME, []);
-  const items = localGalleries.length > 0 ? localGalleries : [getDefaultSocialGallery()];
-  await writeJsonFile(FILE_NAME, items);
-  await seedSupabase(items);
+  const localGallery = localGalleries.find((gallery) => gallery.slug === SINGLE_GALLERY_SLUG);
+  const items = localGallery?.items.length ? localGalleries : [getDefaultSocialGallery()];
+  if (!localGallery?.items.length) await ensureDefaultSocialGalleryInSupabase();
+  else await seedSupabase(items);
   return items.map((gallery) => ({ ...gallery, status: "published" as const, deleted_at: null }));
 }
 
@@ -188,7 +255,19 @@ export async function getSocialGalleryById(id: string) {
     if (!ge && gallery) {
       const { data: items, error: ie } = await supabase.from("social_gallery_items").select("*").eq("social_gallery_id", id).order("sort_order");
       if (!ie) {
-        return { ...(gallery as Record<string, unknown>), status: "published" as const, deleted_at: null, items: (items ?? []).map(mapDbItemToTs) } as SocialGallery;
+        const imageIds = (items ?? [])
+          .map((item) => typeof item.image_id === "string" ? item.image_id : "")
+          .filter(Boolean);
+        const mediaUrlByFile = new Map<string, string>();
+        if (imageIds.length > 0) {
+          const { data: mediaRows } = await supabase.from("media_assets").select("file_name,file_url").in("file_name", imageIds);
+          for (const row of (mediaRows ?? []) as Array<Record<string, unknown>>) {
+            if (typeof row.file_name === "string" && typeof row.file_url === "string") {
+              mediaUrlByFile.set(row.file_name, row.file_url);
+            }
+          }
+        }
+        return { ...(gallery as Record<string, unknown>), status: "published" as const, deleted_at: null, items: (items ?? []).map((row) => mapDbItemToTs(row, mediaUrlByFile)) } as SocialGallery;
       }
     }
   } catch { /* fall through */ }
@@ -205,7 +284,6 @@ export async function createSocialGallery(data: Input) {
     return updateSocialGallery(existing.id, data);
   }
   const next = normalize(data, undefined, all);
-  await writeJsonFile(FILE_NAME, [next, ...all]);
   await upsertGallery(next);
   await replaceGalleryItems(next.id, next.items);
   await logAction({ action: "create", entity_type: "social_gallery", entity_id: next.id, entity_title: next.name, new_data: next });
@@ -215,11 +293,10 @@ export async function createSocialGallery(data: Input) {
 export async function updateSocialGallery(id: string, data: Input) {
   const all = await readJsonFile<SocialGallery[]>(FILE_NAME, []);
   const idx = all.findIndex((x) => x.id === id);
-  if (idx === -1) return null;
-  const old = all[idx];
+  const dbGallery = idx === -1 ? await getSocialGalleryById(id) : null;
+  if (idx === -1 && !dbGallery) return null;
+  const old = idx === -1 ? dbGallery as SocialGallery : all[idx];
   const next = normalize(data, old, all);
-  all[idx] = next;
-  await writeJsonFile(FILE_NAME, all);
   await upsertGallery(next);
   await replaceGalleryItems(next.id, next.items);
   await logAction({ action: "update", entity_type: "social_gallery", entity_id: next.id, entity_title: next.name, old_data: old, new_data: next });

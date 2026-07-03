@@ -5,14 +5,16 @@ import { SitePage } from "@/features/shared/layout/SitePage";
 import { StudioProfileBlock } from "@/features/studio/StudioProfileBlock";
 import { getPublicTestimonials } from "@/lib/cms/public-content";
 import { getPublicNavigationItems } from "@/lib/cms/navigation-public";
+import { getSettings } from "@/lib/cms/settings";
 import { getTeachers } from "@/lib/cms/teachers";
 import { assetPath } from "@/lib/assets";
 
 export async function StudioPage() {
-  const [cmsTestimonials, teachers, navigationItems] = await Promise.all([
+  const [cmsTestimonials, teachers, navigationItems, settings] = await Promise.all([
     getPublicTestimonials(),
     getTeachers(),
     getPublicNavigationItems("main"),
+    getSettings(),
   ]);
   const testimonials = cmsTestimonials
     .map((item) => ({
@@ -30,7 +32,12 @@ export async function StudioPage() {
       bodyClass="studio-page"
       header={
         <header className="studio-header">
-          <NavbarGlobal navigationItems={navigationItems} />
+          <NavbarGlobal
+            navigationItems={navigationItems}
+            logoUrl={settings.menu.header_logo_url}
+            scrollMenuBackgroundColor={settings.menu.scroll_menu_background_color}
+            scrollMenuTextColor={settings.menu.scroll_menu_text_color}
+          />
         </header>
       }
     >

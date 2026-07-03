@@ -75,12 +75,11 @@ function getActiveBannerFromItems(items: PromoBanner[]) {
 }
 
 export function getPublicSocialGallery(): Promise<SocialGallery | null> {
-  return cached("public-social-gallery", async () => {
-    const galleries = await withFallback(getSocialGalleries, getLocalSocialGalleries);
-    return galleries
+  return withFallback(getSocialGalleries, getLocalSocialGalleries).then((galleries) =>
+    galleries
       .filter((item) => item.deleted_at === null)
-      .sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at))[0] ?? null;
-  });
+      .sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at))[0] ?? null,
+  );
 }
 
 export function getPublicTestimonials(): Promise<Testimonial[]> {

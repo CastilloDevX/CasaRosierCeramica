@@ -12,8 +12,8 @@ type Input = Partial<Omit<PromoBanner, "id" | "created_at" | "updated_at" | "del
 const LIMITS = {
   key_text: 40,
   title: 60,
-  text: 140,
-  detail_text: 130,
+  text: 600,
+  detail_text: 600,
   button_text: 28,
 };
 

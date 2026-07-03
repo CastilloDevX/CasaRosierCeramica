@@ -773,8 +773,8 @@ function offeringPath(type: Offering["type"], slug: string): string {
   const prefix = {
     class: "clases",
     workshop: "workshops",
-    experience: "reservas-privadas",
-    gift_card: "gift-card",
+    experience: "experiencias",
+    gift_card: "gift-cards",
   }[type];
   return pagePath(`${prefix}/${slug}`);
 }

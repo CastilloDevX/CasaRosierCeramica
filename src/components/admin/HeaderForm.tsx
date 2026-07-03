@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
-import Modal from "@/components/ui/Modal";
-import MediaPicker from "./MediaPicker";
+import MediaLibraryModal from "./MediaLibraryModal";
 import type { Header, HeaderOverlayImage, HeaderType } from "@/lib/cms/types";
 import { HEADER_TYPES, HEADER_STATUSES } from "@/lib/cms/types";
 import HeaderPreview from "./HeaderPreview";
@@ -752,9 +751,11 @@ export default function HeaderForm({
         </aside>
       </form>
 
-      <Modal open={pickerTarget !== null} onClose={() => setPickerTarget(null)} title="Seleccionar imagen">
-        <MediaPicker onSelect={handleSelectImage} onClose={() => setPickerTarget(null)} />
-      </Modal>
+      <MediaLibraryModal
+        open={pickerTarget !== null}
+        onSelect={handleSelectImage}
+        onClose={() => setPickerTarget(null)}
+      />
     </>
   );
 }

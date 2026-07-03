@@ -10,8 +10,7 @@ import Select from "@/components/ui/Select";
 import Textarea from "@/components/ui/Textarea";
 import Checkbox from "@/components/ui/Checkbox";
 import Button from "@/components/ui/Button";
-import Modal from "@/components/ui/Modal";
-import MediaPicker from "./MediaPicker";
+import MediaLibraryModal from "./MediaLibraryModal";
 
 function defaultOffering(type?: string): Partial<Offering> {
   return {
@@ -288,16 +287,11 @@ export default function OfferingForm({
         </div>
       </form>
 
-      <Modal
+      <MediaLibraryModal
         open={pickerFor !== null}
+        onSelect={handleSelectFromPicker}
         onClose={() => setPickerFor(null)}
-        title="Seleccionar imagen"
-      >
-        <MediaPicker
-          onSelect={handleSelectFromPicker}
-          onClose={() => setPickerFor(null)}
-        />
-      </Modal>
+      />
     </>
   );
 }

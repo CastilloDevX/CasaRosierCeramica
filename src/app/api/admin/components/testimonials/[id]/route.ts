@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
 export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!(await requireAdminApi())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try { const item = await updateItem((await ctx.params).id, await request.json()); if (!item) return NextResponse.json({ error: "No encontrado" }, { status: 404 }); return NextResponse.json({ testimonial: item }); }
-  catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : "Error" }, { status: 400 }); }
+  catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo guardar el testimonio." }, { status: 400 }); }
 }
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!(await requireAdminApi())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

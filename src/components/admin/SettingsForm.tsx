@@ -2,11 +2,89 @@
 
 import { useState } from "react";
 import type { SiteSettings } from "@/lib/cms/settings";
+import type { Menu } from "@/lib/cms/types";
 import SettingsSection from "./SettingsSection";
 import MediaSelectField from "./MediaSelectField";
 
-export default function SettingsForm({ initial }: { initial: SiteSettings }) {
+type EditableMenuItem = {
+  id?: string;
+  key: string;
+  label: string;
+  href: string;
+  order: number;
+  locked?: boolean;
+};
+
+const DEFAULT_MENU_ITEMS: EditableMenuItem[] = [
+  { key: "inicio", label: "Inicio", href: "/#hero", order: 0, locked: true },
+  { key: "clases", label: "Clases", href: "/clases", order: 1 },
+  { key: "workshops", label: "Workshops", href: "/workshops", order: 2 },
+  { key: "experiencias", label: "Experiencias", href: "/experiencias", order: 3 },
+  { key: "gift-cards", label: "Gift Cards", href: "/gift-cards", order: 4 },
+  { key: "estudio", label: "El Estudio", href: "/el-estudio", order: 5 },
+  { key: "shop", label: "Shop", href: "/shop", order: 6 },
+];
+
+function normalizedMenuLabel(label: string, href: string) {
+  const normalized = label
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if ((href === "/reservas-privadas" || href === "/experiencias") && normalized === "reservas privadas") {
+    return "Experiencias";
+  }
+  if (
+    (href === "/gift-cards" || href === "/gift-card") &&
+    (normalized === "tarjeta de regalo" ||
+      normalized === "tarjetas de regalo" ||
+      normalized === "targetas de regalo")
+  ) {
+    return "Gift Cards";
+  }
+  return label;
+}
+
+function buildEditableMenuItems(menu?: Menu | null): EditableMenuItem[] {
+  const roots = (menu?.items ?? [])
+    .filter((item) => !item.parent_id)
+    .sort((a, b) => a.sort_order - b.sort_order);
+
+  const byHref = new Map(roots.map((item) => [item.url, item]));
+  const legacyBlogRoot = roots.find((item) => {
+    const normalized = normalizedMenuLabel(item.label, item.url)
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+    return item.url === "/blog" && (normalized === "blog" || normalized === "bitacora");
+  });
+  const defaults = DEFAULT_MENU_ITEMS.map((item) => {
+    const existing = byHref.get(item.href) ?? (item.href === "/shop" ? legacyBlogRoot : undefined);
+    return existing
+      ? { ...item, id: existing.id, label: item.locked || item.href === "/shop" ? item.label : normalizedMenuLabel(existing.label, item.href), order: existing.sort_order }
+      : item;
+  });
+
+  const defaultHrefs = new Set(defaults.map((item) => item.href));
+  const extras = roots
+    .filter((item) => !defaultHrefs.has(item.url) && item.id !== legacyBlogRoot?.id)
+    .map((item) => ({
+      id: item.id,
+      key: item.id,
+      label: normalizedMenuLabel(item.label, item.url),
+      href: item.url,
+      order: item.sort_order,
+    }));
+
+  return [...defaults, ...extras].sort((a, b) => a.order - b.order);
+}
+
+export default function SettingsForm({ initial, initialMenu }: { initial: SiteSettings; initialMenu?: Menu | null }) {
   const [settings, setSettings] = useState<SiteSettings>(initial);
+  const [menuItems, setMenuItems] = useState<EditableMenuItem[]>(() => buildEditableMenuItems(initialMenu));
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -16,6 +94,45 @@ export default function SettingsForm({ initial }: { initial: SiteSettings }) {
       ...prev,
       [section]: { ...prev[section], ...value },
     }));
+  }
+
+  function updateMenuItem(key: string, label: string) {
+    setMenuItems((prev) =>
+      prev.map((item) => (item.key === key && !item.locked ? { ...item, label } : item))
+    );
+  }
+
+  async function saveMenuItems() {
+    if (!initialMenu?.id) return;
+
+    const savedItems: EditableMenuItem[] = [];
+    for (const item of menuItems) {
+      const payload = {
+        label: item.locked ? "Inicio" : item.label,
+        type: "internal",
+        url: item.locked ? "/#hero" : item.href,
+        linked_entity_type: "none",
+        linked_entity_id: "",
+        parent_id: null,
+        sort_order: item.order,
+        is_visible: true,
+        open_in_new_tab: false,
+      };
+
+      const response = await fetch(`/api/admin/menus/${initialMenu.id}/items`, {
+        method: item.id ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(item.id ? { itemId: item.id, ...payload } : payload),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: "Error al guardar el menú." }));
+        throw new Error(data.error || "Error al guardar el menú.");
+      }
+      const data = await response.json();
+      savedItems.push({ ...item, id: data.item?.id ?? item.id });
+    }
+    setMenuItems(savedItems);
   }
 
   async function handleSave() {
@@ -32,6 +149,14 @@ export default function SettingsForm({ initial }: { initial: SiteSettings }) {
     if (!response.ok) {
       const data = await response.json().catch(() => ({ error: "Error al guardar." }));
       setError(data.error || "Error al guardar la configuración.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      await saveMenuItems();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al guardar el menú.");
       setIsLoading(false);
       return;
     }
@@ -70,6 +195,72 @@ export default function SettingsForm({ initial }: { initial: SiteSettings }) {
 
   return (
     <div className="settings-form">
+      <SettingsSection title="Menú" description="Logo, textos y colores del menú principal.">
+        <div className="grid-2">
+          <MediaSelectField
+            label="Logo del menú"
+            value={settings.menu.header_logo_url}
+            onChange={(url) => updateSection("menu", { header_logo_url: url })}
+          />
+          <div className="grid-2">
+            <label className="field">
+              <span>Fondo sticky</span>
+              <input
+                type="color"
+                value={settings.menu.scroll_menu_background_color}
+                onChange={(e) => updateSection("menu", { scroll_menu_background_color: e.target.value })}
+              />
+            </label>
+            <label className="field">
+              <span>Texto sticky</span>
+              <input
+                type="color"
+                value={settings.menu.scroll_menu_text_color}
+                onChange={(e) => updateSection("menu", { scroll_menu_text_color: e.target.value })}
+              />
+            </label>
+            <label className="field">
+              <span>Icono sticky</span>
+              <input
+                type="color"
+                value={settings.menu.scroll_menu_icon_color}
+                onChange={(e) => updateSection("menu", { scroll_menu_icon_color: e.target.value })}
+              />
+            </label>
+            <label className="field">
+              <span>Logo sticky</span>
+              <input
+                type="color"
+                value={settings.menu.scroll_menu_logo_tint_color}
+                onChange={(e) => updateSection("menu", { scroll_menu_logo_tint_color: e.target.value })}
+              />
+            </label>
+            <label className="checkbox-field">
+              <input
+                type="checkbox"
+                checked={settings.menu.scroll_menu_logo_tint_enabled}
+                onChange={(e) => updateSection("menu", { scroll_menu_logo_tint_enabled: e.target.checked })}
+              />
+              <span>Aplicar color al logo sticky</span>
+            </label>
+          </div>
+        </div>
+
+        <div className="settings-menu-items">
+          {menuItems.map((item) => (
+            <label className="field" key={item.key}>
+              <span>{item.href}</span>
+              <input
+                value={item.label}
+                disabled={item.locked}
+                onChange={(e) => updateMenuItem(item.key, e.target.value)}
+              />
+              {item.locked ? <small>Bloqueado: siempre debe existir un inicio.</small> : null}
+            </label>
+          ))}
+        </div>
+      </SettingsSection>
+
       <SettingsSection title="Información general" description="Nombre, descripción e imagen del sitio.">
         <div className="grid-2">
           <label className="field span-2">

@@ -87,7 +87,8 @@ async function readWithChildren(parentTable: string, childTable: string, parentC
   const byParent = new Map<string, JsonRecord[]>();
   for (const child of (children ?? []) as JsonRecord[]) {
     const parentId = String(child[parentColumn] ?? "");
-    const { [parentColumn]: _parentColumn, ...rest } = child;
+    const rest = { ...child };
+    delete rest[parentColumn];
     const list = byParent.get(parentId) ?? [];
     list.push(rest);
     byParent.set(parentId, list);
@@ -121,6 +122,7 @@ async function writeWithChildren(
 function settingsToRow(settings: JsonRecord) {
   const site = (settings.site ?? {}) as JsonRecord;
   const contact = (settings.contact ?? {}) as JsonRecord;
+  const menu = (settings.menu ?? {}) as JsonRecord;
   const social = (settings.social ?? {}) as JsonRecord;
   const footer = (settings.footer ?? {}) as JsonRecord;
   const seo = (settings.seo ?? {}) as JsonRecord;
@@ -132,6 +134,12 @@ function settingsToRow(settings: JsonRecord) {
     site_description: nilToNull(site.site_description),
     logo_url: nilToNull(site.logo_url),
     favicon_url: nilToNull(site.favicon_url),
+    header_logo_url: nilToNull(menu.header_logo_url),
+    scroll_menu_background_color: menu.scroll_menu_background_color ?? "#8c7457",
+    scroll_menu_text_color: menu.scroll_menu_text_color ?? "#fff9f1",
+    scroll_menu_icon_color: menu.scroll_menu_icon_color ?? "#fff9f1",
+    scroll_menu_logo_tint_enabled: menu.scroll_menu_logo_tint_enabled ?? false,
+    scroll_menu_logo_tint_color: menu.scroll_menu_logo_tint_color ?? "#fff9f1",
     default_language: site.default_language ?? "es",
     timezone: site.timezone ?? "Europe/Madrid",
     email: nilToNull(contact.email),

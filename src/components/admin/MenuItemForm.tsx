@@ -14,7 +14,7 @@ interface MenuItemFormProps {
 
 const typeLabels: Record<string, string> = { internal: "Interno", external: "Externo", offering: "Offering", custom: "Custom" };
 const linkedLabels: Record<string, string> = { offering: "Offering", page: "Página", landing: "Landing", blog: "Blog", shop: "Shop", none: "Ninguna" };
-const offeringTypeUrlMap: Record<string, string> = { class: "/clases/", workshop: "/workshops/", experience: "/experiencias/", gift_card: "/gift-card/" };
+const offeringTypeUrlMap: Record<string, string> = { class: "/clases/", workshop: "/workshops/", experience: "/experiencias/", gift_card: "/gift-cards/" };
 
 export default function MenuItemForm({ item, parentOptions, menuId, onSave, onCancel }: MenuItemFormProps) {
   const [label, setLabel] = useState(item?.label ?? "");

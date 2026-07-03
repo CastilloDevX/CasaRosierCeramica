@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { SUBMISSION_STATUSES, type FormSubmission, type FormSubmissionStatus } from "@/lib/cms/types";
+import type { FormSubmission, FormSubmissionStatus } from "@/lib/cms/types";
 
-const stLabels: Record<string, string> = {
+const statusLabels: Record<FormSubmissionStatus, string> = {
   new: "Nuevo",
   read: "Leído",
   replied: "Respondido",
@@ -13,17 +12,65 @@ const stLabels: Record<string, string> = {
   deleted: "Eliminado",
 };
 
+type InboxFilter = "all" | "new" | "replied" | "archived";
+
+const inboxTabs: Array<{ value: InboxFilter; label: string }> = [
+  { value: "all", label: "Todos" },
+  { value: "new", label: "No leídos" },
+  { value: "replied", label: "Respondidos" },
+  { value: "archived", label: "Archivados" },
+];
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function shortDate(value: string) {
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "2-digit",
+    month: "short",
+  }).format(new Date(value));
+}
+
+function previewText(item: FormSubmission) {
+  const text = item.message || item.subject || item.form_name;
+  return text.length > 96 ? `${text.slice(0, 96)}...` : text;
+}
+
+function extraData(item: FormSubmission) {
+  const hiddenKeys = new Set(["name", "email", "phone", "subject", "message", "source_page"]);
+  return Object.entries(item.data).filter(([key]) => !hiddenKeys.has(key));
+}
+
 export default function MessagesTable({ items }: { items: FormSubmission[] }) {
-  const router = useRouter();
+  const [messages, setMessages] = useState(items);
+  const [selectedId, setSelectedId] = useState(items[0]?.id ?? "");
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<FormSubmissionStatus | "all">("all");
+  const [filter, setFilter] = useState<InboxFilter>("all");
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
+  const [notesById, setNotesById] = useState<Record<string, string>>(() => (
+    Object.fromEntries(items.map((item) => [item.id, item.internal_notes]))
+  ));
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const counts = useMemo(() => ({
+    all: messages.length,
+    new: messages.filter((item) => item.status === "new").length,
+    replied: messages.filter((item) => item.status === "replied").length,
+    archived: messages.filter((item) => item.status === "archived").length,
+  }), [messages]);
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return items
+    return messages
       .filter((item) => {
-        const matchesStatus = status === "all" || item.status === status;
+        const matchesFilter = filter === "all" || item.status === filter;
         const haystack = [
           item.name,
           item.email,
@@ -33,104 +80,209 @@ export default function MessagesTable({ items }: { items: FormSubmission[] }) {
           item.form_name,
           item.source_page,
         ].join(" ").toLowerCase();
-        return matchesStatus && (!normalizedQuery || haystack.includes(normalizedQuery));
+        return matchesFilter && (!normalizedQuery || haystack.includes(normalizedQuery));
       })
       .sort((a, b) => {
         const diff = Date.parse(b.created_at) - Date.parse(a.created_at);
         return sort === "newest" ? diff : -diff;
       });
-  }, [items, query, status, sort]);
+  }, [messages, query, filter, sort]);
 
-  async function mark(id: string, status: string) {
-    const r = await fetch(`/api/admin/mensajes/${id}`, {
+  const selected = messages.find((item) => item.id === selectedId) ?? filteredItems[0] ?? null;
+  const selectedNotes = selected ? notesById[selected.id] ?? selected.internal_notes : "";
+  const replySubject = selected ? encodeURIComponent(`Re: ${selected.subject || "Tu mensaje a Casa Rosier"}`) : "";
+
+  async function updateStatus(id: string, nextStatus: FormSubmissionStatus) {
+    const response = await fetch(`/api/admin/mensajes/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "status", status }),
+      body: JSON.stringify({ action: "status", status: nextStatus }),
     });
-    if (r.ok) router.refresh();
+    const data = await response.json().catch(() => ({})) as { submission?: FormSubmission; error?: string };
+    if (!response.ok || !data.submission) {
+      setNotice(data.error || "No se pudo actualizar el mensaje.");
+      return;
+    }
+    setMessages((current) => current.map((item) => item.id === id ? data.submission! : item));
+    setSelectedId(id);
+    setNotice("Mensaje actualizado.");
+  }
+
+  async function moveToTrash(id: string) {
+    const response = await fetch(`/api/admin/mensajes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "trash" }),
+    });
+    const data = await response.json().catch(() => ({})) as { error?: string };
+    if (!response.ok) {
+      setNotice(data.error || "No se pudo mover el mensaje a papelera.");
+      return;
+    }
+    setMessages((current) => current.filter((item) => item.id !== id));
+    setSelectedId(filteredItems.find((item) => item.id !== id)?.id ?? "");
+    setNotice("Mensaje enviado a papelera.");
+  }
+
+  async function saveNotes() {
+    if (!selected) return;
+    const response = await fetch(`/api/admin/mensajes/${selected.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ internal_notes: selectedNotes }),
+    });
+    const data = await response.json().catch(() => ({})) as { submission?: FormSubmission; error?: string };
+    if (!response.ok || !data.submission) {
+      setNotice(data.error || "No se pudieron guardar las notas.");
+      return;
+    }
+    setMessages((current) => current.map((item) => item.id === selected.id ? data.submission! : item));
+    setNotesById((current) => ({ ...current, [selected.id]: data.submission!.internal_notes }));
+    setNotice("Notas guardadas.");
+  }
+
+  function selectMessage(item: FormSubmission) {
+    setSelectedId(item.id);
+    if (item.status === "new") void updateStatus(item.id, "read");
   }
 
   return (
-    <div className="messages-inbox">
-      <div className="admin-control-bar">
-        <label className="field admin-control-bar__search">
-          <span>Buscar mensaje</span>
-          <input
-            type="search"
-            placeholder="Nombre, correo, asunto o texto"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </label>
-        <label className="field admin-control-bar__select">
-          <span>Estado</span>
-          <select value={status} onChange={(event) => setStatus(event.target.value as FormSubmissionStatus | "all")}>
-            <option value="all">Todos</option>
-            {SUBMISSION_STATUSES.filter((value) => value !== "deleted").map((value) => (
-              <option key={value} value={value}>{stLabels[value]}</option>
-            ))}
-          </select>
-        </label>
-        <label className="field admin-control-bar__select">
-          <span>Orden</span>
-          <select value={sort} onChange={(event) => setSort(event.target.value as "newest" | "oldest")}>
-            <option value="newest">Más reciente primero</option>
-            <option value="oldest">Menos reciente primero</option>
-          </select>
-        </label>
+    <div className="messages-inbox messages-inbox--split">
+      <div className="messages-sidebar">
+        <div className="messages-tabs" aria-label="Filtrar mensajes">
+          {inboxTabs.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              className={filter === tab.value ? "messages-tab is-active" : "messages-tab"}
+              onClick={() => setFilter(tab.value)}
+            >
+              {tab.label}
+              {tab.value !== "all" ? <span>{counts[tab.value]}</span> : null}
+            </button>
+          ))}
+        </div>
+
+        <div className="messages-filters">
+          <label className="field">
+            <span>Buscar</span>
+            <input
+              type="search"
+              placeholder="Nombre, correo, asunto o texto"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>Orden</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value as "newest" | "oldest")}>
+              <option value="newest">Más reciente primero</option>
+              <option value="oldest">Menos reciente primero</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="messages-list" role="listbox" aria-label="Mensajes recibidos">
+          {filteredItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="option"
+              aria-selected={selected?.id === item.id}
+              className={[
+                "message-list-item",
+                selected?.id === item.id ? "is-selected" : "",
+                item.status === "new" ? "is-unread" : "",
+              ].filter(Boolean).join(" ")}
+              onClick={() => selectMessage(item)}
+            >
+              <span className="message-list-item__top">
+                <strong>{item.name || "Sin nombre"}</strong>
+                <small>{shortDate(item.created_at)}</small>
+              </span>
+              <span className="message-list-item__subject">{item.subject || "Sin asunto"}</span>
+              <span className="message-list-item__preview">{previewText(item)}</span>
+              <span className={`message-status-pill message-status-pill--${item.status}`}>{statusLabels[item.status]}</span>
+            </button>
+          ))}
+          {filteredItems.length === 0 ? (
+            <p className="messages-empty">No hay mensajes para los filtros seleccionados.</p>
+          ) : null}
+        </div>
       </div>
 
-      <div className="table-card">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Usuario</th>
-              <th>Formulario</th>
-              <th>Asunto</th>
-              <th>Estado</th>
-              <th>Recibido</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredItems.map((s) => (
-              <tr key={s.id} className={s.status === "new" ? "is-unread-row" : undefined}>
-                <td>
-                  <strong>{s.name}</strong>
-                  <br />
-                  <a className="muted" href={`mailto:${s.email}`}>{s.email}</a>
-                  {s.phone ? <><br /><span className="muted">{s.phone}</span></> : null}
-                </td>
-                <td>
-                  <span>{s.form_name}</span>
-                  {s.source_page ? <><br /><span className="muted">{s.source_page}</span></> : null}
-                </td>
-                <td>
-                  <strong>{s.subject || "Mensaje sin asunto"}</strong>
-                  {s.message ? <><br /><span className="muted">{s.message.slice(0, 90)}{s.message.length > 90 ? "..." : ""}</span></> : null}
-                </td>
-                <td><span className={`entity-badge ${s.status === "new" ? "badge-new" : ""}`}>{stLabels[s.status]}</span></td>
-                <td>{new Date(s.created_at).toLocaleString("es-MX")}</td>
-                <td>
-                  <div className="row-actions">
-                    <a className="link-btn" href={`/admin/mensajes/${s.id}`}>Ver</a>
-                    {s.status !== "read" ? <button className="secondary-btn" onClick={() => mark(s.id, "read")}>Leído</button> : null}
-                    <button className="secondary-btn" onClick={() => mark(s.id, "archived")}>Archivar</button>
-                    <button className="secondary-btn" onClick={() => mark(s.id, "spam")}>Spam</button>
+      <section className="message-detail-panel" aria-live="polite">
+        {selected ? (
+          <>
+            <div className="message-detail-panel__head">
+              <div>
+                <p className="auth-kicker">{selected.form_name || "Formulario"}</p>
+                <h3>{selected.subject || "Sin asunto"}</h3>
+              </div>
+              <div className="message-detail-panel__tools">
+                <button type="button" className="secondary-btn" onClick={() => updateStatus(selected.id, "archived")}>Archivar</button>
+                <button type="button" className="danger-btn" onClick={() => moveToTrash(selected.id)}>Papelera</button>
+              </div>
+            </div>
+
+            <div className="message-contact-grid">
+              <div><span>Nombre</span><strong>{selected.name || "Sin nombre"}</strong></div>
+              <div><span>Email</span><a href={`mailto:${selected.email}`}>{selected.email}</a></div>
+              {selected.phone ? <div><span>Teléfono</span><a href={`tel:${selected.phone}`}>{selected.phone}</a></div> : null}
+              <div><span>Recibido</span><strong>{formatDate(selected.created_at)}</strong></div>
+              <div><span>Estado</span><strong>{statusLabels[selected.status]}</strong></div>
+              {selected.source_page ? <div><span>Origen</span><strong>{selected.source_page}</strong></div> : null}
+            </div>
+
+            <div className="message-body-card">
+              <p>{selected.message || "Este mensaje no incluye contenido adicional."}</p>
+            </div>
+
+            {extraData(selected).length ? (
+              <div className="message-extra-data">
+                <h4>Datos adicionales</h4>
+                {extraData(selected).map(([key, value]) => (
+                  <div key={key}>
+                    <span>{key}</span>
+                    <strong>{String(value)}</strong>
                   </div>
-                </td>
-              </tr>
-            ))}
-            {filteredItems.length === 0 ? (
-              <tr>
-                <td colSpan={6}>
-                  <p className="muted users-admin__empty">No hay mensajes para los filtros seleccionados.</p>
-                </td>
-              </tr>
+                ))}
+              </div>
             ) : null}
-          </tbody>
-        </table>
-      </div>
+
+            <div className="message-notes">
+              <label className="field">
+                <span>Notas internas</span>
+                <textarea
+                  rows={4}
+                  value={selectedNotes}
+                  onChange={(event) => setNotesById((current) => ({ ...current, [selected.id]: event.target.value }))}
+                />
+              </label>
+              <button type="button" className="secondary-btn" onClick={() => void saveNotes()}>Guardar notas</button>
+            </div>
+
+            {notice ? <p className="message-notice">{notice}</p> : null}
+
+            <div className="message-actions-bar">
+              <a className="primary-btn" href={`mailto:${selected.email}?subject=${replySubject}`}>
+                Responder por Email
+              </a>
+              {selected.phone ? <a className="secondary-btn message-call-btn" href={`tel:${selected.phone}`}>Llamar</a> : null}
+              {selected.status !== "read" ? (
+                <button type="button" className="secondary-btn" onClick={() => updateStatus(selected.id, "read")}>Marcar leído</button>
+              ) : null}
+              <button type="button" className="secondary-btn" onClick={() => updateStatus(selected.id, "replied")}>Respondido</button>
+              <button type="button" className="secondary-btn" onClick={() => updateStatus(selected.id, "spam")}>Spam</button>
+            </div>
+          </>
+        ) : (
+          <div className="message-detail-empty">
+            <h3>Selecciona un mensaje</h3>
+            <p>El detalle aparecerá aquí cuando haya mensajes disponibles.</p>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

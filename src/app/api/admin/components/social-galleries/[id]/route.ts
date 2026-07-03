@@ -12,7 +12,7 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
   if (!(await requireAdminApi())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json();
   try { const item = await updateSocialGallery((await ctx.params).id, body); if (!item) return NextResponse.json({ error: "No encontrado" }, { status: 404 }); return NextResponse.json({ socialGallery: item }); }
-  catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : "Error" }, { status: 400 }); }
+  catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo guardar la galería social." }, { status: 400 }); }
 }
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!(await requireAdminApi())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

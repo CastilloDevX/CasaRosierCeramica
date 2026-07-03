@@ -33,6 +33,18 @@ export interface ExperienceItem {
   heroImage: string;
   heroVariant?: "image" | "text";
   heroMenuTone?: "light" | "dark";
+  heroLogoPositionX?: string;
+  heroLogoPositionY?: string;
+  heroLogoWidth?: string;
+  heroLogoTabletPositionX?: string;
+  heroLogoTabletPositionY?: string;
+  heroLogoTabletWidth?: string;
+  heroLogoMobilePositionX?: string;
+  heroLogoMobilePositionY?: string;
+  heroLogoMobileWidth?: string;
+  heroMenuPositionY?: string;
+  heroMenuTabletPositionY?: string;
+  heroMenuMobilePositionY?: string;
   heroTitleImage?: string;
   heroTitleImageSecondary?: string;
   heroTitle: string;
@@ -55,6 +67,8 @@ export interface ExperienceItem {
   additionalInfo: string;
   showIdeaPromptSection?: boolean;
   ctaHref: string;
+  ctaConsultHref: string;
+  ctaEnrollHref: string;
   seoTitle: string;
   seoDescription: string;
   isPublished: boolean;

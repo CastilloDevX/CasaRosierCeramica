@@ -1,4 +1,6 @@
 import { randomUUID } from "crypto";
+import { readFile } from "fs/promises";
+import path from "path";
 import { createAdminClient } from "../supabase/admin";
 import { addTrashItem, getCurrentUserEmail, getTrashItemByEntity, removeTrashItem } from "./trash";
 import { readJsonFile, writeJsonFile } from "./local-storage";
@@ -7,6 +9,7 @@ import { logAction } from "./history-logs";
 
 const TABLE = "product_categories";
 const FILE_NAME = "product-categories.json";
+const DATA_DIR = path.join(process.cwd(), "data");
 
 type CatInput = Partial<Omit<ProductCategory, "id" | "created_at" | "updated_at" | "deleted_at">> & { id?: string; deleted_at?: string | null };
 
@@ -49,6 +52,15 @@ async function readAllFromSupabase(): Promise<ProductCategory[] | null> {
   }
 }
 
+async function readLocalCategories(): Promise<ProductCategory[]> {
+  try {
+    const raw = await readFile(path.join(DATA_DIR, FILE_NAME), "utf8");
+    return JSON.parse(raw) as ProductCategory[];
+  } catch {
+    return [];
+  }
+}
+
 async function readFromSupabase(query: (s: ReturnType<typeof createAdminClient>) => Promise<Record<string, unknown> | null>): Promise<ProductCategory | null> {
   try {
     const supabase = createAdminClient();
@@ -78,7 +90,8 @@ async function deleteCategoryFromDb(id: string): Promise<void> {
 export async function getCategories() {
   const fromSupabase = await readAllFromSupabase();
   if (fromSupabase) return fromSupabase;
-  return readJsonFile<ProductCategory[]>(FILE_NAME, []);
+  const local = await readLocalCategories();
+  return local.length ? local : readJsonFile<ProductCategory[]>(FILE_NAME, []);
 }
 
 export async function getCategoryById(id: string) {

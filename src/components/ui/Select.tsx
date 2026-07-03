@@ -23,7 +23,7 @@ export default function Select({ label, error, options, placeholder, className =
         </label>
       )}
       <div className="relative">
-        <select id={selectId} className={`${base} ${borderClass} ${className}`} {...props}>
+        <select id={selectId} className={`${base} ui-select ${borderClass} ${className}`} {...props}>
           {placeholder && <option value="">{placeholder}</option>}
           {options.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -31,9 +31,6 @@ export default function Select({ label, error, options, placeholder, className =
             </option>
           ))}
         </select>
-        <span className="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant">
-          expand_more
-        </span>
       </div>
       {error && <p className="text-label-md text-error">{error}</p>}
     </div>

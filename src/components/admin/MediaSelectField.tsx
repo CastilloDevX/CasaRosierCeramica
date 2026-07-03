@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import MediaPicker from "./MediaPicker";
+import MediaLibraryModal from "./MediaLibraryModal";
 
 function isAbsoluteUrl(url: string) {
   return /^https?:\/\//i.test(url);
@@ -12,10 +12,14 @@ export default function MediaSelectField({
   label,
   value,
   onChange,
+  className,
+  previewClassName,
 }: {
   label: string;
   value: string;
   onChange: (url: string) => void;
+  className?: string;
+  previewClassName?: string;
 }) {
   const [showPicker, setShowPicker] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -44,21 +48,27 @@ export default function MediaSelectField({
   }
 
   return (
-    <div className="media-select-field">
+    <div className={["media-select-field", className].filter(Boolean).join(" ")}>
       <span className="field-label">{label}</span>
-      <div className="field-row">
-        <input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Selecciona o sube una imagen"
-        />
+      <div className={["img-preview relative", previewClassName].filter(Boolean).join(" ")}>
+        {value ? (
+          isAbsoluteUrl(value) ? (
+            <img src={value} alt={label} className="media-img-preview" />
+          ) : (
+            <Image src={value} alt={label} fill sizes="260px" className="object-cover" unoptimized />
+          )
+        ) : (
+          <span className="media-select-field__empty">Sin imagen</span>
+        )}
+      </div>
+      <div className="media-select-field__actions">
         <button
           type="button"
           className="secondary-btn"
           aria-expanded={showPicker}
-          onClick={() => setShowPicker((open) => !open)}
+          onClick={() => setShowPicker(true)}
         >
-          {showPicker ? "Cerrar biblioteca" : "Biblioteca"}
+          Biblioteca
         </button>
         <label className="secondary-btn" style={{ cursor: isUploading ? "wait" : "pointer" }}>
           {isUploading ? "Subiendo..." : "Subir"}
@@ -81,27 +91,15 @@ export default function MediaSelectField({
         ) : null}
       </div>
       {error ? <p className="form-error">{error}</p> : null}
-      {value ? (
-        <div className="img-preview relative">
-          {isAbsoluteUrl(value) ? (
-            <img src={value} alt={label} className="media-img-preview" />
-          ) : (
-            <Image src={value} alt={label} fill sizes="220px" className="object-cover" unoptimized />
-          )}
-        </div>
-      ) : null}
 
-      {showPicker ? (
-        <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3">
-          <MediaPicker
-            onSelect={(url) => {
-              onChange(url);
-              setShowPicker(false);
-            }}
-            onClose={() => setShowPicker(false)}
-          />
-        </div>
-      ) : null}
+      <MediaLibraryModal
+        open={showPicker}
+        onSelect={(url) => {
+          onChange(url);
+          setShowPicker(false);
+        }}
+        onClose={() => setShowPicker(false)}
+      />
     </div>
   );
 }

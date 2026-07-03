@@ -7,7 +7,11 @@ import { useMemo, useState } from "react";
 import type { BlogPost, BlogPostBlock, BlogPostBlockType, BlogPostStatus } from "@/lib/cms/types";
 import { BLOG_BLOCK_TYPES } from "@/lib/cms/types";
 import { assetPath, internalHref } from "@/lib/assets";
+import { MarkdownContent, renderInlineMarkdown } from "@/components/ui/MarkdownContent";
+import Switch from "@/components/ui/Switch";
+import AdminActionModal from "./AdminActionModal";
 import MediaSelectField from "./MediaSelectField";
+import RichTextField from "./RichTextField";
 
 type StepKey = "structure" | "preview";
 
@@ -53,10 +57,6 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .replace(/-{2,}/g, "-");
-}
-
-function textParagraphs(value: string) {
-  return value.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
 }
 
 function FieldLabel({ children, required = false }: { children: string; required?: boolean }) {
@@ -141,13 +141,7 @@ function SwitchField({
   description?: string;
 }) {
   return (
-    <label className="flex min-h-16 cursor-pointer items-center justify-between gap-4 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3">
-      <span>
-        <span className="block text-label-lg font-bold text-on-surface">{label}</span>
-        {description ? <span className="mt-1 block text-label-md text-on-surface-variant">{description}</span> : null}
-      </span>
-      <input className="h-5 w-5 accent-[#674bb5]" type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
-    </label>
+    <Switch checked={checked} label={label} description={description} onCheckedChange={onChange} />
   );
 }
 
@@ -173,9 +167,7 @@ function ArticlePreview({
           <h1 className="font-serif text-[clamp(34px,4vw,46px)] leading-none text-[#4a443e]">
             {title || "Título de la bitácora"}
           </h1>
-          <p className="mt-5 text-left font-sans text-[17px] leading-7 text-[#716960]">
-            {excerpt || "Texto introductorio de la bitácora."}
-          </p>
+          <MarkdownContent className="mt-5 text-left font-sans text-[17px] leading-7 text-[#716960]" source={excerpt || "Texto introductorio de la bitácora."} />
         </header>
         <figure className="mx-auto mb-8 max-w-[760px] overflow-hidden bg-[#eee8e2]">
           {cover ? (
@@ -187,7 +179,7 @@ function ArticlePreview({
         <article className="mx-auto max-w-[760px]">
           {visibleBlocks.map((block, index) => {
             if (block.type === "quote") {
-              return <blockquote className="my-7 font-serif text-[clamp(28px,3vw,36px)] italic leading-tight text-[#9b7053]" key={block.id}><p>{block.text || "Frase destacada"}</p></blockquote>;
+              return <blockquote className="my-7 font-serif text-[clamp(28px,3vw,36px)] italic leading-tight text-[#9b7053]" key={block.id}><p>{renderInlineMarkdown(block.text || "Frase destacada")}</p></blockquote>;
             }
             if (block.type === "heading") {
               const Tag = block.custom_html === "2" ? "h2" : "h3";
@@ -217,14 +209,12 @@ function ArticlePreview({
               );
             }
             if (block.type === "list") {
-              return <ul className="mb-5 list-disc pl-5 font-sans text-[17px] leading-7 text-[#625b54]" key={block.id}>{block.text.split("\n").filter(Boolean).map((item) => <li key={item}>{item.replace(/^[-*\d.]+\s*/, "")}</li>)}</ul>;
+              return <ul className="mb-5 list-disc pl-5 font-sans text-[17px] leading-7 text-[#625b54]" key={block.id}>{block.text.split("\n").filter(Boolean).map((item) => <li key={item}>{renderInlineMarkdown(item.replace(/^[-*\d.]+\s*/, ""))}</li>)}</ul>;
             }
             if (block.type === "cta") {
               return <div className="my-6 text-center" key={block.id}><Link className="blog-post__button" href={internalHref(block.source_url || "/clases")}>{block.title || "Ver clases"}</Link></div>;
             }
-            return textParagraphs(block.text).map((paragraph) => (
-              <p className="mb-5 font-sans text-[17px] leading-7 text-[#625b54]" key={`${block.id}-${paragraph.slice(0, 18)}`}>{paragraph}</p>
-            ));
+            return <MarkdownContent className="mb-5 font-sans text-[17px] leading-7 text-[#625b54]" source={block.text} key={block.id} />;
           })}
           {!visibleBlocks.length ? <p className="font-sans text-[17px] leading-7 text-[#625b54]">Agrega bloques de contenido para ver la estructura del artículo.</p> : null}
         </article>
@@ -255,7 +245,7 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
   const [seoDescription, setSeoDescription] = useState(item?.seo_description ?? "");
   const [seoImage, setSeoImage] = useState(item?.seo_image ?? "");
   const [blocks, setBlocks] = useState<BlogPostBlock[]>(item?.blocks ?? []);
-  const [error, setError] = useState<string | null>(null);
+  const [modal, setModal] = useState<{ type: "success" | "error"; title: string; message?: string; redirectToList?: boolean } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const readingTime = useMemo(
@@ -294,10 +284,10 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
 
   async function save(nextStatus = status) {
     setIsLoading(true);
-    setError(null);
+    setModal(null);
 
     if (!title.trim()) {
-      setError("El título es obligatorio.");
+      setModal({ type: "error", title: "Falta el título", message: "El título es obligatorio para guardar la bitácora." });
       setIsLoading(false);
       setStep("structure");
       return;
@@ -332,17 +322,36 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({ error: "Error" }));
-      setError((data as { error?: string }).error || "No se pudo guardar la bitácora.");
+      setModal({ type: "error", title: "No se pudo guardar", message: (data as { error?: string }).error || "No se pudo guardar la bitácora." });
       setIsLoading(false);
       return;
     }
 
-    router.push("/admin/bitacora");
+    setModal({
+      type: "success",
+      title: nextStatus === "published" ? "Bitácora publicada" : "Bitácora guardada",
+      message: nextStatus === "published" ? "El artículo ya está publicado correctamente." : "El borrador se guardó correctamente.",
+      redirectToList: true,
+    });
+    setIsLoading(false);
     router.refresh();
   }
 
   return (
     <div className="cms-editor-shell">
+      <AdminActionModal
+        open={Boolean(modal)}
+        type={modal?.type}
+        title={modal?.title ?? ""}
+        message={modal?.message}
+        confirmLabel="Entendido"
+        onClose={() => {
+          const shouldRedirect = modal?.redirectToList;
+          setModal(null);
+          if (shouldRedirect) router.push("/admin/bitacora");
+        }}
+      />
+
       <header className="cms-page-editor-head">
         <div className="cms-page-editor-head__main">
           <h1>{editorTitle}</h1>
@@ -373,8 +382,6 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
         </button>
       </nav>
 
-      {error ? <p className="form-error cms-editor-error" role="alert">{error}</p> : null}
-
       <div className="cms-editor-main">
         {step === "structure" ? (
           <div className="space-y-6">
@@ -388,7 +395,9 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
               <div className="grid gap-4 md:grid-cols-2">
                 <TextField label="Título" required value={title} onChange={(event) => setTitle(event.target.value)} onBlur={() => { if (!slug.trim()) setSlug(slugify(title)); }} />
                 <TextField label="Slug" value={slug} help="Se genera automáticamente si lo dejas vacío." onChange={(event) => setSlug(slugify(event.target.value))} />
-                <TextAreaField label="Texto introductorio" required value={excerpt} onChange={(event) => setExcerpt(event.target.value)} className="md:col-span-2" />
+                <div className="md:col-span-2">
+                  <RichTextField label="Texto introductorio" required value={excerpt} onChange={setExcerpt} minHeight="170px" />
+                </div>
                 <SelectField label="Estado" value={status} onChange={(event) => setStatus(event.target.value as BlogPostStatus)}>
                   <option value="draft">Borrador</option>
                   <option value="published">Publicado</option>
@@ -418,7 +427,9 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
               <div className="grid gap-4 md:grid-cols-2">
                 <SwitchField checked={isFeatured} onChange={setIsFeatured} label="Mostrar en destacados" description="Aparecerá en el carrusel de destacados." />
                 <TextField label="Orden destacado" type="number" value={featuredOrder} onChange={(event) => setFeaturedOrder(Number(event.target.value))} />
-                <TextAreaField label="Texto para destacado" value={featuredExcerpt} onChange={(event) => setFeaturedExcerpt(event.target.value)} placeholder={excerpt} className="md:col-span-2" />
+                <div className="md:col-span-2">
+                  <RichTextField label="Texto para destacado" value={featuredExcerpt} onChange={setFeaturedExcerpt} placeholder={excerpt} minHeight="150px" />
+                </div>
               </div>
             </section>
 
@@ -469,13 +480,13 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
                         </>
                       ) : null}
                       {block.type === "text" || block.type === "quote" || block.type === "list" ? (
-                        <TextAreaField
+                        <RichTextField
                           label={block.type === "quote" ? "Frase" : block.type === "list" ? "Elementos" : "Texto"}
                           value={block.text}
-                          help={block.type === "list" ? "Un elemento por línea." : undefined}
-                          onChange={(event) => updateBlock(idx, "text", event.target.value)}
+                          placeholder={block.type === "list" ? "Un elemento por línea." : undefined}
+                          onChange={(value) => updateBlock(idx, "text", value)}
                           className="md:col-span-2"
-                          rows={block.type === "text" ? 7 : 4}
+                          minHeight={block.type === "text" ? "220px" : "150px"}
                         />
                       ) : null}
                       {block.type === "image" ? (
@@ -519,6 +530,16 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
             <ArticlePreview title={title} excerpt={excerpt} cover={featuredImageId} blocks={blocks} />
           </div>
         )}
+      </div>
+
+      <div className="admin-sticky-actionbar">
+        <span className="admin-sticky-actionbar__meta">{readingTime} min de lectura · {visibleBlockCount} bloques visibles</span>
+        <button type="button" className="secondary-btn" onClick={() => save("draft")} disabled={isLoading}>
+          {isLoading ? "Guardando..." : "Guardar boceto"}
+        </button>
+        <button type="button" className="primary-btn" onClick={() => save("published")} disabled={isLoading}>
+          {isLoading ? "Publicando..." : "Publicar"}
+        </button>
       </div>
     </div>
   );

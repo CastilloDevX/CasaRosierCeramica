@@ -15,11 +15,12 @@ const dynamicMenuConfig: Record<DynamicMenuKey, {
 }> = {
   classes: { label: "Clases", href: "/clases", offeringType: "class", order: 1 },
   workshops: { label: "Workshops", href: "/workshops", offeringType: "workshop", order: 2 },
-  privateBookings: { label: "Reservas Privadas", href: "/reservas-privadas", offeringType: "experience", order: 3 },
-  giftCards: { label: "Tarjeta de regalo", href: "/gift-card", offeringType: "gift_card", order: 4 },
+  privateBookings: { label: "Experiencias", href: "/experiencias", offeringType: "experience", order: 3 },
+  giftCards: { label: "Gift Cards", href: "/gift-cards", offeringType: "gift_card", order: 4 },
 };
 
 const staticFallbackItems: NavigationItem[] = [
+  { label: "Inicio", href: "/#hero", order: 0, visible: true },
   ...Object.values(dynamicMenuConfig).map((item) => ({
     label: item.label,
     href: item.href,
@@ -27,8 +28,17 @@ const staticFallbackItems: NavigationItem[] = [
     visible: true,
     children: [],
   })),
-  { label: "El Estudio", href: "/el-estudio", order: 5, visible: true },
-  { label: "Blog", href: "/blog", order: 6, visible: true },
+  {
+    label: "El Estudio",
+    href: "/el-estudio",
+    order: 5,
+    visible: true,
+    children: [
+      { label: "El Estudio", href: "/el-estudio", order: 0, visible: true },
+      { label: "Bitácora", href: "/blog", order: 1, visible: true },
+    ],
+  },
+  { label: "Shop", href: "/shop", order: 6, visible: true },
 ];
 
 function hrefForItem(item: MenuItem) {
@@ -73,9 +83,78 @@ function dynamicKeyForItem(item: NavigationItem): DynamicMenuKey | null {
   const label = normalizeLabel(item.label);
   if (label === "clases" || label === "classes") return "classes";
   if (label === "workshops") return "workshops";
-  if (label === "reservas privadas" || label === "experiencias") return "privateBookings";
-  if (label === "tarjeta de regalo" || label === "gift cards" || label === "giftcards") return "giftCards";
+  if (item.href === "/reservas-privadas" || label === "reservas privadas" || label === "experiencias") return "privateBookings";
+  if (
+    item.href === "/gift-card" ||
+    label === "tarjeta de regalo" ||
+    label === "tarjetas de regalo" ||
+    label === "targetas de regalo" ||
+    label === "gift cards" ||
+    label === "giftcards"
+  ) return "giftCards";
   return null;
+}
+
+function labelForDynamicItem(item: NavigationItem, key: DynamicMenuKey) {
+  const label = normalizeLabel(item.label);
+  if (key === "privateBookings" && label === "reservas privadas") {
+    return dynamicMenuConfig[key].label;
+  }
+  if (
+    key === "giftCards" &&
+    (label === "tarjeta de regalo" ||
+      label === "tarjetas de regalo" ||
+      label === "targetas de regalo")
+  ) {
+    return dynamicMenuConfig[key].label;
+  }
+  return item.label;
+}
+
+function isStudioItem(item: NavigationItem) {
+  return item.href === "/el-estudio" || normalizeLabel(item.label) === "el estudio";
+}
+
+function isLegacyBlogRootItem(item: NavigationItem) {
+  const label = normalizeLabel(item.label);
+  return item.href === "/blog" && (label === "blog" || label === "bitacora");
+}
+
+function ensureStudioSubmenu(children: NavigationItem[] = []) {
+  const byHref = new Map(children.map((child) => [child.href, child]));
+  const studioChild = byHref.get("/el-estudio") ?? {
+    label: "El Estudio",
+    href: "/el-estudio",
+    order: 0,
+    visible: true,
+  };
+  const blogChild = byHref.get("/blog") ?? {
+    label: "Bitácora",
+    href: "/blog",
+    order: 1,
+    visible: true,
+  };
+  const extras = children.filter((child) => child.href !== "/el-estudio" && child.href !== "/blog");
+  return [
+    { ...studioChild, label: "El Estudio", order: 0, visible: true },
+    { ...blogChild, label: "Bitácora", order: 1, visible: true },
+    ...extras,
+  ].sort((a, b) => a.order - b.order);
+}
+
+function normalizePublicMenuStructure(items: NavigationItem[]) {
+  const hasShop = items.some((item) => item.href === "/shop");
+  return items
+    .flatMap((item) => {
+      if (!isLegacyBlogRootItem(item)) return [item];
+      return hasShop ? [] : [{ ...item, label: "Shop", href: "/shop", children: [] }];
+    })
+    .map((item) => (
+      isStudioItem(item)
+        ? { ...item, label: "El Estudio", children: ensureStudioSubmenu(item.children) }
+        : item
+    ))
+    .sort((a, b) => a.order - b.order);
 }
 
 function offeringToNavigationItem(offering: Offering, order: number): NavigationItem {
@@ -110,8 +189,9 @@ function withDynamicChildren(items: NavigationItem[], dynamicChildren: Record<Dy
     seen.add(key);
     return {
       ...item,
+      label: labelForDynamicItem(item, key),
       href: dynamicMenuConfig[key].href,
-      children: dynamicChildren[key].length ? dynamicChildren[key] : item.children,
+      children: item.children?.length ? item.children : dynamicChildren[key],
     };
   });
 
@@ -127,7 +207,7 @@ function withDynamicChildren(items: NavigationItem[], dynamicChildren: Record<Dy
     });
   }
 
-  return enhanced.sort((a, b) => a.order - b.order);
+  return normalizePublicMenuStructure(enhanced);
 }
 
 export async function getPublicNavigationItems(location: "main" | "mobile" | "footer" = "main") {
@@ -149,5 +229,9 @@ export async function getPublicNavigationItems(location: "main" | "mobile" | "fo
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((item) => toNavigationItem(item, childrenByParent.get(item.id) ?? []));
 
-  return dynamicChildren ? withDynamicChildren(items.length ? items : staticFallbackItems, dynamicChildren) : items;
+  if (dynamicChildren) {
+    return withDynamicChildren(items.length ? items : staticFallbackItems, dynamicChildren);
+  }
+
+  return location === "footer" ? items : normalizePublicMenuStructure(items);
 }

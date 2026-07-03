@@ -20,6 +20,19 @@ export function ExperienceDetailPage({ item }: { item: ExperienceItem }) {
           eyebrow={item.category}
           title={item.heroTitle}
           overlayTitle={item.heroVariant === "image"}
+          heroMenuTone={item.heroMenuTone}
+          heroLogoPositionX={item.heroLogoPositionX}
+          heroLogoPositionY={item.heroLogoPositionY}
+          heroLogoWidth={item.heroLogoWidth}
+          heroLogoTabletPositionX={item.heroLogoTabletPositionX}
+          heroLogoTabletPositionY={item.heroLogoTabletPositionY}
+          heroLogoTabletWidth={item.heroLogoTabletWidth}
+          heroLogoMobilePositionX={item.heroLogoMobilePositionX}
+          heroLogoMobilePositionY={item.heroLogoMobilePositionY}
+          heroLogoMobileWidth={item.heroLogoMobileWidth}
+          heroMenuPositionY={item.heroMenuPositionY}
+          heroMenuTabletPositionY={item.heroMenuTabletPositionY}
+          heroMenuMobilePositionY={item.heroMenuMobilePositionY}
         >
           {item.heroVariant === "image" ? (
             <div className="page-hero__script-stack">

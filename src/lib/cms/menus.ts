@@ -3,7 +3,7 @@ import { createAdminClient } from "../supabase/admin";
 import { addTrashItem, getCurrentUserEmail, getTrashItemByEntity, removeTrashItem } from "./trash";
 import { readJsonFile, writeJsonFile } from "./local-storage";
 import { isMenuLocation, isMenuStatus, isMenuItemType, isLinkedEntityType } from "./types";
-import type { Menu, MenuItem, MenuLocation, MenuStatus, MenuItemType, LinkedEntityType } from "./types";
+import type { Menu, MenuItem, MenuLocation } from "./types";
 import { logAction } from "./history-logs";
 
 const FILE_NAME = "menus.json";
@@ -16,6 +16,14 @@ type MenuInput = Partial<Omit<Menu, "id" | "created_at" | "updated_at" | "delete
 type MenuItemInput = Partial<Omit<MenuItem, "id" | "created_at" | "updated_at">> & {
   id?: string;
 };
+
+export type MenuItemTreeInput = MenuItemInput & {
+  children?: MenuItemInput[];
+};
+
+export function isProtectedHomeMenuItem(item: Pick<MenuItem, "url" | "parent_id">) {
+  return !item.parent_id && ["/#hero", "/", "/home"].includes(item.url);
+}
 
 function normalizeMenu(input: MenuInput, existing?: Menu, allMenus: Menu[] = []) {
   const name = String(input.name ?? existing?.name ?? "").trim();
@@ -52,7 +60,7 @@ function normalizeMenuItem(input: MenuItemInput, existing?: MenuItem) {
   if (!label) throw new Error("La etiqueta del item es obligatoria.");
   if (!isMenuItemType(type)) throw new Error("Tipo de item no válido.");
 
-  return {
+  const normalized = {
     id: existing?.id ?? input.id ?? randomUUID(),
     label,
     type,
@@ -66,10 +74,28 @@ function normalizeMenuItem(input: MenuItemInput, existing?: MenuItem) {
     created_at: existing?.created_at ?? now,
     updated_at: now,
   } satisfies MenuItem;
+
+  if (existing && isProtectedHomeMenuItem(existing)) {
+    return {
+      ...normalized,
+      label: existing.label || "Inicio",
+      type: "internal",
+      url: "/#hero",
+      linked_entity_type: "none",
+      linked_entity_id: "",
+      parent_id: null,
+      sort_order: 0,
+      is_visible: true,
+      open_in_new_tab: false,
+    } satisfies MenuItem;
+  }
+
+  return normalized;
 }
 
 function stripMenuId(item: Record<string, unknown>): MenuItem {
-  const { menu_id, ...rest } = item;
+  const rest = { ...item };
+  delete rest.menu_id;
   return rest as unknown as MenuItem;
 }
 
@@ -101,7 +127,8 @@ async function readMenusFromSupabase(): Promise<Menu[] | null> {
 async function upsertMenu(menu: Menu): Promise<void> {
   try {
     const supabase = createAdminClient();
-    const { items, ...data } = menu;
+    const data = { ...menu } as Record<string, unknown>;
+    delete data.items;
     await supabase.from("menus").upsert(data as unknown as Record<string, unknown>, { onConflict: "id" });
   } catch { /* best-effort */ }
 }
@@ -118,6 +145,23 @@ async function upsertMenuItem(menuId: string, item: MenuItem): Promise<void> {
     const supabase = createAdminClient();
     const record: Record<string, unknown> = { ...item as unknown as Record<string, unknown>, menu_id: menuId };
     await supabase.from("menu_items").upsert(record, { onConflict: "id" });
+  } catch { /* best-effort */ }
+}
+
+async function upsertMenuItems(menuId: string, items: MenuItem[]): Promise<void> {
+  if (!items.length) return;
+  try {
+    const supabase = createAdminClient();
+    const records = items.map((item) => ({ ...item as unknown as Record<string, unknown>, menu_id: menuId }));
+    await supabase.from("menu_items").upsert(records, { onConflict: "id" });
+  } catch { /* best-effort */ }
+}
+
+async function deleteChildrenFromDb(parentIds: string[]): Promise<void> {
+  if (!parentIds.length) return;
+  try {
+    const supabase = createAdminClient();
+    await supabase.from("menu_items").delete().in("parent_id", parentIds);
   } catch { /* best-effort */ }
 }
 
@@ -267,20 +311,99 @@ export async function deleteMenuPermanently(id: string) {
 export async function addMenuItem(menuId: string, data: MenuItemInput) {
   const menus = await readJsonFile<Menu[]>(FILE_NAME, []);
   const index = menus.findIndex((m) => m.id === menuId);
-  if (index === -1) return null;
   const item = normalizeMenuItem(data);
+  if (index === -1) {
+    await upsertMenuItem(menuId, item);
+    return item;
+  }
   menus[index] = { ...menus[index], items: [...menus[index].items, item], updated_at: new Date().toISOString() };
   await writeJsonFile(FILE_NAME, menus);
   await upsertMenuItem(menuId, item);
   return item;
 }
 
+export async function saveMenuItemsTree(menuId: string, tree: MenuItemTreeInput[]) {
+  const menus = await readJsonFile<Menu[]>(FILE_NAME, []);
+  const menuIndex = menus.findIndex((m) => m.id === menuId);
+  const currentMenu = menuIndex === -1 ? await getMenuById(menuId) : menus[menuIndex];
+  if (!currentMenu) return null;
+
+  const existingById = new Map(currentMenu.items.map((item) => [item.id, item]));
+  const roots: MenuItem[] = [];
+  const children: MenuItem[] = [];
+
+  tree.forEach((rootInput, rootIndex) => {
+    const rootExisting = rootInput.id ? existingById.get(rootInput.id) : undefined;
+    const root = normalizeMenuItem({
+      ...rootInput,
+      parent_id: null,
+      sort_order: rootIndex,
+      is_visible: rootInput.is_visible ?? true,
+    }, rootExisting);
+    roots.push(root);
+
+    (rootInput.children ?? []).forEach((childInput, childIndex) => {
+      const childExisting = childInput.id ? existingById.get(childInput.id) : undefined;
+      children.push(normalizeMenuItem({
+        ...childInput,
+        parent_id: root.id,
+        sort_order: childIndex,
+        is_visible: childInput.is_visible ?? true,
+      }, childExisting));
+    });
+  });
+
+  const touchedRootIds = new Set(roots.map((item) => item.id));
+  const nextItems = [
+    ...currentMenu.items.filter((item) => (
+      !touchedRootIds.has(item.id) &&
+      (!item.parent_id || !touchedRootIds.has(item.parent_id))
+    )),
+    ...roots,
+    ...children,
+  ].sort((a, b) => a.sort_order - b.sort_order);
+
+  const updatedMenu = { ...currentMenu, items: nextItems, updated_at: new Date().toISOString() };
+  if (menuIndex !== -1) {
+    menus[menuIndex] = updatedMenu;
+    await writeJsonFile(FILE_NAME, menus);
+  } else {
+    await upsertMenu(updatedMenu);
+  }
+
+  await deleteChildrenFromDb([...touchedRootIds]);
+  await upsertMenuItems(menuId, [...roots, ...children]);
+  await logAction({
+    action: "update",
+    entity_type: "menu",
+    entity_id: updatedMenu.id,
+    entity_title: updatedMenu.name,
+    old_data: currentMenu,
+    new_data: updatedMenu,
+  });
+
+  return [...roots, ...children];
+}
+
 export async function updateMenuItem(menuId: string, itemId: string, data: MenuItemInput) {
   const menus = await readJsonFile<Menu[]>(FILE_NAME, []);
   const menuIndex = menus.findIndex((m) => m.id === menuId);
-  if (menuIndex === -1) return null;
+  if (menuIndex === -1) {
+    const dbMenu = await getMenuById(menuId);
+    const existing = dbMenu?.items.find((i) => i.id === itemId);
+    if (!existing) return null;
+    if (isProtectedHomeMenuItem(existing) && data.is_visible === false) {
+      throw new Error("Inicio esta bloqueado y no se puede ocultar.");
+    }
+    const updated = normalizeMenuItem(data, existing);
+    await upsertMenuItem(menuId, updated);
+    return updated;
+  }
   const itemIndex = menus[menuIndex].items.findIndex((i) => i.id === itemId);
   if (itemIndex === -1) return null;
+  if (isProtectedHomeMenuItem(menus[menuIndex].items[itemIndex]) && data.is_visible === false) {
+    throw new Error("Inicio esta bloqueado y no se puede ocultar.");
+  }
   const updated = normalizeMenuItem(data, menus[menuIndex].items[itemIndex]);
   const items = [...menus[menuIndex].items];
   items[itemIndex] = updated;
@@ -293,8 +416,21 @@ export async function updateMenuItem(menuId: string, itemId: string, data: MenuI
 export async function deleteMenuItem(menuId: string, itemId: string) {
   const menus = await readJsonFile<Menu[]>(FILE_NAME, []);
   const menuIndex = menus.findIndex((m) => m.id === menuId);
-  if (menuIndex === -1) return false;
+  if (menuIndex === -1) {
+    const dbMenu = await getMenuById(menuId);
+    const item = dbMenu?.items.find((i) => i.id === itemId);
+    if (!item) return false;
+    if (isProtectedHomeMenuItem(item)) {
+      throw new Error("Inicio esta bloqueado y no se puede eliminar.");
+    }
+    await deleteMenuItemFromDb(itemId);
+    return true;
+  }
   const originalLength = menus[menuIndex].items.length;
+  const item = menus[menuIndex].items.find((i) => i.id === itemId);
+  if (item && isProtectedHomeMenuItem(item)) {
+    throw new Error("Inicio esta bloqueado y no se puede eliminar.");
+  }
   menus[menuIndex] = {
     ...menus[menuIndex],
     items: menus[menuIndex].items.filter((i) => i.id !== itemId && i.parent_id !== itemId),
@@ -309,8 +445,9 @@ export async function deleteMenuItem(menuId: string, itemId: string) {
 export async function reorderMenuItems(menuId: string, orderedItemIds: string[]) {
   const menus = await readJsonFile<Menu[]>(FILE_NAME, []);
   const menuIndex = menus.findIndex((m) => m.id === menuId);
-  if (menuIndex === -1) return null;
-  const itemMap = new Map(menus[menuIndex].items.map((i) => [i.id, i]));
+  const currentMenu = menuIndex === -1 ? await getMenuById(menuId) : menus[menuIndex];
+  if (!currentMenu) return null;
+  const itemMap = new Map(currentMenu.items.map((i) => [i.id, i]));
   const reordered: MenuItem[] = [];
   for (const id of orderedItemIds) {
     const item = itemMap.get(id);
@@ -322,8 +459,10 @@ export async function reorderMenuItems(menuId: string, orderedItemIds: string[])
   for (const item of itemMap.values()) {
     reordered.push({ ...item, sort_order: reordered.length });
   }
-  menus[menuIndex] = { ...menus[menuIndex], items: reordered, updated_at: new Date().toISOString() };
-  await writeJsonFile(FILE_NAME, menus);
+  if (menuIndex !== -1) {
+    menus[menuIndex] = { ...menus[menuIndex], items: reordered, updated_at: new Date().toISOString() };
+    await writeJsonFile(FILE_NAME, menus);
+  }
   try {
     const supabase = createAdminClient();
     for (const item of reordered) {
@@ -336,9 +475,22 @@ export async function reorderMenuItems(menuId: string, orderedItemIds: string[])
 export async function toggleMenuItemVisibility(menuId: string, itemId: string) {
   const menus = await readJsonFile<Menu[]>(FILE_NAME, []);
   const menuIndex = menus.findIndex((m) => m.id === menuId);
-  if (menuIndex === -1) return null;
+  if (menuIndex === -1) {
+    const dbMenu = await getMenuById(menuId);
+    const item = dbMenu?.items.find((i) => i.id === itemId);
+    if (!item) return null;
+    if (isProtectedHomeMenuItem(item)) {
+      throw new Error("Inicio esta bloqueado y no se puede ocultar.");
+    }
+    const updated = { ...item, is_visible: !item.is_visible, updated_at: new Date().toISOString() };
+    await upsertMenuItem(menuId, updated);
+    return updated;
+  }
   const itemIndex = menus[menuIndex].items.findIndex((i) => i.id === itemId);
   if (itemIndex === -1) return null;
+  if (isProtectedHomeMenuItem(menus[menuIndex].items[itemIndex])) {
+    throw new Error("Inicio esta bloqueado y no se puede ocultar.");
+  }
   const items = [...menus[menuIndex].items];
   items[itemIndex] = { ...items[itemIndex], is_visible: !items[itemIndex].is_visible, updated_at: new Date().toISOString() };
   menus[menuIndex] = { ...menus[menuIndex], items, updated_at: new Date().toISOString() };

@@ -1,9 +1,13 @@
 import AdminShell from "@/components/admin/AdminShell";
 import SettingsForm from "@/components/admin/SettingsForm";
+import { getMenuByLocation } from "@/lib/cms/menus";
 import { getSettings } from "@/lib/cms/settings";
 
 export default async function SettingsPage() {
-  const settings = await getSettings();
+  const [settings, mainMenu] = await Promise.all([
+    getSettings(),
+    getMenuByLocation("main"),
+  ]);
 
   return (
     <AdminShell>
@@ -15,7 +19,7 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      <SettingsForm initial={settings} />
+      <SettingsForm initial={settings} initialMenu={mainMenu} />
     </AdminShell>
   );
 }

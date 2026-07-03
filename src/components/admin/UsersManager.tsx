@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { CmsAdminUser } from "@/lib/admin/users";
 
@@ -35,17 +35,20 @@ export default function UsersManager({ initialUsers }: { initialUsers: CmsAdminU
       });
   }, [query, sort, users]);
 
-  async function reloadUsers() {
+  const reloadUsers = useCallback(async () => {
     const response = await fetch("/api/admin/users");
     if (!response.ok) return;
     const data = (await response.json()) as { users: CmsAdminUser[] };
     setUsers(data.users);
     router.refresh();
-  }
+  }, [router]);
 
   useEffect(() => {
-    void reloadUsers();
-  }, []);
+    const id = window.setTimeout(() => {
+      void reloadUsers();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [reloadUsers]);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

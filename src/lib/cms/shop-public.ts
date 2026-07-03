@@ -29,6 +29,11 @@ function detailsFromProduct(product: Product) {
   return details;
 }
 
+function orderFromProduct(product: Product) {
+  const match = product.sku.match(/(\d+)$/);
+  return match ? Number(match[1]) : 0;
+}
+
 function productToShopItem(product: Product, categories: ProductCategory[]): ShopItem {
   const gallery = [product.main_image_id, ...(product.gallery ?? [])].filter(Boolean);
 
@@ -44,10 +49,10 @@ function productToShopItem(product: Product, categories: ProductCategory[]): Sho
     gallery,
     description: product.description || product.excerpt,
     details: detailsFromProduct(product),
-    availabilityNote: product.stock === null ? "" : `${product.stock} disponible(s)`,
+    availabilityNote: product.excerpt || (product.stock === null ? "" : `${product.stock} disponible(s)`),
     seoTitle: product.seo_title || `${product.name} | Casa Rosier`,
     seoDescription: product.seo_description || product.excerpt || product.description,
-    order: 0,
+    order: orderFromProduct(product),
     isPublished: product.status === "published",
   };
 }

@@ -155,6 +155,43 @@
   font: 400 12px/1.55 var(--font-menu);
 }
 
+.promo-entrada__subtitle.markdown-content,
+.promo-entrada__text.markdown-content {
+  display: grid;
+  gap: 6px;
+}
+
+.promo-entrada__subtitle p,
+.promo-entrada__text p,
+.promo-entrada__subtitle ul,
+.promo-entrada__text ul,
+.promo-entrada__subtitle ol,
+.promo-entrada__text ol {
+  margin: 0;
+}
+
+.promo-entrada__subtitle ul,
+.promo-entrada__text ul,
+.promo-entrada__subtitle ol,
+.promo-entrada__text ol {
+  padding-left: 18px;
+  text-align: left;
+}
+
+.promo-entrada__subtitle li,
+.promo-entrada__text li {
+  margin: 2px 0;
+}
+
+.promo-entrada__subtitle a,
+.promo-entrada__text a {
+  color: #7f5b25;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
 .promo-entrada__actions {
   margin-top: 14px;
   display: flex;

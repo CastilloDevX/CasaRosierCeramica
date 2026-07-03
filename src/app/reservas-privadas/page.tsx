@@ -1,14 +1,5 @@
-import type { Metadata } from "next";
-import { ExperienceCollectionPage } from "@/features/experiences/ExperienceCollectionPage";
-import { getExperienceCollectionConfig } from "@/features/experiences/experienceRoutes";
-
-export const metadata: Metadata = {
-  title: "Experiencias",
-  description:
-    "Reservas privadas y experiencias de ceramica de Casa Rosier en Barcelona."
-};
+import { redirect } from "next/navigation";
 
 export default async function PrivateExperiencesPage() {
-  const config = await getExperienceCollectionConfig("privateBookings");
-  return <ExperienceCollectionPage config={config} />;
+  redirect("/experiencias");
 }

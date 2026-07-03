@@ -12,5 +12,5 @@ export async function POST(request: NextRequest) {
   if (!(await requireAdminApi())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json(); if (!body?.name) return NextResponse.json({ error: "El nombre es obligatorio." }, { status: 400 });
   try { const item = await createTestimonial(body); return NextResponse.json({ testimonial: item }); }
-  catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : "Error" }, { status: 400 }); }
+  catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : "No se pudo guardar el testimonio." }, { status: 400 }); }
 }

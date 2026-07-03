@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { NavigationItem } from "@/data/types";
 import { classNames } from "@/lib/utils";
@@ -11,9 +12,27 @@ const DESKTOP_SUBMENU_CLOSE_DELAY = 320;
 export function NavbarGlobal({
   home = false,
   navigationItems,
+  logoUrl = "/img/logo-header.png",
+  scrollMenuBackgroundColor = "#8c7457",
+  scrollMenuTextColor = "#fff9f1",
+  scrollMenuIconColor = "#fff9f1",
+  scrollMenuLogoTintEnabled = false,
+  scrollMenuLogoTintColor = "#fff9f1",
+  scrollThreshold = 12,
+  tabletScrollThreshold = scrollThreshold,
+  mobileScrollThreshold = scrollThreshold,
 }: {
   home?: boolean;
   navigationItems: NavigationItem[];
+  logoUrl?: string;
+  scrollMenuBackgroundColor?: string;
+  scrollMenuTextColor?: string;
+  scrollMenuIconColor?: string;
+  scrollMenuLogoTintEnabled?: boolean;
+  scrollMenuLogoTintColor?: string;
+  scrollThreshold?: number;
+  tabletScrollThreshold?: number;
+  mobileScrollThreshold?: number;
 }) {
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -35,9 +54,19 @@ export function NavbarGlobal({
     .filter((item) => item.visible)
     .sort((a, b) => a.order - b.order);
   const desktopItems = mobileItems.filter(
-    (item) => !home || item.label !== "Inicio"
+    (item) => !home || item.href !== "/#hero"
   );
   const scrollDesktopItems = desktopItems;
+  const navStyle = {
+    "--site-scroll-menu-bg": scrollMenuBackgroundColor,
+    "--site-scroll-menu-text": scrollMenuTextColor,
+    "--site-scroll-menu-icon": scrollMenuIconColor,
+    "--site-scroll-logo-tint": scrollMenuLogoTintColor,
+  } as CSSProperties;
+  const scrollLogoTintStyle = {
+    WebkitMaskImage: `url("${logoUrl.replace(/"/g, "%22")}")`,
+    maskImage: `url("${logoUrl.replace(/"/g, "%22")}")`,
+  } as CSSProperties;
 
   const clearDesktopCloseTimeout = useCallback(() => {
     if (desktopCloseTimeoutRef.current) {
@@ -53,9 +82,9 @@ export function NavbarGlobal({
     }
   }, []);
 
-  const openDesktopMenu = useCallback((label: string) => {
+  const openDesktopMenu = useCallback((href: string) => {
     clearDesktopCloseTimeout();
-    setDesktopOpen(label);
+    setDesktopOpen(href);
   }, [clearDesktopCloseTimeout]);
 
   const closeDesktopMenu = useCallback(() => {
@@ -130,8 +159,13 @@ export function NavbarGlobal({
   }, [clearDesktopCloseTimeout, clearScrollDesktopCloseTimeout]);
 
   useEffect(() => {
+    const currentThreshold = () => {
+      if (window.innerWidth <= 640) return mobileScrollThreshold;
+      if (window.innerWidth <= 1024) return tabletScrollThreshold;
+      return scrollThreshold;
+    };
     const onScroll = () => {
-      const scrolled = window.scrollY > 12;
+      const scrolled = window.scrollY > currentThreshold();
       setMobileScrolled(scrolled);
       if (!scrolled) {
         setMobileOpen(false);
@@ -139,8 +173,12 @@ export function NavbarGlobal({
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [mobileScrollThreshold, scrollThreshold, tabletScrollThreshold]);
 
   const current = (href: string) =>
     href === "/#hero"
@@ -154,12 +192,13 @@ export function NavbarGlobal({
         home ? "site-nav-shell--home" : "site-nav-shell--internal"
       )}
       ref={rootRef}
+      style={navStyle}
     >
       <div className="navbar-global hero__top container">
         <Link className="hero__logo" href="/#hero" aria-label="Casa Rosier">
           <img
             className="hero__logo-image"
-            src="/img/logo-header.png"
+            src={logoUrl}
             alt="Casa Rosier"
           />
         </Link>
@@ -169,7 +208,7 @@ export function NavbarGlobal({
             {desktopItems.map((item, index) => {
               const children =
                 item.children?.filter((child) => child.visible) ?? [];
-              const open = desktopOpen === item.label;
+              const open = desktopOpen === item.href;
               const submenuId = `desktop-submenu-${index}`;
               return (
                 <li
@@ -180,13 +219,13 @@ export function NavbarGlobal({
                   )}
                   key={item.label}
                   onMouseEnter={() =>
-                    children.length > 0 && openDesktopMenu(item.label)
+                    children.length > 0 && openDesktopMenu(item.href)
                   }
                   onMouseLeave={() =>
                     children.length > 0 && scheduleDesktopMenuClose()
                   }
                   onFocus={() =>
-                    children.length > 0 && openDesktopMenu(item.label)
+                    children.length > 0 && openDesktopMenu(item.href)
                   }
                 >
                   <div className="hero__nav-group">
@@ -210,7 +249,7 @@ export function NavbarGlobal({
                         aria-controls={submenuId}
                         aria-label={`Abrir submenu de ${item.label}`}
                         onClick={() =>
-                          open ? closeDesktopMenu() : openDesktopMenu(item.label)
+                          open ? closeDesktopMenu() : openDesktopMenu(item.href)
                         }
                       >
                         <span className="hero__plus" aria-hidden="true" />
@@ -263,7 +302,7 @@ export function NavbarGlobal({
             >
               <img
                 className="mobile-static-nav__logo-image"
-                src="/img/logo-header.png"
+                src={logoUrl}
                 alt="Casa Rosier"
               />
             </Link>
@@ -367,11 +406,19 @@ export function NavbarGlobal({
             aria-label="Casa Rosier"
             onClick={() => setMobileOpen(false)}
           >
-            <img
-              className="mobile-scroll-nav__logo-image"
-              src="/img/logo-header.png"
-              alt="Casa Rosier"
-            />
+            {scrollMenuLogoTintEnabled ? (
+              <span
+                className="mobile-scroll-nav__logo-tint"
+                style={scrollLogoTintStyle}
+                aria-hidden="true"
+              />
+            ) : (
+              <img
+                className="mobile-scroll-nav__logo-image"
+                src={logoUrl}
+                alt="Casa Rosier"
+              />
+            )}
           </Link>
           <nav className="scroll-desktop-nav" aria-label="Principal">
             <ul className="scroll-desktop-nav__list">

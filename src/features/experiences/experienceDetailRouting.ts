@@ -23,6 +23,8 @@ type LegacyOfferingDetails = Partial<ClassOfferingDetails> & {
   paymentMethods?: unknown;
   additionalInfo?: unknown;
   ctaHref?: unknown;
+  ctaConsultHref?: unknown;
+  ctaEnrollHref?: unknown;
   giftCardTypeLabel?: unknown;
   giftCardTypeOptions?: unknown;
 };
@@ -58,11 +60,17 @@ function formatPrice(value: number | null) {
   return value === null ? "" : `${value} EUR`;
 }
 
-function ctaHref(details: LegacyOfferingDetails) {
-  const configuredHref = stringValue(details.ctaHref);
-  if (configuredHref) return configuredHref;
+function fallbackWhatsappHref(details: LegacyOfferingDetails) {
   const whatsapp = details.whatsappNumber || details.content?.contactWhatsapp || "34633788860";
   return `https://wa.me/${whatsapp}`;
+}
+
+function ctaConsultHref(details: LegacyOfferingDetails) {
+  return stringValue(details.ctaConsultHref) || stringValue(details.ctaHref) || fallbackWhatsappHref(details);
+}
+
+function ctaEnrollHref(details: LegacyOfferingDetails) {
+  return stringValue(details.ctaEnrollHref) || stringValue(details.ctaHref) || fallbackWhatsappHref(details);
 }
 
 function hasDetailValue(value: unknown): boolean {
@@ -82,6 +90,7 @@ function populatedDetails(value: Partial<ClassOfferingDetails>) {
 
 function detailsForOffering(offering: Offering): LegacyOfferingDetails {
   const rootDetails = offering.details as LegacyOfferingDetails;
+
   return {
     ...rootDetails,
     ...(rootDetails.class ? populatedDetails(rootDetails.class) : {}),
@@ -144,6 +153,8 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .map((item) => ({ label: item.description || "Precio", price: formatPrice(item.price) }));
   const schedule = scheduleForOffering(offering, details);
+  const consultHref = ctaConsultHref(details);
+  const enrollHref = ctaEnrollHref(details);
 
   return {
     id: offering.id,
@@ -158,6 +169,18 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     heroImage: details.heroImage || offering.cover_image_url || "img/hero-bg.jpg",
     heroVariant: details.heroVariant ?? "text",
     heroMenuTone: details.heroMenuTone ?? (details.heroVariant === "image" ? "light" : "dark"),
+    heroLogoPositionX: details.heroLogoPositionX,
+    heroLogoPositionY: details.heroLogoPositionY,
+    heroLogoWidth: details.heroLogoWidth,
+    heroLogoTabletPositionX: details.heroLogoTabletPositionX,
+    heroLogoTabletPositionY: details.heroLogoTabletPositionY,
+    heroLogoTabletWidth: details.heroLogoTabletWidth,
+    heroLogoMobilePositionX: details.heroLogoMobilePositionX,
+    heroLogoMobilePositionY: details.heroLogoMobilePositionY,
+    heroLogoMobileWidth: details.heroLogoMobileWidth,
+    heroMenuPositionY: details.heroMenuPositionY,
+    heroMenuTabletPositionY: details.heroMenuTabletPositionY,
+    heroMenuMobilePositionY: details.heroMenuMobilePositionY,
     heroTitleImage: details.titleImage,
     heroTitleImageSecondary: details.titleImageSecondary,
     heroTitle: details.heroTitle || offering.title,
@@ -179,7 +202,9 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     paymentMethods: splitList(content.paymentMethods || details.paymentMethods),
     additionalInfo: content.extraInfo || stringValue(details.additionalInfo) || `Cualquier consulta o información adicional que necesites, puedes escribir al WhatsApp ${details.whatsappNumber || content.contactWhatsapp || "633788860"}.`,
     showIdeaPromptSection: details.showIdeaPromptSection ?? true,
-    ctaHref: ctaHref(details),
+    ctaHref: consultHref,
+    ctaConsultHref: consultHref,
+    ctaEnrollHref: enrollHref,
     seoTitle: offering.seo_title || `${offering.title} | Casa Rosier`,
     seoDescription: offering.seo_description || offering.excerpt,
     isPublished: offering.status === "published",

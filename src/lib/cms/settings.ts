@@ -5,6 +5,7 @@ import type { SiteSettingInsert, SiteSettingUpdate } from "../supabase/types";
 const FILE_NAME = "settings.json";
 
 const SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
+const MENU_VISUAL_SETTINGS_ID = "00000000-0000-0000-0000-000000000002";
 
 export interface SiteSettings {
   site: {
@@ -14,6 +15,14 @@ export interface SiteSettings {
     favicon_url: string;
     default_language: string;
     timezone: string;
+  };
+  menu: {
+    header_logo_url: string;
+    scroll_menu_background_color: string;
+    scroll_menu_text_color: string;
+    scroll_menu_icon_color: string;
+    scroll_menu_logo_tint_enabled: boolean;
+    scroll_menu_logo_tint_color: string;
   };
   contact: {
     email: string;
@@ -60,6 +69,14 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     default_language: "es",
     timezone: "Europe/Madrid",
   },
+  menu: {
+    header_logo_url: "https://ilkrcakrduibgsfqfzti.supabase.co/storage/v1/object/public/media/img/logo-header.png",
+    scroll_menu_background_color: "#8c7457",
+    scroll_menu_text_color: "#fff9f1",
+    scroll_menu_icon_color: "#fff9f1",
+    scroll_menu_logo_tint_enabled: false,
+    scroll_menu_logo_tint_color: "#fff9f1",
+  },
   contact: {
     email: "",
     phone: "",
@@ -102,6 +119,12 @@ function flattenSettings(s: SiteSettings): SiteSettingUpdate {
     site_description: s.site.site_description || null,
     logo_url: s.site.logo_url || null,
     favicon_url: s.site.favicon_url || null,
+    header_logo_url: s.menu.header_logo_url || null,
+    scroll_menu_background_color: s.menu.scroll_menu_background_color || "#8c7457",
+    scroll_menu_text_color: s.menu.scroll_menu_text_color || "#fff9f1",
+    scroll_menu_icon_color: s.menu.scroll_menu_icon_color || "#fff9f1",
+    scroll_menu_logo_tint_enabled: s.menu.scroll_menu_logo_tint_enabled,
+    scroll_menu_logo_tint_color: s.menu.scroll_menu_logo_tint_color || "#fff9f1",
     default_language: s.site.default_language,
     timezone: s.site.timezone,
     email: s.contact.email || null,
@@ -136,6 +159,12 @@ function rowToSettings(
     site_description: string | null;
     logo_url: string | null;
     favicon_url: string | null;
+    header_logo_url?: string | null;
+    scroll_menu_background_color?: string | null;
+    scroll_menu_text_color?: string | null;
+    scroll_menu_icon_color?: string | null;
+    scroll_menu_logo_tint_enabled?: boolean | null;
+    scroll_menu_logo_tint_color?: string | null;
     default_language: string;
     timezone: string;
     email: string | null;
@@ -172,6 +201,14 @@ function rowToSettings(
       favicon_url: row.favicon_url ?? "",
       default_language: row.default_language,
       timezone: row.timezone,
+    },
+    menu: {
+      header_logo_url: row.header_logo_url ?? row.logo_url ?? DEFAULT_SETTINGS.menu.header_logo_url,
+      scroll_menu_background_color: row.scroll_menu_background_color ?? DEFAULT_SETTINGS.menu.scroll_menu_background_color,
+      scroll_menu_text_color: row.scroll_menu_text_color ?? DEFAULT_SETTINGS.menu.scroll_menu_text_color,
+      scroll_menu_icon_color: row.scroll_menu_icon_color ?? row.scroll_menu_text_color ?? DEFAULT_SETTINGS.menu.scroll_menu_icon_color,
+      scroll_menu_logo_tint_enabled: row.scroll_menu_logo_tint_enabled ?? DEFAULT_SETTINGS.menu.scroll_menu_logo_tint_enabled,
+      scroll_menu_logo_tint_color: row.scroll_menu_logo_tint_color ?? row.scroll_menu_icon_color ?? DEFAULT_SETTINGS.menu.scroll_menu_logo_tint_color,
     },
     contact: {
       email: row.email ?? "",
@@ -210,6 +247,42 @@ function rowToSettings(
   };
 }
 
+type MenuVisualSettingsRow = {
+  header_logo_url?: string | null;
+  scroll_menu_background_color?: string | null;
+  scroll_menu_text_color?: string | null;
+  scroll_menu_icon_color?: string | null;
+  scroll_menu_logo_tint_enabled?: boolean | null;
+  scroll_menu_logo_tint_color?: string | null;
+};
+
+function rowToMenuSettings(row: MenuVisualSettingsRow): Partial<SiteSettings["menu"]> {
+  return {
+    header_logo_url: row.header_logo_url ?? DEFAULT_SETTINGS.menu.header_logo_url,
+    scroll_menu_background_color: row.scroll_menu_background_color ?? DEFAULT_SETTINGS.menu.scroll_menu_background_color,
+    scroll_menu_text_color: row.scroll_menu_text_color ?? DEFAULT_SETTINGS.menu.scroll_menu_text_color,
+    scroll_menu_icon_color: row.scroll_menu_icon_color ?? row.scroll_menu_text_color ?? DEFAULT_SETTINGS.menu.scroll_menu_icon_color,
+    scroll_menu_logo_tint_enabled: row.scroll_menu_logo_tint_enabled ?? DEFAULT_SETTINGS.menu.scroll_menu_logo_tint_enabled,
+    scroll_menu_logo_tint_color: row.scroll_menu_logo_tint_color ?? row.scroll_menu_icon_color ?? DEFAULT_SETTINGS.menu.scroll_menu_logo_tint_color,
+  };
+}
+
+async function readMenuVisualSettingsFromSupabase(): Promise<Partial<SiteSettings["menu"]> | null> {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from("menu_visual_settings")
+      .select("*")
+      .eq("key", "default")
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return rowToMenuSettings(data as MenuVisualSettingsRow);
+  } catch {
+    return null;
+  }
+}
+
 async function readFromSupabase(): Promise<SiteSettings | null> {
   try {
     const supabase = createAdminClient();
@@ -220,10 +293,31 @@ async function readFromSupabase(): Promise<SiteSettings | null> {
       .maybeSingle();
     if (error) throw error;
     if (!data) return null;
-    return rowToSettings(data as Parameters<typeof rowToSettings>[0]);
+    const settings = rowToSettings(data as Parameters<typeof rowToSettings>[0]);
+    const menuVisualSettings = await readMenuVisualSettingsFromSupabase();
+    return menuVisualSettings
+      ? { ...settings, menu: { ...settings.menu, ...menuVisualSettings } }
+      : settings;
   } catch {
     return null;
   }
+}
+
+async function writeMenuVisualSettingsToSupabase(settings: SiteSettings): Promise<void> {
+  try {
+    const supabase = createAdminClient();
+    await supabase.from("menu_visual_settings").upsert({
+      id: MENU_VISUAL_SETTINGS_ID,
+      key: "default",
+      header_logo_url: settings.menu.header_logo_url,
+      scroll_menu_background_color: settings.menu.scroll_menu_background_color || "#8c7457",
+      scroll_menu_text_color: settings.menu.scroll_menu_text_color || "#fff9f1",
+      scroll_menu_icon_color: settings.menu.scroll_menu_icon_color || "#fff9f1",
+      scroll_menu_logo_tint_enabled: settings.menu.scroll_menu_logo_tint_enabled,
+      scroll_menu_logo_tint_color: settings.menu.scroll_menu_logo_tint_color || "#fff9f1",
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "key" });
+  } catch { /* table may not exist yet */ }
 }
 
 async function writeToSupabase(settings: SiteSettings): Promise<boolean> {
@@ -248,6 +342,7 @@ async function writeToSupabase(settings: SiteSettings): Promise<boolean> {
         .insert({ id: SETTINGS_ID, ...flat } as SiteSettingInsert);
       if (error) throw error;
     }
+    await writeMenuVisualSettingsToSupabase(settings);
     return true;
   } catch {
     return false;
@@ -257,6 +352,7 @@ async function writeToSupabase(settings: SiteSettings): Promise<boolean> {
 function mergeSettings(current: SiteSettings, partial: Partial<SiteSettings>): SiteSettings {
   return {
     site: { ...current.site, ...(partial.site ?? {}) },
+    menu: { ...current.menu, ...(partial.menu ?? {}) },
     contact: { ...current.contact, ...(partial.contact ?? {}) },
     social: { ...current.social, ...(partial.social ?? {}) },
     footer: { ...current.footer, ...(partial.footer ?? {}) },
@@ -271,14 +367,24 @@ export async function getSettings(): Promise<SiteSettings> {
     return fromSupabase;
   }
   const data = await readJsonFile<Partial<SiteSettings>>(FILE_NAME, {});
-  return { ...DEFAULT_SETTINGS, ...data };
+  return {
+    site: { ...DEFAULT_SETTINGS.site, ...(data.site ?? {}) },
+    menu: { ...DEFAULT_SETTINGS.menu, ...(data.menu ?? {}) },
+    contact: { ...DEFAULT_SETTINGS.contact, ...(data.contact ?? {}) },
+    social: { ...DEFAULT_SETTINGS.social, ...(data.social ?? {}) },
+    footer: { ...DEFAULT_SETTINGS.footer, ...(data.footer ?? {}) },
+    seo: { ...DEFAULT_SETTINGS.seo, ...(data.seo ?? {}) },
+    system: { ...DEFAULT_SETTINGS.system, ...(data.system ?? {}) },
+  };
 }
 
 export async function updateSettings(data: Partial<SiteSettings>): Promise<SiteSettings> {
   const current = await getSettings();
   const next = mergeSettings(current, data);
   await writeToSupabase(next);
-  await writeJsonFile(FILE_NAME, next);
+  try {
+    await writeJsonFile(FILE_NAME, next);
+  } catch { /* migrations may not be applied yet */ }
   return next;
 }
 

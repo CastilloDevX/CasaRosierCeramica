@@ -15,6 +15,8 @@ function includedText(value: string) {
 
 export function DetailPage({ item }: { item: ExperienceItem }) {
   const isGiftCard = item.kind === "gift-card";
+  const consultHref = item.ctaConsultHref || item.ctaHref;
+  const enrollHref = item.ctaEnrollHref || consultHref;
   const [added, setAdded] = useState(false);
   const defaultPrice = useMemo(
     () =>
@@ -51,14 +53,14 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
               title={item.title}
               videoImage={item.videoCardImage}
               videoLabel={item.videoCardLabel}
-              ctaHref={item.ctaHref}
+              ctaHref={consultHref}
               showVideo={false}
             />
 
             <aside className="class-detail__side-column">
               <a
                 className="class-gallery__video-card"
-                href={item.ctaHref}
+                href={consultHref}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -139,7 +141,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                 </ul>
                 <a
                   className="class-detail__button"
-                  href={item.ctaHref}
+                  href={consultHref}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -195,7 +197,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                 ) : (
                   <a
                     className="class-detail__button class-detail__button--primary"
-                    href={item.ctaHref}
+                    href={enrollHref}
                     target="_blank"
                     rel="noreferrer"
                   >

@@ -39,7 +39,7 @@ export function Cart() {
         <p>Aun no has anadido ninguna gift card ni experiencia al pedido.</p>
         <Link
           className="class-detail__button class-detail__button--primary"
-          href="/gift-card"
+          href="/gift-cards"
         >
           Ver gift cards
         </Link>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { MarkdownContent } from "./MarkdownContent";
 
 export interface PromoEntryData {
   keyText: string;
@@ -68,12 +69,8 @@ export function PromoEntry({ promo = defaultPromo }: { promo?: PromoEntryData | 
             <h2 className="promo-entrada__title" id="promo-entrada-title">
               {promo.title}
             </h2>
-            <p className="promo-entrada__subtitle">
-              {promo.text}
-            </p>
-            <p className="promo-entrada__text">
-              {promo.detailText}
-            </p>
+            <MarkdownContent className="promo-entrada__subtitle" source={promo.text} />
+            <MarkdownContent className="promo-entrada__text" source={promo.detailText} />
             <div className="promo-entrada__actions">
               <Link className="promo-entrada__cta" href={promo.href || "/clases"}>
                 {promo.buttonText}

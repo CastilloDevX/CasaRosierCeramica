@@ -1,8 +1,12 @@
 import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
 import { getPublicNavigationItems } from "@/lib/cms/navigation-public";
+import { getSettings } from "@/lib/cms/settings";
 
 export async function HeaderHome() {
-  const navigationItems = await getPublicNavigationItems("main");
+  const [navigationItems, settings] = await Promise.all([
+    getPublicNavigationItems("main"),
+    getSettings(),
+  ]);
 
   return (
     <header
@@ -11,7 +15,16 @@ export async function HeaderHome() {
       data-header-component="HeaderHome"
     >
       <div className="hero__bg" />
-      <NavbarGlobal home navigationItems={navigationItems} />
+      <NavbarGlobal
+        home
+        navigationItems={navigationItems}
+        logoUrl={settings.menu.header_logo_url}
+        scrollMenuBackgroundColor={settings.menu.scroll_menu_background_color}
+        scrollMenuTextColor={settings.menu.scroll_menu_text_color}
+        scrollMenuIconColor={settings.menu.scroll_menu_icon_color}
+        scrollMenuLogoTintEnabled={settings.menu.scroll_menu_logo_tint_enabled}
+        scrollMenuLogoTintColor={settings.menu.scroll_menu_logo_tint_color}
+      />
       <h1 className="hero__title">Casa Rosier</h1>
       <div className="hero__overlays" aria-hidden="true">
         <img

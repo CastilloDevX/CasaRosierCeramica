@@ -20,6 +20,7 @@ export interface Database {
       landing_pages: { Row: LandingPageRow; Insert: LandingPageInsert; Update: LandingPageUpdate; };
       legal_settings: { Row: LegalSettingRow; Insert: LegalSettingInsert; Update: LegalSettingUpdate; };
       media_assets: { Row: MediaAssetRow; Insert: MediaAssetInsert; Update: MediaAssetUpdate; };
+      menu_visual_settings: { Row: MenuVisualSettingRow; Insert: MenuVisualSettingInsert; Update: MenuVisualSettingUpdate; };
       menu_items: { Row: MenuItemRow; Insert: MenuItemInsert; Update: MenuItemUpdate; };
       menus: { Row: MenuRow; Insert: MenuInsert; Update: MenuUpdate; };
       offering_gallery_items: { Row: OfferingGalleryItemRow; Insert: OfferingGalleryItemInsert; Update: OfferingGalleryItemUpdate; };
@@ -920,6 +921,45 @@ export interface MenuItemUpdate {
   updated_at?: string;
 }
 
+export interface MenuVisualSettingRow {
+  id: string;
+  key: string;
+  header_logo_url: string;
+  scroll_menu_background_color: string;
+  scroll_menu_text_color: string;
+  scroll_menu_icon_color: string;
+  scroll_menu_logo_tint_enabled: boolean;
+  scroll_menu_logo_tint_color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MenuVisualSettingInsert {
+  id?: string;
+  key?: string;
+  header_logo_url?: string;
+  scroll_menu_background_color?: string;
+  scroll_menu_text_color?: string;
+  scroll_menu_icon_color?: string;
+  scroll_menu_logo_tint_enabled?: boolean;
+  scroll_menu_logo_tint_color?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface MenuVisualSettingUpdate {
+  id?: string;
+  key?: string;
+  header_logo_url?: string;
+  scroll_menu_background_color?: string;
+  scroll_menu_text_color?: string;
+  scroll_menu_icon_color?: string;
+  scroll_menu_logo_tint_enabled?: boolean;
+  scroll_menu_logo_tint_color?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface MenuRow {
   id: string;
   name: string;
@@ -1470,6 +1510,10 @@ export interface PromoBannerRow {
   id: string;
   title: string;
   text: string | null;
+  key_text: string | null;
+  detail_text: string | null;
+  image_url: string | null;
+  button_text: string | null;
   link_url: string | null;
   start_date: string | null;
   end_date: string | null;
@@ -1484,6 +1528,10 @@ export interface PromoBannerInsert {
   id?: string;
   title: string;
   text?: string | null;
+  key_text?: string | null;
+  detail_text?: string | null;
+  image_url?: string | null;
+  button_text?: string | null;
   link_url?: string | null;
   start_date?: string | null;
   end_date?: string | null;
@@ -1498,6 +1546,10 @@ export interface PromoBannerUpdate {
   id?: string;
   title?: string;
   text?: string | null;
+  key_text?: string | null;
+  detail_text?: string | null;
+  image_url?: string | null;
+  button_text?: string | null;
   link_url?: string | null;
   start_date?: string | null;
   end_date?: string | null;
@@ -1664,6 +1716,12 @@ export interface SiteSettingRow {
   site_description: string | null;
   logo_url: string | null;
   favicon_url: string | null;
+  header_logo_url: string | null;
+  scroll_menu_background_color: string;
+  scroll_menu_text_color: string;
+  scroll_menu_icon_color: string;
+  scroll_menu_logo_tint_enabled: boolean;
+  scroll_menu_logo_tint_color: string;
   default_language: string;
   timezone: string;
   email: string | null;
@@ -1699,6 +1757,12 @@ export interface SiteSettingInsert {
   site_description?: string | null;
   logo_url?: string | null;
   favicon_url?: string | null;
+  header_logo_url?: string | null;
+  scroll_menu_background_color?: string;
+  scroll_menu_text_color?: string;
+  scroll_menu_icon_color?: string;
+  scroll_menu_logo_tint_enabled?: boolean;
+  scroll_menu_logo_tint_color?: string;
   default_language?: string;
   timezone?: string;
   email?: string | null;
@@ -1734,6 +1798,12 @@ export interface SiteSettingUpdate {
   site_description?: string | null;
   logo_url?: string | null;
   favicon_url?: string | null;
+  header_logo_url?: string | null;
+  scroll_menu_background_color?: string;
+  scroll_menu_text_color?: string;
+  scroll_menu_icon_color?: string;
+  scroll_menu_logo_tint_enabled?: boolean;
+  scroll_menu_logo_tint_color?: string;
   default_language?: string;
   timezone?: string;
   email?: string | null;

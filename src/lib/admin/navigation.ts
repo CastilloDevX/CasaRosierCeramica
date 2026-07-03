@@ -92,6 +92,7 @@ export const adminSections: AdminNavSection[] = [
     label: "Setup Página",
     icon: "sync_alt",
     children: [
+      { label: "Menú", href: adminRoutes.menus },
       { label: "Multimedia", href: adminRoutes.media },
       { label: "Redirecciones", href: adminRoutes.redirects },
     ],

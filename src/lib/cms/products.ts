@@ -1,13 +1,16 @@
 import { randomUUID } from "crypto";
+import { readFile } from "fs/promises";
+import path from "path";
 import { createAdminClient } from "../supabase/admin";
 import { addTrashItem, getCurrentUserEmail, getTrashItemByEntity, removeTrashItem } from "./trash";
 import { readJsonFile, writeJsonFile } from "./local-storage";
 import { isProductStatus } from "./types";
-import type { Product, ProductStatus } from "./types";
+import type { Product } from "./types";
 import { logAction } from "./history-logs";
 
 const TABLE = "products";
 const FILE_NAME = "products.json";
+const DATA_DIR = path.join(process.cwd(), "data");
 
 type ProductInput = Partial<Omit<Product, "id" | "created_at" | "updated_at" | "deleted_at">> & {
   id?: string;
@@ -88,6 +91,15 @@ async function readAllFromSupabase(): Promise<Product[] | null> {
   }
 }
 
+async function readLocalProducts(): Promise<Product[]> {
+  try {
+    const raw = await readFile(path.join(DATA_DIR, FILE_NAME), "utf8");
+    return JSON.parse(raw) as Product[];
+  } catch {
+    return [];
+  }
+}
+
 async function readFromSupabase(query: (s: ReturnType<typeof createAdminClient>) => Promise<Record<string, unknown> | null>): Promise<Product | null> {
   try {
     const supabase = createAdminClient();
@@ -117,7 +129,8 @@ async function deleteProductFromDb(id: string): Promise<void> {
 export async function getProducts() {
   const fromSupabase = await readAllFromSupabase();
   if (fromSupabase) return fromSupabase;
-  return readJsonFile<Product[]>(FILE_NAME, []);
+  const local = await readLocalProducts();
+  return local.length ? local : readJsonFile<Product[]>(FILE_NAME, []);
 }
 
 export async function getProductById(id: string) {

@@ -1,14 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SocialGallery, SocialGalleryItem } from "@/lib/cms/types";
 import MediaSelectField from "./MediaSelectField";
+
+type Toast = { type: "success" | "error"; message: string };
 
 function createGalleryItem(order: number): SocialGalleryItem {
   const now = new Date().toISOString();
   return {
-    id: `new_${Date.now()}_${order}`,
+    id: typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `new_${Date.now()}_${order}`,
     image_id: "",
     image_url: "",
     title: "",
@@ -32,8 +36,14 @@ export default function SocialGalleryForm({
   const [title, setTitle] = useState(item?.title ?? "Y tu, cuando tuviste\ntu ultima idea?");
   const [description, setDescription] = useState(item?.description ?? "siguenos en instagram - @casarosier");
   const [items, setItems] = useState<SocialGalleryItem[]>(item?.items ?? []);
-  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 4200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   function addItem() {
     setItems((current) =>
@@ -72,7 +82,7 @@ export default function SocialGalleryForm({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setIsLoading(true);
-    setError(null);
+    setToast(null);
 
     const body = {
       name: "Galeria social principal",
@@ -85,37 +95,42 @@ export default function SocialGalleryForm({
       items: items.map((galleryItem, order) => ({ ...galleryItem, is_visible: true, sort_order: order })),
     };
 
-    const response = await fetch(
-      mode === "create" ? "/api/admin/components/social-galleries" : `/api/admin/components/social-galleries/${item?.id}`,
-      {
-        method: mode === "create" ? "POST" : "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      },
-    );
+    try {
+      const response = await fetch(
+        mode === "create" ? "/api/admin/components/social-galleries" : `/api/admin/components/social-galleries/${item?.id}`,
+        {
+          method: mode === "create" ? "POST" : "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
 
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({ error: "No se pudo guardar la galería." }));
-      setError((data as { error?: string }).error || "No se pudo guardar la galería.");
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: "No se pudo guardar la galería social." }));
+        setToast({ type: "error", message: (data as { error?: string }).error || "No se pudo guardar la galería social." });
+        return;
+      }
+
+      setToast({ type: "success", message: "Galería social guardada correctamente." });
+      router.refresh();
+    } catch {
+      setToast({ type: "error", message: "No se pudo conectar con el servidor. Intenta nuevamente." });
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    router.push("/admin/components/social-galleries");
-    router.refresh();
   }
 
   return (
     <form className="editor-form social-gallery-editor" onSubmit={handleSubmit}>
-      <section className="form-block social-gallery-editor__hero">
-        <div>
-          <p className="auth-kicker">Componente único</p>
-          <h3>Galería social</h3>
-          <p className="muted">
-            Administra las fotos, textos y links que alimentan la sección publica de ideas.
-          </p>
+      {toast ? (
+        <div
+          className={`admin-toast admin-toast--${toast.type}`}
+          role={toast.type === "error" ? "alert" : "status"}
+          aria-live="polite"
+        >
+          {toast.message}
         </div>
-      </section>
+      ) : null}
 
       <section className="form-block">
         <h3>Contenido de la sección</h3>
@@ -151,13 +166,13 @@ export default function SocialGalleryForm({
           <div className="social-gallery-item-list">
             {items.map((galleryItem, index) => (
               <article key={galleryItem.id} className="social-gallery-item-card">
-                <div className="social-gallery-item-card__preview">
-                  {galleryItem.image_url ? (
-                    <img src={galleryItem.image_url} alt={galleryItem.title || `Foto ${index + 1}`} />
-                  ) : (
-                    <span>Sin imagen</span>
-                  )}
-                </div>
+                <MediaSelectField
+                  label="Imagen"
+                  value={galleryItem.image_url}
+                  onChange={(url) => updateItem(index, "image_url", url)}
+                  className="social-gallery-item-card__media"
+                  previewClassName="social-gallery-item-card__preview"
+                />
                 <div className="social-gallery-item-card__content">
                   <div className="social-gallery-item-card__top">
                     <div>
@@ -177,9 +192,6 @@ export default function SocialGalleryForm({
                     </div>
                   </div>
                   <div className="grid-2">
-                    <div className="span-2">
-                      <MediaSelectField label="Imagen" value={galleryItem.image_url} onChange={(url) => updateItem(index, "image_url", url)} />
-                    </div>
                     <label className="field">
                       <span>Título</span>
                       <input value={galleryItem.title} onChange={(event) => updateItem(index, "title", event.target.value)} />
@@ -200,7 +212,6 @@ export default function SocialGalleryForm({
         )}
       </section>
 
-      {error ? <p className="form-error">{error}</p> : null}
       <div className="form-actions sticky-form-actions">
         <button className="primary-btn" type="submit" disabled={isLoading}>
           {isLoading ? "Guardando..." : "Guardar galería social"}

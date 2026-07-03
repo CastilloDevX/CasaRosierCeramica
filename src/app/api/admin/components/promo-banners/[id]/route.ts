@@ -2,6 +2,16 @@ import { requireAdminApi } from "@/lib/auth/supabase-auth";
 import { deletePromoBannerPermanently, duplicatePromoBanner, getPromoBannerById, movePromoBannerToTrash, restorePromoBanner, updatePromoBanner } from "@/lib/cms/promo-banners";
 import { type NextRequest, NextResponse } from "next/server";
 
+function getPromoBannerErrorMessage(err: unknown) {
+  const message = err instanceof Error ? err.message : "No se pudo guardar el banner promocional.";
+  const lower = message.toLowerCase();
+  if (lower.includes("promo_banners_text_length") || lower.includes("promo_banners_detail_text_length")) {
+    return "Supabase todavía tiene el límite anterior para las descripciones del banner. Aplica la migración 018_promo_banner_rich_text_limits.sql y vuelve a guardar.";
+  }
+  if (lower === "error") return "No se pudo guardar el banner promocional.";
+  return message;
+}
+
 export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!(await requireAdminApi())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const item = await getPromoBannerById((await ctx.params).id); if (!item) return NextResponse.json({ error: "No encontrado" }, { status: 404 }); return NextResponse.json({ promoBanner: item });
@@ -9,7 +19,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
 export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!(await requireAdminApi())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try { const item = await updatePromoBanner((await ctx.params).id, await request.json()); if (!item) return NextResponse.json({ error: "No encontrado" }, { status: 404 }); return NextResponse.json({ promoBanner: item }); }
-  catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : "Error" }, { status: 400 }); }
+  catch (err) { return NextResponse.json({ error: getPromoBannerErrorMessage(err) }, { status: 400 }); }
 }
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   if (!(await requireAdminApi())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -160,6 +160,12 @@ function flattenSettings(settings) {
     site_description: nilToNull(settings.site?.site_description),
     logo_url: nilToNull(settings.site?.logo_url),
     favicon_url: nilToNull(settings.site?.favicon_url),
+    header_logo_url: nilToNull(settings.menu?.header_logo_url),
+    scroll_menu_background_color: settings.menu?.scroll_menu_background_color ?? "#8c7457",
+    scroll_menu_text_color: settings.menu?.scroll_menu_text_color ?? "#fff9f1",
+    scroll_menu_icon_color: settings.menu?.scroll_menu_icon_color ?? settings.menu?.scroll_menu_text_color ?? "#fff9f1",
+    scroll_menu_logo_tint_enabled: settings.menu?.scroll_menu_logo_tint_enabled ?? false,
+    scroll_menu_logo_tint_color: settings.menu?.scroll_menu_logo_tint_color ?? settings.menu?.scroll_menu_icon_color ?? "#fff9f1",
     default_language: settings.site?.default_language ?? "es",
     timezone: settings.site?.timezone ?? "Europe/Madrid",
     email: nilToNull(settings.contact?.email),
@@ -394,10 +400,10 @@ function defaultMenuItems(menu, offerings) {
       base("inicio", "Inicio", "/#hero", 0),
       base("clases", "Clases", "/clases", 1),
       base("workshops", "Workshops", "/workshops", 2),
-      base("experiencias", "Reservas Privadas", "/reservas-privadas", 3),
-      base("gift-card", "Tarjeta de regalo", "/gift-card", 4),
+      base("experiencias", "Experiencias", "/reservas-privadas", 3),
+      base("gift-card", "Gift Cards", "/gift-card", 4),
       base("estudio", "El Estudio", "/el-estudio", 5),
-      base("blog", "Blog", "/blog", 6),
+      base("shop", "Shop", "/shop", 6),
       base("privacidad", "Privacidad", "/politica-privacidad", 7),
     ];
   }
@@ -406,10 +412,10 @@ function defaultMenuItems(menu, offerings) {
     base("inicio", "Inicio", "/#hero", 0),
     base("clases", "Clases", "/clases", 1),
     base("workshops", "Workshops", "/workshops", 2),
-    base("experiencias", "Reservas Privadas", "/reservas-privadas", 3),
-    base("gift-card", "Tarjeta de regalo", "/gift-card", 4),
+    base("experiencias", "Experiencias", "/reservas-privadas", 3),
+    base("gift-card", "Gift Cards", "/gift-card", 4),
     base("estudio", "El Estudio", "/el-estudio", 5),
-    base("blog", "Blog", "/blog", 6),
+    base("shop", "Shop", "/shop", 6),
   ];
 
   return [
@@ -418,6 +424,8 @@ function defaultMenuItems(menu, offerings) {
     ...childrenFor("workshops", "workshop", 30),
     ...childrenFor("experiencias", "experience", 50),
     ...childrenFor("gift-card", "gift_card", 70),
+    base("estudio:estudio", "El Estudio", "/el-estudio", 90, `${menu.id}:estudio`),
+    base("estudio:bitacora", "Bitácora", "/blog", 91, `${menu.id}:estudio`),
   ];
 }
 
@@ -450,7 +458,7 @@ async function seedOfferings(supabase) {
   const galleryItems = [];
 
   for (const offering of offeringsSource) {
-    (offering.schedule ?? []).forEach((scheduleText, index) => {
+    (offering.schedule ?? []).forEach((scheduleText) => {
       const dow = dayOfWeek(scheduleText);
       if (dow === null) return;
       schedules.push({
@@ -501,11 +509,22 @@ async function seedSingletons(supabase) {
   const settings = flattenSettings(readJson("settings.json", {}));
   const marketing = flattenMarketing(readJson("marketing.json", {}));
   const legal = flattenLegal(readJson("legal-settings.json", {}));
+  const menuVisualSettings = {
+    id: "00000000-0000-0000-0000-000000000002",
+    key: "default",
+    header_logo_url: settings.header_logo_url,
+    scroll_menu_background_color: settings.scroll_menu_background_color,
+    scroll_menu_text_color: settings.scroll_menu_text_color,
+    scroll_menu_icon_color: settings.scroll_menu_icon_color,
+    scroll_menu_logo_tint_enabled: settings.scroll_menu_logo_tint_enabled,
+    scroll_menu_logo_tint_color: settings.scroll_menu_logo_tint_color,
+  };
   await upsertRows(supabase, "site_settings", [settings]);
+  await upsertRows(supabase, "menu_visual_settings", [menuVisualSettings]);
   await upsertRows(supabase, "marketing_settings", [marketing]);
   await upsertRows(supabase, "legal_settings", [legal]);
-  console.log("singletons: site_settings, marketing_settings, legal_settings");
-  return 3;
+  console.log("singletons: site_settings, menu_visual_settings, marketing_settings, legal_settings");
+  return 4;
 }
 
 async function uploadPublicMedia(supabase) {

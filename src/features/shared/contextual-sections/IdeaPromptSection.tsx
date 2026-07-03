@@ -14,7 +14,7 @@ export async function IdeaPromptSection({
   const gallery = await getPublicSocialGallery();
 
   const posts = gallery?.items
-    .filter((item) => item.image_url)
+    .filter((item) => item.is_visible !== false && item.image_url)
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((item) => ({
       image: item.image_url,
