@@ -8,6 +8,11 @@ function isAbsoluteUrl(url: string) {
   return /^https?:\/\//i.test(url);
 }
 
+function localImageSrc(url: string) {
+  if (!url) return "";
+  return url.startsWith("/") ? url : `/${url}`;
+}
+
 export default function MediaSelectField({
   label,
   value,
@@ -55,7 +60,7 @@ export default function MediaSelectField({
           isAbsoluteUrl(value) ? (
             <img src={value} alt={label} className="media-img-preview" />
           ) : (
-            <Image src={value} alt={label} fill sizes="260px" className="object-cover" unoptimized />
+            <Image src={localImageSrc(value)} alt={label} fill sizes="260px" className="object-cover" unoptimized />
           )
         ) : (
           <span className="media-select-field__empty">Sin imagen</span>

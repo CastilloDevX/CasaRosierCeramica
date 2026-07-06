@@ -79,6 +79,7 @@ export interface ExperienceItem {
   seoTitle: string;
   seoDescription: string;
   isPublished: boolean;
+  isFeatured?: boolean;
   order: number;
 }
 

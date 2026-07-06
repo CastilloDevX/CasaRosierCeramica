@@ -86,7 +86,7 @@ export async function getTeacherById(id: string) {
 }
 
 export async function createTeacher(data: Input) {
-  const all = await readJsonFile<Teacher[]>(FILE_NAME, []);
+  const all = await getTeachers();
   const next = normalize(data);
   await writeJsonFile(FILE_NAME, [next, ...all]);
   await upsertTeacher(next);
@@ -95,7 +95,7 @@ export async function createTeacher(data: Input) {
 }
 
 export async function updateTeacher(id: string, data: Input) {
-  const all = await readJsonFile<Teacher[]>(FILE_NAME, []);
+  const all = await getTeachers();
   const idx = all.findIndex((x) => x.id === id);
   if (idx === -1) return null;
   const old = all[idx];
@@ -112,7 +112,7 @@ export async function updateTeacher(id: string, data: Input) {
 }
 
 export async function duplicateTeacher(id: string) {
-  const all = await readJsonFile<Teacher[]>(FILE_NAME, []);
+  const all = await getTeachers();
   const orig = all.find((x) => x.id === id);
   if (!orig) return null;
   const copy = normalize({ ...orig, name: `${orig.name} (copia)`, status: "draft" });

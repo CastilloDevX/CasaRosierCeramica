@@ -1,10 +1,64 @@
-import Link from "@/components/admin/AdminLink"; import AdminShell from "@/components/admin/AdminShell"; import FootersTable from "@/components/admin/FootersTable"; import SectionEmptyState from "@/components/admin/SectionEmptyState"; import { getFooters } from "@/lib/cms/footers";
+import AdminShell from "@/components/admin/AdminShell";
+import FooterForm from "@/components/admin/FooterForm";
+import { createFooter, getFooters } from "@/lib/cms/footers";
 
-export default async function Page({ searchParams }: { searchParams?: { status?: string } }) {
-  const items = await getFooters(); const status = searchParams?.status || "all";
-  const filtered = items.filter((x) => (status === "all" || x.status === status) && x.status !== "deleted");
-  return (<AdminShell><div className="section-head"><div><p className="auth-kicker">CMS</p><h2>Footers</h2></div><Link className="primary-btn inline" href="/admin/components/footers/new">Crear footer</Link></div>
-    <div className="filters"><div className="filter-group">{["all","draft","published","archived"].map((s) => <Link key={s} className={s === status ? "chip active" : "chip"} href={`/admin/components/footers?status=${s}`}>{s === "all" ? "Todos" : s === "draft" ? "Borrador" : s === "published" ? "Publicado" : "Archivado"}</Link>)}</div></div>
-    {filtered.length ? <FootersTable items={filtered} /> : <SectionEmptyState title="Aún no hay footers" description="Crea el primer footer." actionHref="/admin/components/footers/new" actionLabel="Crear footer" />}
-  </AdminShell>);
+async function getEditableFooter() {
+  const footers = await getFooters();
+  const existing =
+    footers.find((footer) => footer.status === "published" && footer.deleted_at === null) ??
+    footers.find((footer) => footer.deleted_at === null);
+
+  if (existing) return existing;
+
+  return createFooter({
+    name: "Footer principal",
+    status: "published",
+    contact_title: "Contacto",
+    contact_text: "+34 600 000 000\nBarcelona, Espana\nLunes a Sabado - 10:00 a 20:00\nSiguenos en Nuestras Redes:",
+    form_button_color: "#111111",
+    form_button_text_color: "#ffffff",
+    social_button_color: "#2f2723",
+    social_icon_color: "#ffffff",
+    social_links: [
+      {
+        platform: "instagram",
+        url: "https://www.facebook.com/casarosier",
+        label: "Instagram",
+        icon_url: "/img/icon-instagram.svg",
+        icon_color: "#ffffff",
+        button_color: "#2f2723",
+      },
+      {
+        platform: "facebook",
+        url: "https://www.facebook.com/casarosier",
+        label: "Facebook",
+        icon_url: "/img/icon-facebook.svg",
+        icon_color: "#ffffff",
+        button_color: "#2f2723",
+      },
+    ],
+  });
+}
+
+export default async function Page() {
+  const footer = await getEditableFooter();
+
+  return (
+    <AdminShell>
+      <div className="cms-editor-shell">
+        <header className="cms-page-editor-head">
+          <div className="cms-page-editor-head__main">
+            <h1>Footer</h1>
+            <p>Edicion del footer global que se muestra en todas las paginas</p>
+            <div className="cms-page-editor-meta">
+              <span className={`status-pill status-pill--${footer.status}`}>{footer.status}</span>
+              <span>{footer.social_links.length} redes sociales</span>
+              <span>Enlaces legales fijos</span>
+            </div>
+          </div>
+        </header>
+        <FooterForm mode="edit" item={footer} singleton />
+      </div>
+    </AdminShell>
+  );
 }

@@ -87,7 +87,7 @@ export async function getFaqById(id: string) {
 }
 
 export async function createFaq(data: Input) {
-  const all = await readJsonFile<Faq[]>(FILE_NAME, []);
+  const all = await getFaqs();
   const next = normalize(data);
   await writeJsonFile(FILE_NAME, [next, ...all]);
   await upsertFaq(next);
@@ -96,7 +96,7 @@ export async function createFaq(data: Input) {
 }
 
 export async function updateFaq(id: string, data: Input) {
-  const all = await readJsonFile<Faq[]>(FILE_NAME, []);
+  const all = await getFaqs();
   const idx = all.findIndex((x) => x.id === id);
   if (idx === -1) return null;
   const old = all[idx];
@@ -113,7 +113,7 @@ export async function updateFaq(id: string, data: Input) {
 }
 
 export async function duplicateFaq(id: string) {
-  const all = await readJsonFile<Faq[]>(FILE_NAME, []);
+  const all = await getFaqs();
   const orig = all.find((x) => x.id === id);
   if (!orig) return null;
   const copy = normalize({ ...orig, question: `${orig.question} (copia)`, status: "draft" });

@@ -8,16 +8,33 @@ import { getPublicExperienceItems } from "@/features/experiences/experienceDetai
 import { HomeGiftCardSection } from "@/features/home/HomeGiftCardSection";
 import { IdeaPromptSection } from "@/features/shared/contextual-sections/IdeaPromptSection";
 import { SitePage } from "@/features/shared/layout/SitePage";
+import { getHomePageSettings } from "@/lib/cms/home-page";
 import { getPublicHomeContent } from "@/lib/cms/public-content";
 
+function pickHomeItems<T extends { id: string }>(items: T[], selectedIds: string[]) {
+  if (selectedIds.length) {
+    const selected = new Set(selectedIds);
+    const ordered = items
+      .filter((item) => selected.has(item.id))
+      .sort((a, b) => selectedIds.indexOf(a.id) - selectedIds.indexOf(b.id));
+    if (ordered.length) return ordered;
+  }
+  const featured = items.filter((item) => "isFeatured" in item ? Boolean(item.isFeatured) : false);
+  return featured.length ? featured : items;
+}
+
 export async function HomePage() {
-  const [{ promoBanner, testimonials: cmsTestimonials }, experienceItems] = await Promise.all([
+  const [{ promoBanner, testimonials: cmsTestimonials }, experienceItems, homePage] = await Promise.all([
     getPublicHomeContent(),
     getPublicExperienceItems(),
+    getHomePageSettings(),
   ]);
   const classes = experienceItems.filter((item) => item.kind === "class");
   const workshops = experienceItems.filter((item) => item.kind === "workshop");
   const giftCards = experienceItems.filter((item): item is GiftCardItem => item.kind === "gift-card");
+  const homeClasses = pickHomeItems(classes, homePage.classesFeaturedIds);
+  const homeWorkshops = pickHomeItems(workshops, homePage.workshopsFeaturedIds);
+  const homeGiftCards = pickHomeItems(giftCards, homePage.giftFeaturedIds);
   const testimonials = cmsTestimonials
     .map((item) => ({
       image: item.avatar_id || "/img/avatar-1.jpg",
@@ -44,22 +61,22 @@ export async function HomePage() {
       }
       header={<HeaderHome />}
     >
-      <IntroSlider />
+      <IntroSlider slides={homePage.introSlides} />
       <FeaturedSection
         id="clases-destacadas"
-        title="Cursos y Talleres de Ceramica"
-        subtitle="En Barcelona"
-        items={classes}
+        title={homePage.classesTitle}
+        subtitle={homePage.classesSubtitle}
+        items={homeClasses}
         variant="classes"
       />
       <FeaturedSection
         id="workshops-destacados"
-        title="Workshops de Especializacion"
-        subtitle="En Barcelona"
-        items={workshops}
+        title={homePage.workshopsTitle}
+        subtitle={homePage.workshopsSubtitle}
+        items={homeWorkshops}
         variant="workshops"
       />
-      <HomeGiftCardSection items={giftCards} />
+      <HomeGiftCardSection title={homePage.giftTitle} subtitle={homePage.giftSubtitle} items={homeGiftCards} />
       <IdeaPromptSection context="home" />
       <TestimonialSlider testimonials={testimonials} />
     </SitePage>

@@ -98,7 +98,7 @@ export async function getTestimonialById(id: string) {
 }
 
 export async function createTestimonial(data: Input) {
-  const all = await readJsonFile<Testimonial[]>(FILE_NAME, []);
+  const all = await getTestimonials();
   const next = normalize(data);
   await writeJsonFile(FILE_NAME, [next, ...all]);
   await upsertTestimonial(next);
@@ -107,7 +107,7 @@ export async function createTestimonial(data: Input) {
 }
 
 export async function updateTestimonial(id: string, data: Input) {
-  const all = await readJsonFile<Testimonial[]>(FILE_NAME, []);
+  const all = await getTestimonials();
   const idx = all.findIndex((x) => x.id === id);
   if (idx === -1) return null;
   const old = all[idx];
@@ -124,7 +124,7 @@ export async function updateTestimonial(id: string, data: Input) {
 }
 
 export async function duplicateTestimonial(id: string) {
-  const all = await readJsonFile<Testimonial[]>(FILE_NAME, []);
+  const all = await getTestimonials();
   const orig = all.find((x) => x.id === id);
   if (!orig) return null;
   const copy = normalize({ ...orig, name: `${orig.name} (copia)`, status: "draft" });

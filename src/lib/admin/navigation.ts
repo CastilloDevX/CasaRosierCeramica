@@ -18,6 +18,7 @@ export const adminRoutes = {
   experiences: "/admin/experiencias",
   giftCards: "/admin/gift-cards",
   pages: "/admin/pages",
+  home: "/admin/home",
   studio: "/admin/estudio",
   landingPages: "/admin/landing-pages",
   blog: "/admin/bitacora",
@@ -84,6 +85,7 @@ export const adminSections: AdminNavSection[] = [
     label: "Contenido",
     icon: "description",
     children: [
+      { label: "Shop", href: adminRoutes.shop },
       { label: "El estudio", href: adminRoutes.studio },
       { label: "Bitácora", href: adminRoutes.blog },
     ],
@@ -92,6 +94,8 @@ export const adminSections: AdminNavSection[] = [
     label: "Setup Página",
     icon: "sync_alt",
     children: [
+      { label: "Home", href: adminRoutes.home },
+      { label: "Footer", href: adminRoutes.footers },
       { label: "Menú", href: adminRoutes.menus },
       { label: "Multimedia", href: adminRoutes.media },
       { label: "Redirecciones", href: adminRoutes.redirects },

@@ -154,7 +154,7 @@ export async function getProductBySlug(slug: string) {
 }
 
 export async function createProduct(data: ProductInput) {
-  const items = await readJsonFile<Product[]>(FILE_NAME, []);
+  const items = await getProducts();
   const next = normalizeProduct(data, undefined, items);
   await writeJsonFile(FILE_NAME, [next, ...items]);
   await upsertProduct(next);
@@ -163,7 +163,7 @@ export async function createProduct(data: ProductInput) {
 }
 
 export async function updateProduct(id: string, data: ProductInput) {
-  const items = await readJsonFile<Product[]>(FILE_NAME, []);
+  const items = await getProducts();
   const index = items.findIndex((p) => p.id === id);
   if (index === -1) return null;
   const old = items[index];
@@ -180,7 +180,7 @@ export async function updateProduct(id: string, data: ProductInput) {
 }
 
 export async function duplicateProduct(id: string) {
-  const items = await readJsonFile<Product[]>(FILE_NAME, []);
+  const items = await getProducts();
   const original = items.find((p) => p.id === id);
   if (!original) return null;
   const copy = normalizeProduct({ ...original, name: `${original.name} (copia)`, slug: "", status: "draft" }, undefined, items);

@@ -210,7 +210,7 @@ export async function getMenuByLocation(location: MenuLocation) {
 }
 
 export async function createMenu(data: MenuInput) {
-  const menus = await readJsonFile<Menu[]>(FILE_NAME, []);
+  const menus = await getMenus();
   const next = normalizeMenu(data, undefined, menus);
   await writeJsonFile(FILE_NAME, [next, ...menus]);
   await upsertMenu(next);
@@ -219,7 +219,7 @@ export async function createMenu(data: MenuInput) {
 }
 
 export async function updateMenu(id: string, data: MenuInput) {
-  const menus = await readJsonFile<Menu[]>(FILE_NAME, []);
+  const menus = await getMenus();
   const index = menus.findIndex((m) => m.id === id);
   if (index === -1) return null;
   const old = menus[index];
@@ -236,7 +236,7 @@ export async function updateMenu(id: string, data: MenuInput) {
 }
 
 export async function duplicateMenu(id: string) {
-  const menus = await readJsonFile<Menu[]>(FILE_NAME, []);
+  const menus = await getMenus();
   const original = menus.find((m) => m.id === id);
   if (!original) return null;
   const copy = normalizeMenu(

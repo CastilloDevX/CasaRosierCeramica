@@ -1,11 +1,37 @@
 import { Carousel } from "@/components/ui/Carousel";
+import { getFooters } from "@/lib/cms/footers";
 import FooterContactForm from "./FooterContactForm";
+import type { CSSProperties } from "react";
 
-export function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
+function fallbackSocialIcon(platform: string) {
+  const key = platform.toLowerCase();
+  if (key.includes("facebook")) return "/img/icon-facebook.svg";
+  if (key.includes("whatsapp")) return "/img/icon-whatsapp.svg";
+  return "/img/icon-instagram.svg";
+}
+
+export async function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
+  const footers = await getFooters();
+  const footer = footers.find((item) => item.status === "published" && item.deleted_at === null) ?? footers.find((item) => item.deleted_at === null);
+  const socialLinks = footer?.social_links?.length ? footer.social_links : [
+    { platform: "Instagram", label: "Instagram", url: "https://www.facebook.com/casarosier", icon_url: "/img/icon-instagram.svg" },
+    { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/casarosier", icon_url: "/img/icon-facebook.svg" },
+  ];
+  const contactLines = (footer?.contact_text || "+34 600 000 000\nBarcelona, Espana\nLunes a Sabado - 10:00 a 20:00\nSiguenos en Nuestras Redes:")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const socialTitle = contactLines.pop() || "Siguenos en Nuestras Redes:";
+  const footerStyle = {
+    "--contact-submit-bg": footer?.form_button_color || "#111111",
+    "--contact-submit-color": footer?.form_button_text_color || "#ffffff",
+    "--contact-social-bg": footer?.social_button_color || "#2f2723",
+    "--contact-social-icon": footer?.social_icon_color || "#ffffff",
+  } as CSSProperties;
   const socialLoop = Array.from({ length: 12 }, (_, index) => (index % 4) + 1);
 
   return (
-    <footer id="footer" className="site-footer">
+    <footer id="footer" className="site-footer" style={footerStyle}>
       {socialTrack && (
         <Carousel
           items={socialLoop}
@@ -41,34 +67,39 @@ export function Footer({ socialTrack = false }: { socialTrack?: boolean }) {
         <div className="container contact-footer__container">
           <FooterContactForm />
           <div className="contact-info">
-            <h2 className="contact-info__title">Contacto</h2>
-            <p className="contact-info__text">+34 600 000 000</p>
-            <p className="contact-info__line">Barcelona, Espana</p>
-            <p className="contact-info__line">
-              Lunes a Sabado - 10:00 a 20:00
-            </p>
+            <h2 className="contact-info__title">{footer?.contact_title || "Contacto"}</h2>
+            {contactLines.map((line, index) => (
+              <p className={index === 0 ? "contact-info__text" : "contact-info__line"} key={`${line}-${index}`}>
+                {line}
+              </p>
+            ))}
             <p className="contact-info__social-title">
-              Siguenos en Nuestras Redes:
+              {socialTitle}
             </p>
             <div className="contact-info__social">
-              <a
-                className="contact-info__social-link"
-                href="https://www.facebook.com/casarosier"
-                aria-label="Instagram"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <img src="/img/icon-instagram.svg" alt="" loading="lazy" decoding="async" />
-              </a>
-              <a
-                className="contact-info__social-link"
-                href="https://www.facebook.com/casarosier"
-                aria-label="Facebook"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <img src="/img/icon-facebook.svg" alt="" loading="lazy" decoding="async" />
-              </a>
+              {socialLinks.map((link, index) => (
+                <a
+                  className="contact-info__social-link"
+                  href={link.url}
+                  aria-label={link.label || link.platform || `Red social ${index + 1}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    "--contact-social-bg": link.button_color || footer?.social_button_color || "#2f2723",
+                    "--contact-social-icon": link.icon_color || footer?.social_icon_color || "#ffffff",
+                  } as CSSProperties}
+                  key={`${link.platform}-${index}`}
+                >
+                  <span
+                    className="contact-info__social-icon"
+                    aria-hidden="true"
+                    style={{
+                      "--contact-social-icon-url": `url("${link.icon_url || fallbackSocialIcon(link.platform)}")`,
+                      "--contact-social-icon": link.icon_color || footer?.social_icon_color || "#ffffff",
+                    } as CSSProperties}
+                  />
+                </a>
+              ))}
             </div>
             <div className="contact-info__legal-links" aria-label="Enlaces legales">
               <a className="contact-info__legal-link" href="/politica-privacidad">

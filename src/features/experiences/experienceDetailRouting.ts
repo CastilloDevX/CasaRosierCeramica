@@ -225,6 +225,7 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     seoTitle: offering.seo_title || `${offering.title} | Casa Rosier`,
     seoDescription: offering.seo_description || offering.excerpt,
     isPublished: offering.status === "published",
+    isFeatured: offering.featured,
     order: 0,
   };
 }

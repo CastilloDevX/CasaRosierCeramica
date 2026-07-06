@@ -481,6 +481,9 @@ export interface SocialLink {
   platform: string;
   url: string;
   label: string;
+  icon_url?: string;
+  icon_color?: string;
+  button_color?: string;
 }
 
 export interface FooterComponent {
@@ -492,6 +495,12 @@ export interface FooterComponent {
   whatsapp: string;
   address: string;
   legal_text: string;
+  contact_title: string;
+  contact_text: string;
+  form_button_color: string;
+  form_button_text_color: string;
+  social_button_color: string;
+  social_icon_color: string;
   social_links: SocialLink[];
   menu_id: string | null;
   newsletter_enabled: boolean;
@@ -831,6 +840,45 @@ export interface BlogPageSettings {
   status: "draft" | "published";
   hero: CmsHeroSettings;
   showIdeaPromptSection: boolean;
+  seo_title: string;
+  seo_description: string;
+  seo_image: string;
+  updated_at: string;
+}
+
+export interface HomeIntroSlide {
+  id: string;
+  text: string;
+  buttonText: string;
+  buttonHref: string;
+  image: string;
+  imageAlt: string;
+  isVisible: boolean;
+  sortOrder: number;
+}
+
+export interface HomePageSettings {
+  id: string;
+  status: "draft" | "published";
+  introSlides: HomeIntroSlide[];
+  classesTitle: string;
+  classesSubtitle: string;
+  classesFeaturedIds: string[];
+  workshopsTitle: string;
+  workshopsSubtitle: string;
+  workshopsFeaturedIds: string[];
+  giftTitle: string;
+  giftSubtitle: string;
+  giftFeaturedIds: string[];
+  updated_at: string;
+}
+
+export interface ShopPageSettings {
+  id: string;
+  status: "draft" | "published";
+  hero: CmsHeroSettings;
+  showCharacteristicsInPreview: boolean;
+  previewCharacteristicLabels: string[];
   seo_title: string;
   seo_description: string;
   seo_image: string;

@@ -1,25 +1,34 @@
-import Link from "@/components/admin/AdminLink";
-import ShopOverviewCards from "@/components/admin/ShopOverviewCards";
+import AdminShell from "@/components/admin/AdminShell";
+import ShopPageEditor from "@/components/admin/ShopPageEditor";
+import { getPublicNavigationItems } from "@/lib/cms/navigation-public";
+import { getCategories } from "@/lib/cms/product-categories";
 import { getProducts } from "@/lib/cms/products";
-import { getOrders } from "@/lib/cms/orders";
+import { getSettings } from "@/lib/cms/settings";
+import { getShopPageSettings } from "@/lib/cms/shop-page";
+import { getPublicShopData } from "@/lib/cms/shop-public";
 
 export default async function ShopPage() {
-  const [allProducts, orders] = await Promise.all([getProducts(), getOrders()]);
-  const lowStock = allProducts.filter((p) => p.stock !== null && p.stock <= (p.low_stock_threshold || 5) && p.status !== "deleted");
-  const publishedProducts = allProducts.filter((p) => p.status === "published").length;
-  const newOrders = orders.filter((o) => o.status === "new").length;
-  const totalSales = orders.filter((o) => o.payment_status === "paid").reduce((sum, o) => sum + (o.total ?? 0), 0);
+  const [page, products, categories, shopData, navigationItems, settings] = await Promise.all([
+    getShopPageSettings(),
+    getProducts(),
+    getCategories(),
+    getPublicShopData(),
+    getPublicNavigationItems("main"),
+    getSettings(),
+  ]);
+  const activeProducts = products.filter((product) => product.status !== "deleted");
+
   return (
-    <div className="page-card">
-      <div className="page-header"><h2>Shop</h2></div>
-      <ShopOverviewCards stats={{ publishedProducts, lowStock: lowStock.length, newOrders, totalSales }} />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
-        <Link href="/admin/shop/products" className="stat-card" style={{ textDecoration: "none", cursor: "pointer" }}><p className="auth-kicker">Productos</p><p style={{ fontWeight: 500 }}>Gestionar catálogo</p></Link>
-        <Link href="/admin/shop/categories" className="stat-card" style={{ textDecoration: "none", cursor: "pointer" }}><p className="auth-kicker">Categorías</p><p style={{ fontWeight: 500 }}>Gestionar categorías</p></Link>
-        <Link href="/admin/shop/orders" className="stat-card" style={{ textDecoration: "none", cursor: "pointer" }}><p className="auth-kicker">Pedidos</p><p style={{ fontWeight: 500 }}>Ver pedidos</p></Link>
-        <Link href="/admin/shop/coupons" className="stat-card" style={{ textDecoration: "none", cursor: "pointer" }}><p className="auth-kicker">Cupones</p><p style={{ fontWeight: 500 }}>Gestionar descuentos</p></Link>
-        <Link href="/admin/shop/shipping" className="stat-card" style={{ textDecoration: "none", cursor: "pointer" }}><p className="auth-kicker">Envíos</p><p style={{ fontWeight: 500 }}>Configurar envíos</p></Link>
-      </div>
-    </div>
+    <AdminShell>
+      <ShopPageEditor
+        page={page}
+        products={activeProducts}
+        categories={categories}
+        published={shopData.published}
+        shopCategories={shopData.shopCategories}
+        navigationItems={navigationItems}
+        menuSettings={settings.menu}
+      />
+    </AdminShell>
   );
 }

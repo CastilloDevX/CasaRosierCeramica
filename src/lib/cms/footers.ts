@@ -14,6 +14,41 @@ type Input = Partial<Omit<FooterComponent, "id" | "created_at" | "updated_at" | 
   id?: string; deleted_at?: string | null; social_links?: SocialLink[];
 };
 
+const DEFAULT_SOCIAL_LINKS: SocialLink[] = [
+  {
+    platform: "instagram",
+    url: "https://www.facebook.com/casarosier",
+    label: "Instagram",
+    icon_url: "/img/icon-instagram.svg",
+    icon_color: "#ffffff",
+    button_color: "#2f2723",
+  },
+  {
+    platform: "facebook",
+    url: "https://www.facebook.com/casarosier",
+    label: "Facebook",
+    icon_url: "/img/icon-facebook.svg",
+    icon_color: "#ffffff",
+    button_color: "#2f2723",
+  },
+];
+
+function normalizeSocialLinks(value: unknown): SocialLink[] {
+  if (!Array.isArray(value)) return DEFAULT_SOCIAL_LINKS;
+  const links = value
+    .map((item) => item as Partial<SocialLink>)
+    .map((item) => ({
+      platform: String(item.platform ?? "").trim(),
+      url: String(item.url ?? "").trim(),
+      label: String(item.label ?? item.platform ?? "Red social").trim(),
+      icon_url: String(item.icon_url ?? "").trim(),
+      icon_color: String(item.icon_color ?? "").trim(),
+      button_color: String(item.button_color ?? "").trim(),
+    }))
+    .filter((item) => item.url);
+  return links.length ? links : DEFAULT_SOCIAL_LINKS;
+}
+
 function normalize(input: Input, existing?: FooterComponent) {
   const name = String(input.name ?? existing?.name ?? "").trim();
   const status = input.status ?? existing?.status ?? "draft";
@@ -27,12 +62,31 @@ function normalize(input: Input, existing?: FooterComponent) {
     whatsapp: String(input.whatsapp ?? existing?.whatsapp ?? "").trim(),
     address: String(input.address ?? existing?.address ?? "").trim(),
     legal_text: String(input.legal_text ?? existing?.legal_text ?? "").trim(),
-    social_links: input.social_links ?? existing?.social_links ?? [],
+    contact_title: String(input.contact_title ?? existing?.contact_title ?? "Contacto").trim(),
+    contact_text: String(input.contact_text ?? existing?.contact_text ?? "+34 600 000 000\nBarcelona, Espana\nLunes a Sabado - 10:00 a 20:00\nSiguenos en Nuestras Redes:").trim(),
+    form_button_color: String(input.form_button_color ?? existing?.form_button_color ?? "#111111").trim(),
+    form_button_text_color: String(input.form_button_text_color ?? existing?.form_button_text_color ?? "#ffffff").trim(),
+    social_button_color: String(input.social_button_color ?? existing?.social_button_color ?? "#2f2723").trim(),
+    social_icon_color: String(input.social_icon_color ?? existing?.social_icon_color ?? "#ffffff").trim(),
+    social_links: normalizeSocialLinks(input.social_links ?? existing?.social_links),
     menu_id: input.menu_id !== undefined ? input.menu_id : (existing?.menu_id ?? null),
     newsletter_enabled: input.newsletter_enabled !== undefined ? input.newsletter_enabled : (existing?.newsletter_enabled ?? false),
     created_at: existing?.created_at ?? now, updated_at: now,
     deleted_at: input.status === "deleted" ? existing?.deleted_at ?? now : null,
   } satisfies FooterComponent;
+}
+
+function rowToFooter(row: Record<string, unknown>): FooterComponent {
+  const normalized = normalize({
+    ...(row as Partial<FooterComponent>),
+    social_links: normalizeSocialLinks(row.social_links),
+  }, row as unknown as FooterComponent);
+  return {
+    ...normalized,
+    created_at: String(row.created_at ?? normalized.created_at),
+    updated_at: String(row.updated_at ?? normalized.updated_at),
+    deleted_at: row.deleted_at === null || row.deleted_at === undefined ? null : String(row.deleted_at),
+  };
 }
 
 async function readAllFromSupabase(): Promise<FooterComponent[] | null> {
@@ -41,10 +95,7 @@ async function readAllFromSupabase(): Promise<FooterComponent[] | null> {
     const { data, error } = await supabase.from(TABLE).select("*");
     if (error) throw error;
     if (!data || data.length === 0) return null;
-    return (data as unknown as Array<Record<string, unknown>>).map((row) => ({
-      ...row,
-      social_links: Array.isArray(row.social_links) ? row.social_links : [],
-    })) as FooterComponent[];
+    return (data as unknown as Array<Record<string, unknown>>).map(rowToFooter);
   } catch {
     return null;
   }
@@ -76,8 +127,7 @@ export async function getFooterById(id: string) {
     const supabase = createAdminClient();
     const { data, error } = await supabase.from(TABLE).select("*").eq("id", id).maybeSingle();
     if (!error && data) {
-      const row = data as Record<string, unknown>;
-      return { ...row, social_links: Array.isArray(row.social_links) ? row.social_links : [] } as FooterComponent;
+      return rowToFooter(data as Record<string, unknown>);
     }
   } catch { /* fall through */ }
   const all = await readJsonFile<FooterComponent[]>(FILE_NAME, []);
@@ -85,7 +135,7 @@ export async function getFooterById(id: string) {
 }
 
 export async function createFooter(data: Input) {
-  const all = await readJsonFile<FooterComponent[]>(FILE_NAME, []);
+  const all = await getFooters();
   const next = normalize(data);
   await writeJsonFile(FILE_NAME, [next, ...all]);
   await upsertToSupabase(next);
@@ -94,7 +144,7 @@ export async function createFooter(data: Input) {
 }
 
 export async function updateFooter(id: string, data: Input) {
-  const all = await readJsonFile<FooterComponent[]>(FILE_NAME, []);
+  const all = await getFooters();
   const idx = all.findIndex((x) => x.id === id);
   if (idx === -1) return null;
   const old = all[idx];
@@ -111,7 +161,7 @@ export async function updateFooter(id: string, data: Input) {
 }
 
 export async function duplicateFooter(id: string) {
-  const all = await readJsonFile<FooterComponent[]>(FILE_NAME, []);
+  const all = await getFooters();
   const orig = all.find((x) => x.id === id);
   if (!orig) return null;
   const copy = normalize({ ...orig, name: `${orig.name} (copia)`, status: "draft" });
