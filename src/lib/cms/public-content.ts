@@ -14,6 +14,11 @@ type CacheEntry<T> = {
 
 const publicCache = new Map<string, CacheEntry<unknown>>();
 
+export function invalidatePublicContentCache() {
+  publicCache.delete("public-promo-banner");
+  publicCache.delete("public-home-content");
+}
+
 function cached<T>(key: string, loader: () => Promise<T>, ttlMs = CACHE_TTL_MS) {
   const now = Date.now();
   const current = publicCache.get(key) as CacheEntry<T> | undefined;

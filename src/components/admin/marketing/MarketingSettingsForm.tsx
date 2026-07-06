@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import type { MarketingPublicButtonLink, MarketingSettings } from "@/lib/cms/types";

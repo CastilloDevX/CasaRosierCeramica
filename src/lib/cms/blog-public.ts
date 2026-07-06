@@ -117,6 +117,7 @@ function cmsToPublicPost(post: CmsBlogPost): PublicBlogPost {
     publishedAt,
     seoTitle: post.seo_title || post.title,
     seoDescription: post.seo_description || post.excerpt,
+    hero: post.hero,
     contentBlocks: blocksToPublicContent(visibleBlocks(post), post.content),
   };
 }

@@ -34,6 +34,22 @@ async function readAllFromSupabase(): Promise<HistoryLog[] | null> {
   }
 }
 
+async function readRecentFromSupabase(limit: number): Promise<HistoryLog[] | null> {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select("*")
+      .neq("entity_type", "auth")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []).map(rowToHistoryLog);
+  } catch {
+    return null;
+  }
+}
+
 async function upsertHistoryLog(log: HistoryLog): Promise<void> {
   try {
     const supabase = createAdminClient();
@@ -56,6 +72,13 @@ export async function getHistoryLogs() {
   const fromSupabase = await readAllFromSupabase();
   if (fromSupabase) return fromSupabase;
   return readJsonFile<HistoryLog[]>(FILE_NAME, []);
+}
+
+export async function getRecentHistoryLogs(limit = 5) {
+  const fromSupabase = await readRecentFromSupabase(limit);
+  if (fromSupabase) return fromSupabase;
+  const items = await readJsonFile<HistoryLog[]>(FILE_NAME, []);
+  return items.filter((item) => item.entity_type !== "auth").slice(0, limit);
 }
 
 export async function getHistoryLogById(id: string) {

@@ -1,3 +1,5 @@
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
+
 export function StudioProfileBlock({
   name,
   role,
@@ -19,9 +21,7 @@ export function StudioProfileBlock({
         <p className="studio-profile__role">
           {role}
         </p>
-        {intro.split(/\n{2,}/).map((paragraph) => (
-          <p key={paragraph}>{paragraph}</p>
-        ))}
+        <MarkdownContent source={intro} />
       </div>
     </article>
   );

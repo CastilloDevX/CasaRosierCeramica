@@ -66,10 +66,12 @@ function fallbackWhatsappHref(details: LegacyOfferingDetails) {
 }
 
 function ctaConsultHref(details: LegacyOfferingDetails) {
+  if (details.showConsultCta === false) return "";
   return stringValue(details.ctaConsultHref) || stringValue(details.ctaHref) || fallbackWhatsappHref(details);
 }
 
 function ctaEnrollHref(details: LegacyOfferingDetails) {
+  if (details.showEnrollCta === false) return "";
   return stringValue(details.ctaEnrollHref) || stringValue(details.ctaHref) || fallbackWhatsappHref(details);
 }
 
@@ -99,6 +101,14 @@ function detailsForOffering(offering: Offering): LegacyOfferingDetails {
 
 function scheduleForOffering(offering: Offering, details: LegacyOfferingDetails) {
   if (details.showScheduleOnFrontend === false) return [];
+
+  const scheduleDescription = stringValue(details.scheduleDescription);
+  if (scheduleDescription) {
+    return [{
+      day: "Horario",
+      slots: scheduleDescription.split(/\r?\n/).map((item) => item.trim()).filter(Boolean),
+    }];
+  }
 
   if (details.scheduleDays?.length) {
     return details.scheduleDays
@@ -168,7 +178,9 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     coverImage: offering.cover_image_url || galleryImages[0] || details.heroImage || "img/hero-bg.jpg",
     heroImage: details.heroImage || offering.cover_image_url || "img/hero-bg.jpg",
     heroVariant: details.heroVariant ?? "text",
-    heroMenuTone: details.heroMenuTone ?? (details.heroVariant === "image" ? "light" : "dark"),
+    heroMenuTone: details.heroMenuTone ?? (details.heroVariant === "image" || details.heroVariant === "presentation" ? "light" : "dark"),
+    heroMenuColor: stringValue(details.heroMenuColor) || (details.heroMenuTone === "light" ? "#ffffff" : "#3f3933"),
+    heroMenuScale: typeof details.heroMenuScale === "number" ? details.heroMenuScale : Number(details.heroMenuScale) || 1,
     heroLogoPositionX: details.heroLogoPositionX,
     heroLogoPositionY: details.heroLogoPositionY,
     heroLogoWidth: details.heroLogoWidth,
@@ -183,6 +195,9 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     heroMenuMobilePositionY: details.heroMenuMobilePositionY,
     heroTitleImage: details.titleImage,
     heroTitleImageSecondary: details.titleImageSecondary,
+    heroPresentationText: stringValue(details.heroPresentationText),
+    heroPresentationTextColor: stringValue(details.heroPresentationTextColor) || "#FFFFFF",
+    heroPresentationImage: stringValue(details.heroPresentationImage),
     heroTitle: details.heroTitle || offering.title,
     listingTitle: offering.title,
     listingSubtitle: details.heroSubtitle || "",
@@ -197,9 +212,11 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     schedule,
     included: details.includedItems?.length ? details.includedItems : splitList(details.included),
     program: programForDetails(content, details),
+    learningSectionTitle: stringValue(content.learningSectionTitle) || "¿Qué aprenderás?",
     whatYouWillLearn: splitParagraphs(content.learningContent || details.whatYouWillLearn),
+    participationSectionTitle: stringValue(content.participationSectionTitle) || "¿Quién puede participar?",
     whoCanJoin: splitParagraphs(content.participationContent || details.whoCanJoin),
-    paymentMethods: splitList(content.paymentMethods || details.paymentMethods),
+    paymentMethods: splitList(content.paymentMethodsList?.length ? content.paymentMethodsList : content.paymentMethods || details.paymentMethods),
     additionalInfo: content.extraInfo || stringValue(details.additionalInfo) || `Cualquier consulta o información adicional que necesites, puedes escribir al WhatsApp ${details.whatsappNumber || content.contactWhatsapp || "633788860"}.`,
     showIdeaPromptSection: details.showIdeaPromptSection ?? true,
     ctaHref: consultHref,

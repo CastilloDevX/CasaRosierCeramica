@@ -166,6 +166,22 @@ function offeringToNavigationItem(offering: Offering, order: number): Navigation
   };
 }
 
+function mergeDynamicChildren(existingChildren: NavigationItem[] = [], dynamicChildren: NavigationItem[] = []) {
+  const mergedByHref = new Map<string, NavigationItem>();
+
+  dynamicChildren.forEach((child, index) => {
+    mergedByHref.set(child.href, { ...child, order: index });
+  });
+
+  existingChildren
+    .filter((child) => child.visible !== false && !mergedByHref.has(child.href))
+    .forEach((child, index) => {
+      mergedByHref.set(child.href, { ...child, order: dynamicChildren.length + index });
+    });
+
+  return Array.from(mergedByHref.values()).sort((a, b) => a.order - b.order);
+}
+
 async function getDynamicChildrenByKey() {
   const offerings = await getOfferings();
   const published = offerings
@@ -191,7 +207,7 @@ function withDynamicChildren(items: NavigationItem[], dynamicChildren: Record<Dy
       ...item,
       label: labelForDynamicItem(item, key),
       href: dynamicMenuConfig[key].href,
-      children: item.children?.length ? item.children : dynamicChildren[key],
+      children: mergeDynamicChildren(item.children, dynamicChildren[key]),
     };
   });
 

@@ -20,6 +20,7 @@ function defaultContent(): ClassOfferingContent {
     participationSectionTitle: "",
     participationContent: "",
     paymentMethods: "",
+    paymentMethodsList: [],
     contactWhatsapp: "",
     contactEmail: "",
     extraInfo: "",
@@ -68,35 +69,6 @@ function TextField({
       />
       {help && !error ? <p className="text-label-md text-on-surface-variant/70">{help}</p> : null}
       {error ? <p className="text-label-md text-error">{error}</p> : null}
-    </div>
-  );
-}
-
-function TextAreaField({
-  label,
-  error,
-  help,
-  ...props
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; error?: string; help?: string }) {
-  return (
-    <div className="space-y-1.5">
-      <FieldLabel>{label}</FieldLabel>
-      <textarea
-        {...props}
-        className={`block min-h-[110px] w-full rounded-xl border bg-surface-container-lowest px-4 py-3 text-body-md text-on-surface transition-colors placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-secondary-container ${
-          error ? "border-error" : "border-outline-variant"
-        } ${props.className ?? ""}`}
-      />
-      {help && !error ? <p className="text-label-md text-on-surface-variant/70">{help}</p> : null}
-      {error ? <p className="text-label-md text-error">{error}</p> : null}
-    </div>
-  );
-}
-
-function InfoBlock({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-secondary-container/40 bg-secondary-container/10 p-5 text-body-md text-on-surface">
-      {children}
     </div>
   );
 }
@@ -163,7 +135,30 @@ export default function ClassContentTab({ content, onChange, onDirty }: ClassCon
     onDirty();
   }
 
-  const contactPreview = `Cualquier consulta o información adicional que necesites me puedes escribir al WhatsApp ${content.contactWhatsapp || "(teléfono no configurado)"} o al mail ${content.contactEmail || "(email no configurado)"}`;
+  const paymentMethods = content.paymentMethodsList?.length
+    ? content.paymentMethodsList
+    : content.paymentMethods.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean);
+
+  function updatePaymentMethods(next: string[]) {
+    const clean = next.map((item) => item.trim()).filter(Boolean);
+    onChange({ ...content, paymentMethodsList: next, paymentMethods: clean.join("\n") });
+    onDirty();
+  }
+
+  function addPaymentMethod() {
+    updatePaymentMethods([...paymentMethods, ""]);
+  }
+
+  function updatePaymentMethod(index: number, value: string) {
+    const next = paymentMethods.length ? [...paymentMethods] : [""];
+    next[index] = value;
+    onChange({ ...content, paymentMethodsList: next, paymentMethods: next.map((item) => item.trim()).filter(Boolean).join("\n") });
+    onDirty();
+  }
+
+  function removePaymentMethod(index: number) {
+    updatePaymentMethods(paymentMethods.filter((_, itemIndex) => itemIndex !== index));
+  }
 
   return (
     <div className="space-y-6">
@@ -201,46 +196,47 @@ export default function ClassContentTab({ content, onChange, onDirty }: ClassCon
           placeholder="Materiales básicos para cada clase (arcillas, engobes, esmaltes comerciales).&#10;Uso de herramientas y horno durante las sesiones presenciales."
         />
 
-        <TextField
-          label="Formas de pago"
-          value={content.paymentMethods}
-          placeholder="ej: Transferencia, tarjeta, efectivo, Bizum"
-          onChange={(event) => update("paymentMethods", event.target.value)}
-        />
-
-        <InfoBlock>
-          <p className="mb-4 text-label-md font-semibold text-secondary">
-            Este bloque muestra un mensaje de contacto estándar. Personaliza tu teléfono y email:
-          </p>
-          <div className="space-y-4">
-            <TextField
-              label="Teléfono WhatsApp"
-              type="tel"
-              value={content.contactWhatsapp}
-              placeholder="645690324"
-              error={content.contactWhatsapp && !/^\d+$/.test(content.contactWhatsapp) ? "Usa solo números" : undefined}
-              onChange={(event) => update("contactWhatsapp", event.target.value)}
-            />
-            <TextField
-              label="Email de contacto"
-              type="email"
-              value={content.contactEmail}
-              placeholder="info@casarosierceramica.com"
-              error={content.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(content.contactEmail) ? "Email no válido" : undefined}
-              onChange={(event) => update("contactEmail", event.target.value)}
-            />
+        <div className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <FieldLabel>Formas de pago</FieldLabel>
+              <p className="mt-1 text-label-md text-on-surface-variant/70">Se publicarán como lista con viñetas.</p>
+            </div>
+            <Button type="button" variant="outlined" size="sm" onClick={addPaymentMethod}>Añadir forma</Button>
           </div>
-          <div className="mt-4 rounded-lg bg-white/60 p-4">
-            <p className="text-label-md font-semibold text-on-surface">Vista previa:</p>
-            <p className="mt-1 text-body-md text-on-surface-variant">{contactPreview}</p>
-          </div>
-        </InfoBlock>
+          {paymentMethods.length ? (
+            <div className="space-y-2">
+              {paymentMethods.map((method, index) => (
+                <div key={index} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <TextField
+                    label={`Forma ${index + 1}`}
+                    value={method}
+                    placeholder="Transferencia bancaria"
+                    onChange={(event) => updatePaymentMethod(index, event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePaymentMethod(index)}
+                    className="self-end inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-label-md font-bold text-error transition-colors hover:bg-error-container"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low p-5 text-body-md text-on-surface-variant">
+              No hay formas de pago añadidas.
+            </div>
+          )}
+        </div>
 
-        <TextAreaField
+        <RichTextField
           label="Información extra (opcional)"
           value={content.extraInfo}
           placeholder="Añade información adicional si es necesaria..."
-          onChange={(event) => update("extraInfo", event.target.value)}
+          onChange={(value) => update("extraInfo", value)}
+          minHeight="150px"
         />
 
         <Switch
@@ -277,12 +273,12 @@ export default function ClassContentTab({ content, onChange, onDirty }: ClassCon
               placeholder="ej: Actividades prácticas"
               onChange={(event) => { onChange({ ...content, activitiesSection: { ...content.activitiesSection, title: event.target.value } }); onDirty(); }}
             />
-            <TextAreaField
+            <RichTextField
               label="Contenido"
               value={content.activitiesSection.content}
               placeholder="Describe las actividades que se pueden realizar..."
-              onChange={(event) => { onChange({ ...content, activitiesSection: { ...content.activitiesSection, content: event.target.value } }); onDirty(); }}
-              className="min-h-[120px]"
+              onChange={(value) => { onChange({ ...content, activitiesSection: { ...content.activitiesSection, content: value } }); onDirty(); }}
+              minHeight="150px"
             />
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -302,7 +298,7 @@ export default function ClassContentTab({ content, onChange, onDirty }: ClassCon
                     </div>
                     <div className="space-y-3">
                       <TextField label="Título" value={item.title} onChange={(event) => updateActivityItem(index, { title: event.target.value })} />
-                      <TextAreaField label="Descripción" value={item.description} onChange={(event) => updateActivityItem(index, { description: event.target.value })} className="min-h-[80px]" />
+                      <RichTextField label="Descripción" value={item.description} onChange={(value) => updateActivityItem(index, { description: value })} minHeight="120px" />
                     </div>
                   </div>
                 ))
@@ -323,7 +319,7 @@ export default function ClassContentTab({ content, onChange, onDirty }: ClassCon
           onChange={(event) => update("modulesSectionTitle", event.target.value)}
         />
 
-        <InfoBlock>
+        <div className="rounded-xl border border-secondary-container/40 bg-secondary-container/10 p-5 text-body-md text-on-surface">
           <FieldLabel>Título del acordeón principal</FieldLabel>
           <input
             value={content.modulesAccordionTitle}
@@ -332,7 +328,7 @@ export default function ClassContentTab({ content, onChange, onDirty }: ClassCon
             className="mt-2 block w-full rounded-xl border border-outline-variant bg-white px-4 py-3 text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary-container"
           />
           <p className="mt-2 text-label-md text-on-surface-variant/70">Este título aparece en el acordeón que agrupa todos los módulos</p>
-        </InfoBlock>
+        </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -381,12 +377,12 @@ export default function ClassContentTab({ content, onChange, onDirty }: ClassCon
                     placeholder={`MÓDULO ${index + 1}. TÍTULO DEL MÓDULO`}
                     onChange={(event) => updateModule(index, { title: event.target.value })}
                   />
-                  <TextAreaField
+                  <RichTextField
                     label="Descripción del módulo"
                     value={mod.description}
                     placeholder="Objetivo: comprender la naturaleza técnica de las arcillas..."
-                    onChange={(event) => updateModule(index, { description: event.target.value })}
-                    className="min-h-[100px]"
+                    onChange={(value) => updateModule(index, { description: value })}
+                    minHeight="140px"
                   />
                 </div>
               </div>

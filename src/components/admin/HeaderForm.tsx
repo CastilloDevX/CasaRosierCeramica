@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import ColorPickerField from "./ColorPickerField";
 import MediaLibraryModal from "./MediaLibraryModal";
 import type { Header, HeaderOverlayImage, HeaderType } from "@/lib/cms/types";
 import { HEADER_TYPES, HEADER_STATUSES } from "@/lib/cms/types";
@@ -92,30 +93,6 @@ function SelectField({
         {options.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
       </select>
       {error ? <p className="text-label-md text-error">{error}</p> : null}
-    </div>
-  );
-}
-
-function ColorField({
-  label,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
-  return (
-    <div className="space-y-1.5">
-      <FieldLabel>{label}</FieldLabel>
-      <div className="flex items-center gap-3">
-        <input
-          type="color"
-          {...props}
-          className="h-10 w-14 cursor-pointer rounded-lg border border-outline-variant bg-surface-container-lowest p-1"
-        />
-        <input
-          type="text"
-          value={String(props.value ?? "")}
-          onChange={props.onChange}
-          className="block flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary-container"
-        />
-      </div>
     </div>
   );
 }
@@ -492,7 +469,7 @@ export default function HeaderForm({
             </label>
             {form.overlay_enabled ? (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <ColorField label="Color overlay" value={form.overlay_color} onChange={(event) => update("overlay_color", event.target.value)} />
+                <ColorPickerField label="Color overlay" value={form.overlay_color} onChange={(value) => update("overlay_color", value)} />
                 <TextField label="Opacidad" type="number" step="0.05" min="0" max="1" value={form.overlay_opacity} onChange={(event) => update("overlay_opacity", Number(event.target.value))} />
               </div>
             ) : null}
@@ -597,8 +574,8 @@ export default function HeaderForm({
                 />
                 <TextField label="Orden de capa (z-index)" type="number" value={form.menuZIndex} onChange={(event) => update("menuZIndex", Number(event.target.value))} />
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <ColorField label="Color del texto" value={form.menuTextColor} onChange={(event) => update("menuTextColor", event.target.value)} />
-                  <ColorField label="Color hover" value={form.menuHoverColor} onChange={(event) => update("menuHoverColor", event.target.value)} />
+                  <ColorPickerField label="Color del texto" value={form.menuTextColor} onChange={(value) => update("menuTextColor", value)} />
+                  <ColorPickerField label="Color hover" value={form.menuHoverColor} onChange={(value) => update("menuHoverColor", value)} />
                 </div>
                 <label className="flex items-center gap-2 text-body-md text-on-surface">
                   <input type="checkbox" checked={form.showMenuSeparators} onChange={(event) => update("showMenuSeparators", event.target.checked)} className="h-4 w-4 rounded border-outline-variant text-primary" />

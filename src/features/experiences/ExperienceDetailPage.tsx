@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { DetailPage } from "@/components/collections/DetailPage";
 import { HeaderInterno } from "@/components/layout/HeaderInterno";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import type { ExperienceItem } from "@/data/types";
 import { IdeaPromptSection } from "@/features/shared/contextual-sections/IdeaPromptSection";
 import { SitePage } from "@/features/shared/layout/SitePage";
@@ -18,9 +19,11 @@ export function ExperienceDetailPage({ item }: { item: ExperienceItem }) {
           variant={item.heroVariant ?? "text"}
           image={item.heroImage}
           eyebrow={item.category}
-          title={item.heroTitle}
-          overlayTitle={item.heroVariant === "image"}
+          title={item.heroVariant === "image" || item.heroVariant === "presentation" ? undefined : item.heroTitle}
+          overlayTitle={item.heroVariant === "image" || item.heroVariant === "presentation"}
           heroMenuTone={item.heroMenuTone}
+          heroMenuColor={item.heroMenuColor}
+          heroMenuScale={item.heroMenuScale}
           heroLogoPositionX={item.heroLogoPositionX}
           heroLogoPositionY={item.heroLogoPositionY}
           heroLogoWidth={item.heroLogoWidth}
@@ -34,18 +37,28 @@ export function ExperienceDetailPage({ item }: { item: ExperienceItem }) {
           heroMenuTabletPositionY={item.heroMenuTabletPositionY}
           heroMenuMobilePositionY={item.heroMenuMobilePositionY}
         >
-          {item.heroVariant === "image" ? (
+          {item.heroVariant === "presentation" ? (
+            <div className="page-hero__presentation">
+              <div className="page-hero__presentation-text" style={{ color: item.heroPresentationTextColor || "#FFFFFF" }}>
+                <MarkdownContent
+                  source={item.heroPresentationText || item.heroTitle || item.title}
+                  className="page-hero__presentation-copy"
+                />
+              </div>
+              {item.heroPresentationImage ? (
+                <div className="page-hero__presentation-image">
+                  <Image src={item.heroPresentationImage} alt={item.heroTitle || item.title} fill sizes="420px" className="object-contain" unoptimized />
+                </div>
+              ) : null}
+            </div>
+          ) : item.heroVariant === "image" ? (
             <div className="page-hero__script-stack">
               {item.heroTitleImage ? (
                 <Image src={item.heroTitleImage} alt={item.heroTitle || item.title} fill sizes="520px" className="page-hero__script-image page-hero__script-image--back" unoptimized />
-              ) : (
-                <span className="page-hero__script-fallback page-hero__script-fallback--back">Casa Rosier</span>
-              )}
+              ) : null}
               {item.heroTitleImageSecondary ? (
                 <Image src={item.heroTitleImageSecondary} alt={item.heroTitle || item.title} fill sizes="520px" className="page-hero__script-image page-hero__script-image--front" unoptimized />
-              ) : (
-                <span className="page-hero__script-fallback page-hero__script-fallback--front">{item.heroTitle || item.title}</span>
-              )}
+              ) : null}
             </div>
           ) : undefined}
         </HeaderInterno>

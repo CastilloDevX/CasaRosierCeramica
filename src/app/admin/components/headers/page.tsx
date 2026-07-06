@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import AdminShell from "@/components/admin/AdminShell";
 import HeadersTable from "@/components/admin/HeadersTable";
 import { getHeaders } from "@/lib/cms/headers";

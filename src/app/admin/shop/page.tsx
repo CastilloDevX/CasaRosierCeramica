@@ -1,10 +1,11 @@
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import ShopOverviewCards from "@/components/admin/ShopOverviewCards";
-import { getProducts, getLowStockProducts } from "@/lib/cms/products";
+import { getProducts } from "@/lib/cms/products";
 import { getOrders } from "@/lib/cms/orders";
 
 export default async function ShopPage() {
-  const [allProducts, lowStock, orders] = await Promise.all([getProducts(), getLowStockProducts(), getOrders()]);
+  const [allProducts, orders] = await Promise.all([getProducts(), getOrders()]);
+  const lowStock = allProducts.filter((p) => p.stock !== null && p.stock <= (p.low_stock_threshold || 5) && p.status !== "deleted");
   const publishedProducts = allProducts.filter((p) => p.status === "published").length;
   const newOrders = orders.filter((o) => o.status === "new").length;
   const totalSales = orders.filter((o) => o.payment_status === "paid").reduce((sum, o) => sum + (o.total ?? 0), 0);

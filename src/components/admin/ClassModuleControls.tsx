@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 

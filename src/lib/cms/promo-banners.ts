@@ -3,7 +3,7 @@ import { createAdminClient } from "../supabase/admin";
 import { addTrashItem, getCurrentUserEmail, getTrashItemByEntity, removeTrashItem } from "./trash";
 import { readJsonFile, writeJsonFile } from "./local-storage";
 import { isPromoStatus, PROMO_VISUAL_VARIANTS } from "./types";
-import type { PromoBanner, PromoStatus } from "./types";
+import type { PromoBanner } from "./types";
 import { logAction } from "./history-logs";
 
 const TABLE = "promo_banners";
@@ -68,7 +68,11 @@ function promoBannerToRow(p: PromoBanner): Record<string, unknown> {
 }
 
 function promoBannerToLegacyRow(p: PromoBanner): Record<string, unknown> {
-  const { key_text, detail_text, image_url, button_text, ...legacy } = p;
+  const legacy: Record<string, unknown> = { ...p };
+  delete legacy.key_text;
+  delete legacy.detail_text;
+  delete legacy.image_url;
+  delete legacy.button_text;
   return legacy;
 }
 
@@ -132,6 +136,20 @@ async function deletePromoBannerFromDb(id: string): Promise<void> {
     const supabase = createAdminClient();
     await supabase.from(TABLE).delete().eq("id", id);
   } catch { /* best-effort */ }
+}
+
+async function insertPromoBannerInDb(item: PromoBanner) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.from(TABLE).insert(promoBannerToRow(item)).select("*").single();
+  if (error) throw error;
+  return rowToPromoBanner(data as Record<string, unknown>);
+}
+
+async function updatePromoBannerInDb(id: string, patch: Partial<PromoBanner>) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.from(TABLE).update(patch).eq("id", id).select("*").maybeSingle();
+  if (error) throw error;
+  return data ? rowToPromoBanner(data as Record<string, unknown>) : null;
 }
 
 // ── Public API ──
@@ -198,23 +216,66 @@ export async function updatePromoBanner(id: string, data: Input) {
 }
 
 export async function duplicatePromoBanner(id: string) {
-  const all = await readJsonFile<PromoBanner[]>(FILE_NAME, []);
-  const orig = all.find((x) => x.id === id);
+  const orig = await getPromoBannerById(id);
   if (!orig) return null;
-  const copy = normalize({ ...orig, title: `${orig.title} (copia)`, status: "draft" });
-  await writeJsonFile(FILE_NAME, [copy, ...all]);
-  await upsertPromoBanner(copy);
+  const copy = normalize({ ...orig, id: randomUUID(), title: `${orig.title} (copia)`, status: "draft", deleted_at: null });
+  await insertPromoBannerInDb(copy);
   await logAction({ action: "duplicate", entity_type: "promo_banner", entity_id: orig.id, entity_title: orig.title, new_data: copy });
   return copy;
 }
 
+export async function activatePromoBannerNow(id: string) {
+  const old = await getPromoBannerById(id);
+  if (!old) return null;
+
+  const now = new Date().toISOString();
+  const next = normalize({ ...old, status: "published", start_date: "", end_date: "", deleted_at: null }, old);
+  let archivedCount = 0;
+
+  try {
+    const supabase = createAdminClient();
+    const { count, error: archiveError } = await supabase
+      .from(TABLE)
+      .update({ status: "archived", updated_at: now }, { count: "exact" })
+      .eq("status", "published")
+      .neq("id", id)
+      .select("id");
+    if (archiveError) throw archiveError;
+    archivedCount = count ?? 0;
+
+    const updated = await updatePromoBannerInDb(id, {
+      status: next.status,
+      start_date: next.start_date,
+      end_date: next.end_date,
+      deleted_at: next.deleted_at,
+      updated_at: next.updated_at,
+    });
+    if (!updated) return null;
+
+    if (old.status !== "published") {
+      await logAction({ action: "publish", entity_type: "promo_banner", entity_id: updated.id, entity_title: updated.title, old_data: old, new_data: updated });
+    }
+    await logAction({ action: "update", entity_type: "promo_banner", entity_id: updated.id, entity_title: updated.title, old_data: old, new_data: updated });
+    return { promoBanner: updated, archivedCount };
+  } catch {
+    const all = await readJsonFile<PromoBanner[]>(FILE_NAME, []);
+    const idx = all.findIndex((item) => item.id === id);
+    if (idx === -1) return null;
+    archivedCount = all.filter((item) => item.id !== id && item.status === "published").length;
+    all[idx] = next;
+    await writeJsonFile(FILE_NAME, all);
+    await enforceSinglePublished(id, all);
+    await logAction({ action: "publish", entity_type: "promo_banner", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
+    return { promoBanner: next, archivedCount };
+  }
+}
+
 export async function movePromoBannerToTrash(id: string, deletedBy?: string) {
   const dBy = deletedBy ?? await getCurrentUserEmail();
-  const all = await readJsonFile<PromoBanner[]>(FILE_NAME, []); const idx = all.findIndex((x) => x.id === id); if (idx === -1) return null;
-  const d = new Date().toISOString(); const t: PromoBanner = { ...all[idx], status: "deleted", deleted_at: d, updated_at: d };
-  all[idx] = t; await writeJsonFile(FILE_NAME, all);
-  await upsertPromoBanner(t);
-  await addTrashItem({ id: randomUUID(), entity_type: "promo_banner", entity_id: id, title: t.title, deleted_by: dBy, deleted_at: d, restore_data: all[idx] }); await logAction({ action: "trash", entity_type: "promo_banner", entity_id: id, entity_title: t.title, old_data: all[idx], user_email: dBy }); return t;
+  const old = await getPromoBannerById(id); if (!old) return null;
+  const d = new Date().toISOString(); const t: PromoBanner = { ...old, status: "deleted", deleted_at: d, updated_at: d };
+  await updatePromoBannerInDb(id, { status: t.status, deleted_at: t.deleted_at, updated_at: t.updated_at });
+  await addTrashItem({ id: randomUUID(), entity_type: "promo_banner", entity_id: id, title: t.title, deleted_by: dBy, deleted_at: d, restore_data: t }); await logAction({ action: "trash", entity_type: "promo_banner", entity_id: id, entity_title: t.title, old_data: old, user_email: dBy }); return t;
 }
 
 export async function restorePromoBanner(id: string) {
@@ -228,6 +289,6 @@ export async function restorePromoBanner(id: string) {
 }
 
 export async function deletePromoBannerPermanently(id: string) {
-  const all = await readJsonFile<PromoBanner[]>(FILE_NAME, []); const item = all.find((x) => x.id === id); const next = all.filter((x) => x.id !== id); if (next.length === all.length) return false;
-  await writeJsonFile(FILE_NAME, next); await deletePromoBannerFromDb(id); const ti = await getTrashItemByEntity(id); if (ti) await removeTrashItem(ti.id); if (item) await logAction({ action: "delete_permanently", entity_type: "promo_banner", entity_id: id, entity_title: item.title, old_data: item }); return true;
+  const item = await getPromoBannerById(id); if (!item) return false;
+  await deletePromoBannerFromDb(id); const ti = await getTrashItemByEntity(id); if (ti) await removeTrashItem(ti.id); await logAction({ action: "delete_permanently", entity_type: "promo_banner", entity_id: id, entity_title: item.title, old_data: item }); return true;
 }

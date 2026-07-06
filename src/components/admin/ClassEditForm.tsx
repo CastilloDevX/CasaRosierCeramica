@@ -4,17 +4,23 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { DetailPage } from "@/components/collections/DetailPage";
+import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Switch from "@/components/ui/Switch";
 import { SocialGallery } from "@/components/home/SocialGallery";
+import type { NavigationItem } from "@/data/types";
 import type { ExperienceItem, ExperienceKind } from "@/data/types";
+import { assetPath } from "@/lib/assets";
 import AdminActionModal from "./AdminActionModal";
+import ColorPickerField from "./ColorPickerField";
 import MediaLibraryModal from "./MediaLibraryModal";
 import RichTextField from "./RichTextField";
 import ClassContentTab, { defaultContent } from "./ClassContentTab";
 import type {
   ClassOfferingDetails,
+  ClassHeroVariant,
   ClassScheduleDay,
   Offering,
   OfferingGalleryImage,
@@ -22,7 +28,8 @@ import type {
 } from "@/lib/cms/types";
 
 type TabKey = "hero" | "basic" | "schedule" | "content" | "seo" | "additions" | "preview";
-type PickerTarget = "hero" | "title" | "titleSecondary" | "gallery" | "seo" | "videoPoster" | null;
+type PickerTarget = "hero" | "presentation" | "title" | "titleSecondary" | "gallery" | `gallery:${number}` | "seo" | "videoPoster" | null;
+type UploadTarget = Exclude<PickerTarget, `gallery:${number}` | "gallery" | null>;
 type SaveIntent = "draft" | "publish";
 type FormNotice = { type: "success" | "error"; message: string; details?: string[] };
 type HeroPreviewDevice = "phone" | "tablet" | "desktop";
@@ -65,7 +72,12 @@ const defaultClassDetails: ClassOfferingDetails = {
   heroVariant: "text",
   heroTitle: "",
   heroSubtitle: "",
+  heroPresentationText: "",
+  heroPresentationTextColor: "#FFFFFF",
+  heroPresentationImage: "",
   heroMenuTone: "dark",
+  heroMenuColor: "#3f3933",
+  heroMenuScale: 1,
   heroLogoPositionX: "50%",
   heroLogoPositionY: "46px",
   heroLogoWidth: "118px",
@@ -81,6 +93,8 @@ const defaultClassDetails: ClassOfferingDetails = {
   ctaHref: "",
   ctaConsultHref: "",
   ctaEnrollHref: "",
+  showConsultCta: true,
+  showEnrollCta: true,
   highlightDescription: "",
   homeExcerpt: "",
   durationText: "",
@@ -203,6 +217,7 @@ function toClassDetails(offering: Offering): ClassOfferingDetails {
   legacyContent.learningContent = textBlock(fromDetails.whatYouWillLearn);
   legacyContent.participationContent = textBlock(fromDetails.whoCanJoin);
   legacyContent.paymentMethods = textBlock(fromDetails.paymentMethods);
+  legacyContent.paymentMethodsList = textList(fromDetails.paymentMethods);
   legacyContent.extraInfo = firstText(fromDetails.additionalInfo);
   legacyContent.modules = legacyModules(fromDetails.program);
 
@@ -213,6 +228,9 @@ function toClassDetails(offering: Offering): ClassOfferingDetails {
     learningContent: firstText((persistedContent as Partial<ClassOfferingDetails["content"]>).learningContent, legacyContent.learningContent),
     participationContent: firstText((persistedContent as Partial<ClassOfferingDetails["content"]>).participationContent, legacyContent.participationContent),
     paymentMethods: firstText((persistedContent as Partial<ClassOfferingDetails["content"]>).paymentMethods, legacyContent.paymentMethods),
+    paymentMethodsList: Array.isArray((persistedContent as Partial<ClassOfferingDetails["content"]>).paymentMethodsList)
+      ? (persistedContent as Partial<ClassOfferingDetails["content"]>).paymentMethodsList?.map((item) => String(item).trim()).filter(Boolean) ?? []
+      : textList(firstText((persistedContent as Partial<ClassOfferingDetails["content"]>).paymentMethods, legacyContent.paymentMethods)),
     extraInfo: firstText((persistedContent as Partial<ClassOfferingDetails["content"]>).extraInfo, legacyContent.extraInfo),
     modules: Array.isArray((persistedContent as Partial<ClassOfferingDetails["content"]>).modules) && (persistedContent as Partial<ClassOfferingDetails["content"]>).modules?.length
       ? (persistedContent as ClassOfferingDetails["content"]).modules
@@ -234,7 +252,7 @@ function toClassDetails(offering: Offering): ClassOfferingDetails {
 
   const scheduleDays = Array.isArray(fromDetails.scheduleDays) && fromDetails.scheduleDays.length ? fromDetails.scheduleDays : legacyScheduleDays(offering.schedule);
   const includedItems = Array.isArray(fromDetails.includedItems) && fromDetails.includedItems.length ? fromDetails.includedItems : textList(fromDetails.included);
-  const heroVariant = fromDetails.heroVariant === "image" || fromDetails.heroVariant === "text"
+  const heroVariant = fromDetails.heroVariant === "image" || fromDetails.heroVariant === "text" || fromDetails.heroVariant === "presentation"
     ? fromDetails.heroVariant
     : "text";
 
@@ -244,7 +262,9 @@ function toClassDetails(offering: Offering): ClassOfferingDetails {
     heroVariant,
     heroMenuTone: fromDetails.heroMenuTone === "light" || fromDetails.heroMenuTone === "dark"
       ? fromDetails.heroMenuTone
-      : heroVariant === "image" ? "light" : "dark",
+      : heroVariant === "image" || heroVariant === "presentation" ? "light" : "dark",
+    heroMenuColor: firstText(fromDetails.heroMenuColor, fromDetails.heroMenuTone === "light" ? "#ffffff" : "", heroVariant === "image" || heroVariant === "presentation" ? "#ffffff" : "#3f3933"),
+    heroMenuScale: typeof fromDetails.heroMenuScale === "number" ? fromDetails.heroMenuScale : Number(fromDetails.heroMenuScale) || 1,
     heroLogoPositionX: firstText(fromDetails.heroLogoPositionX, defaultClassDetails.heroLogoPositionX),
     heroLogoPositionY: firstText(fromDetails.heroLogoPositionY, defaultClassDetails.heroLogoPositionY),
     heroLogoWidth: firstText(fromDetails.heroLogoWidth, defaultClassDetails.heroLogoWidth),
@@ -260,8 +280,13 @@ function toClassDetails(offering: Offering): ClassOfferingDetails {
     ctaHref: firstText(fromDetails.ctaHref),
     ctaConsultHref: firstText(fromDetails.ctaConsultHref, fromDetails.ctaHref),
     ctaEnrollHref: firstText(fromDetails.ctaEnrollHref, fromDetails.ctaHref),
+    showConsultCta: fromDetails.showConsultCta ?? true,
+    showEnrollCta: fromDetails.showEnrollCta ?? true,
     heroTitle: firstText(fromDetails.heroTitle, offering.title),
     heroSubtitle: firstText(fromDetails.heroSubtitle, fromDetails.category, offering.subtitle),
+    heroPresentationText: firstText(fromDetails.heroPresentationText),
+    heroPresentationTextColor: firstText(fromDetails.heroPresentationTextColor, defaultClassDetails.heroPresentationTextColor),
+    heroPresentationImage: firstText(fromDetails.heroPresentationImage),
     highlightDescription: firstText(fromDetails.highlightDescription, fromDetails.introHighlight, offering.excerpt),
     durationText: firstText(fromDetails.durationText, offering.duration),
     heroImage: fromDetails.heroImage || offering.cover_image_url || DEFAULT_HERO_IMAGE,
@@ -361,6 +386,53 @@ function ImagePreview({ src, alt, aspect = "aspect-video" }: { src: string; alt:
   return (
     <div className={`relative overflow-hidden rounded-xl border border-outline-variant bg-surface-container-high ${aspect}`}>
       <Image src={src} alt={alt} fill sizes="720px" className="object-cover" unoptimized />
+    </div>
+  );
+}
+
+function ImageActionField({
+  label,
+  value,
+  alt,
+  compact = false,
+  uploading = false,
+  onOpenLibrary,
+  onUpload,
+}: {
+  label: string;
+  value: string;
+  alt: string;
+  compact?: boolean;
+  uploading?: boolean;
+  onOpenLibrary: () => void;
+  onUpload: (file: File) => void;
+}) {
+  const inputId = `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-upload`;
+
+  return (
+    <div className={`cms-hero-image-field${compact ? " cms-hero-image-field--compact" : ""}`}>
+      <FieldLabel>{label}</FieldLabel>
+      <ImagePreview src={value} alt={alt} aspect={compact ? "aspect-[3/1]" : "aspect-[16/7]"} />
+      <div className="cms-hero-image-field__actions">
+        <label className="secondary-btn cms-hero-image-field__button" htmlFor={inputId} aria-disabled={uploading}>
+          {uploading ? "Subiendo..." : value ? "Sustituir" : "Subir imagen"}
+        </label>
+        <input
+          id={inputId}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          disabled={uploading}
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) onUpload(file);
+            event.target.value = "";
+          }}
+        />
+        <Button type="button" variant="outlined" size="sm" onClick={onOpenLibrary}>
+          {value ? "Abrir biblioteca" : "Seleccionar imagen"}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -470,20 +542,18 @@ function HeroPositionEditor({
 
         <fieldset className="space-y-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
           <legend className="px-2 text-label-md font-bold uppercase tracking-wide text-on-surface-variant">
-            Posicionamiento del menú
+            Propiedades del menú
           </legend>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1.5">
-              <FieldLabel>Color del menú inicial</FieldLabel>
-              <select
-                className="w-full rounded-xl border border-outline-variant bg-white px-4 py-3 text-body-md text-on-surface shadow-sm outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary-container"
-                value={details.heroMenuTone ?? "dark"}
-                onChange={(event) => onChange({ heroMenuTone: event.target.value as "light" | "dark" })}
-              >
-                <option value="light">Blanco</option>
-                <option value="dark">Negro</option>
-              </select>
-            </div>
+            <ColorPickerField
+              label="Color del menú y logo"
+              value={details.heroMenuColor || (details.heroMenuTone === "light" ? "#FFFFFF" : "#3F3933")}
+              help="Aplica al logo, texto, iconos y separadores del menú del hero."
+              onChange={(value) => onChange({
+                heroMenuColor: value,
+                heroMenuTone: value.toLowerCase() === "#ffffff" ? "light" : "dark",
+              })}
+            />
             <TextField
               label="Menú inicial Y"
               value={heroValue(details, keys.menuY)}
@@ -492,6 +562,32 @@ function HeroPositionEditor({
               onChange={(event) => updateField(keys.menuY, event.target.value)}
             />
           </div>
+          {activeDevice === "desktop" ? (
+            <div className="grid gap-3">
+              <div className="flex items-center justify-between gap-3">
+                <FieldLabel>Escala del menú en computadora</FieldLabel>
+                <span className="rounded-lg bg-surface-container-low px-3 py-1 text-label-md font-bold text-on-surface-variant">
+                  {(details.heroMenuScale ?? 1).toFixed(2)}x
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0.75"
+                max="1.4"
+                step="0.05"
+                value={details.heroMenuScale ?? 1}
+                onChange={(event) => onChange({ heroMenuScale: Number(event.target.value) })}
+                className="w-full accent-[#9d4300]"
+              />
+              <p className="text-body-sm text-on-surface-variant">
+                Esta escala solo se aplica al menú expandido de escritorio.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-outline-variant bg-surface-container-low p-4 text-body-sm text-on-surface-variant">
+              En tablet y teléfono el hero usa logo a la izquierda y menú de hamburguesa a la derecha; la escala no aplica para estos dispositivos.
+            </div>
+          )}
         </fieldset>
       </div>
     </Card>
@@ -512,26 +608,43 @@ function HeroResponsivePreview({
   const preset = heroPreviewDevices.find((item) => item.key === device) ?? heroPreviewDevices[2];
   const keys = heroDeviceKeys(device);
   const isImageHero = details.heroVariant === "image";
-  const isLight = details.heroMenuTone === "light";
-  const navColor = isLight ? "rgba(255,255,255,0.95)" : "#3f3933";
-  const logoFilter = isLight ? "brightness(0) invert(1)" : "brightness(0) saturate(100%)";
+  const isPresentationHero = details.heroVariant === "presentation";
+  const navColor = details.heroMenuColor || (details.heroMenuTone === "light" ? "rgba(255,255,255,0.95)" : "#3f3933");
   const logoStyle = {
     left: heroValue(details, keys.logoX) || "50%",
     top: heroValue(details, keys.logoY) || "46px",
     width: heroValue(details, keys.logoWidth) || "118px",
-    filter: logoFilter,
+    backgroundColor: navColor,
+    WebkitMaskImage: 'url("/img/logo-header.png")',
+    maskImage: 'url("/img/logo-header.png")',
+    WebkitMaskSize: "contain",
+    maskSize: "contain",
+    WebkitMaskRepeat: "no-repeat",
+    maskRepeat: "no-repeat",
+    WebkitMaskPosition: "center",
+    maskPosition: "center",
   } as CSSProperties;
   const menuStyle = {
     top: heroValue(details, keys.menuY) || "132px",
     color: navColor,
+    transform: `translateX(-50%) scale(${device === "desktop" ? details.heroMenuScale ?? 1 : 1})`,
+    transformOrigin: "top center",
   } as CSSProperties;
+  const heroPreviewBackground = isPresentationHero
+    ? `url("${details.heroImage || DEFAULT_HERO_IMAGE}") center / cover no-repeat`
+    : isImageHero
+      ? `linear-gradient(to bottom, rgba(58,48,37,.2), rgba(251,250,246,.94)), url("${details.heroImage || DEFAULT_HERO_IMAGE}") center / cover no-repeat`
+      : "#fbfaf6";
   const frameStyle = {
     width: `${preset.width}px`,
     height: `${preset.height}px`,
     maxWidth: "100%",
-    background: isImageHero
-      ? `linear-gradient(to bottom, rgba(58,48,37,.2), rgba(251,250,246,.94)), url("${details.heroImage || DEFAULT_HERO_IMAGE}") center / cover no-repeat`
-      : "#fbfaf6",
+    background: heroPreviewBackground,
+  } as CSSProperties;
+  const scriptPreviewStyle = {
+    width: device === "desktop" ? "min(82%, 700px)" : device === "tablet" ? "min(82%, 600px)" : "min(88%, 340px)",
+    aspectRatio: "3.35 / 1",
+    transform: device === "desktop" ? "translateY(-40px)" : device === "tablet" ? "translateY(-24px)" : "translateY(-8px)",
   } as CSSProperties;
 
   return (
@@ -545,54 +658,99 @@ function HeroResponsivePreview({
 
       <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-low p-4">
         <div className="relative mx-auto overflow-hidden rounded-xl border border-outline-variant bg-[#fbfaf6] shadow-sm" style={frameStyle}>
-          <img
-            src="/img/logo-header.png"
-            alt="Casa Rosier"
-            className="absolute z-20 h-auto -translate-x-1/2"
-            style={logoStyle}
-          />
+          {device === "desktop" ? (
+            <>
+              <span className="absolute z-20 h-12 -translate-x-1/2" style={logoStyle} aria-label="Casa Rosier" />
 
-          <div
-            className="absolute left-1/2 z-20 flex -translate-x-1/2 items-center justify-center whitespace-nowrap text-[12px] font-bold"
-            style={menuStyle}
-          >
-            {device === "phone" ? (
+              <div
+                className="absolute left-1/2 z-20 flex items-center justify-center whitespace-nowrap text-[12px] font-bold"
+                style={menuStyle}
+              >
+                <nav aria-label="Vista previa menú hero">
+                  <ul className="flex list-none items-center gap-4 p-0">
+                    {["Inicio", "Clases", "Workshops", "Experiencias", "Gift Cards", "El Estudio", "Shop"].map((item) => (
+                      <li key={item} className="flex items-center gap-2">
+                        <span>{item}</span>
+                        {item !== "Inicio" && item !== "Shop" ? <span aria-hidden="true">+</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </div>
+            </>
+          ) : (
+            <div className="absolute inset-x-4 top-4 z-20 flex items-center justify-between gap-4" style={{ color: navColor }}>
+              <span
+                className="block h-12 w-[104px]"
+                style={{
+                  backgroundColor: navColor,
+                  WebkitMaskImage: 'url("/img/logo-header.png")',
+                  maskImage: 'url("/img/logo-header.png")',
+                  WebkitMaskSize: "contain",
+                  maskSize: "contain",
+                  WebkitMaskRepeat: "no-repeat",
+                  maskRepeat: "no-repeat",
+                  WebkitMaskPosition: "left center",
+                  maskPosition: "left center",
+                }}
+                aria-label="Casa Rosier"
+              />
               <button
                 type="button"
                 className="flex h-11 w-11 items-center justify-center rounded-full border border-current/30"
-                aria-label="Vista de botón de menú móvil"
+                aria-label="Vista de botón de menú en tablet y teléfono"
               >
                 <span className="material-symbols-outlined text-[22px]">menu</span>
               </button>
-            ) : (
-              <nav aria-label="Vista previa menú hero">
-                <ul className="flex list-none items-center gap-4 p-0">
-                  {["Inicio", "Clases", "Workshops", "Experiencias", "Gift Cards", "El Estudio", "Shop"].map((item) => (
-                    <li key={item} className="flex items-center gap-2">
-                      <span>{item}</span>
-                      {item !== "Inicio" && item !== "Shop" ? <span aria-hidden="true">+</span> : null}
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="absolute inset-x-8 top-1/2 z-10 -translate-y-1/2 text-center">
-            {isImageHero ? (
-              <div className="relative mx-auto h-[150px] w-[min(520px,72%)]">
+            {isPresentationHero ? (
+              <div className={`cms-hero-presentation-preview cms-hero-presentation-preview--${device}`}>
+                <div className="page-hero__presentation-text" style={{ color: details.heroPresentationTextColor || "#FFFFFF" }}>
+                  <MarkdownContent
+                    source={details.heroPresentationText || "# Chagall, Master Drawings\n\nFebruary 27-May 28, 2018"}
+                    className="cms-hero-presentation-preview__copy"
+                  />
+                </div>
+                {details.heroPresentationImage ? (
+                  <div className="cms-hero-presentation-preview__image">
+                    <Image
+                      src={details.heroPresentationImage}
+                      alt="Imagen lateral del hero"
+                      fill
+                      sizes="320px"
+                      className="object-contain"
+                      unoptimized
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : isImageHero ? (
+              <div className="relative mx-auto" style={scriptPreviewStyle}>
                 {details.titleImage ? (
-                  <Image src={details.titleImage} alt="Texto principal del hero" fill sizes="520px" className="object-contain opacity-80" unoptimized />
-                ) : (
-                  <span className="font-serif text-[clamp(32px,5vw,56px)] italic text-white/80">Casa Rosier</span>
-                )}
+                  <Image
+                    src={details.titleImage}
+                    alt="Texto principal del hero"
+                    fill
+                    sizes="700px"
+                    className="object-contain"
+                    style={{ opacity: 0.76, transform: "translateY(-3%) scale(1.16)" }}
+                    unoptimized
+                  />
+                ) : null}
                 {details.titleImageSecondary ? (
-                  <Image src={details.titleImageSecondary} alt="Texto secundario del hero" fill sizes="520px" className="object-contain" unoptimized />
-                ) : (
-                  <span className="absolute inset-0 grid place-items-center font-serif text-[clamp(28px,4vw,48px)] italic text-white">
-                    {details.heroTitle || title || "Casa Rosier"}
-                  </span>
-                )}
+                  <Image
+                    src={details.titleImageSecondary}
+                    alt="Texto secundario del hero"
+                    fill
+                    sizes="700px"
+                    className="object-contain"
+                    style={{ transform: "translateY(-12%) scale(1.1)" }}
+                    unoptimized
+                  />
+                ) : null}
               </div>
             ) : (
               <div>
@@ -634,14 +792,9 @@ function formatPreviewPrice(value: number | null) {
 
 function previewSchedule(details: ClassOfferingDetails) {
   if (!details.showScheduleOnFrontend) return [];
-  return details.scheduleDays.map((item) => ({
-    day: item.title || item.date || "Disponible",
-    slots: [
-      item.startTime && item.endTime
-        ? `${item.startTime} a ${item.endTime}`
-        : item.description || "Consultar disponibilidad",
-    ].filter(Boolean),
-  }));
+  return details.scheduleDescription.trim()
+    ? [{ day: "Horario", slots: toLines(details.scheduleDescription).filter(Boolean) }]
+    : [];
 }
 
 function previewProgram(details: ClassOfferingDetails) {
@@ -653,6 +806,25 @@ function previewProgram(details: ClassOfferingDetails) {
     }))
     .filter((item) => item.title || item.content);
 }
+
+const previewNavigationItems: NavigationItem[] = [
+  { label: "Inicio", href: "/#hero", order: 0, visible: true },
+  { label: "Clases", href: "/clases", order: 1, visible: true, children: [] },
+  { label: "Workshops", href: "/workshops", order: 2, visible: true, children: [] },
+  { label: "Experiencias", href: "/experiencias", order: 3, visible: true, children: [] },
+  { label: "Gift Cards", href: "/gift-cards", order: 4, visible: true, children: [] },
+  {
+    label: "El Estudio",
+    href: "/el-estudio",
+    order: 5,
+    visible: true,
+    children: [
+      { label: "El Estudio", href: "/el-estudio", order: 0, visible: true },
+      { label: "Bitácora", href: "/blog", order: 1, visible: true },
+    ],
+  },
+  { label: "Shop", href: "/shop", order: 6, visible: true },
+];
 
 function buildPreviewItem({
   offeringType,
@@ -676,8 +848,8 @@ function buildPreviewItem({
     .map((item) => item.image);
   const fallbackImage = details.heroImage || details.videoPoster || DEFAULT_HERO_IMAGE;
   const fallbackCta = defaultCtaHref(details);
-  const consultHref = details.ctaConsultHref || details.ctaHref || fallbackCta;
-  const enrollHref = details.ctaEnrollHref || details.ctaHref || fallbackCta;
+  const consultHref = details.showConsultCta === false ? "" : details.ctaConsultHref || details.ctaHref || fallbackCta;
+  const enrollHref = details.showEnrollCta === false ? "" : details.ctaEnrollHref || details.ctaHref || fallbackCta;
   const priceOptions = details.pricing
     .filter((item) => item.description.trim() || item.price !== null)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
@@ -685,7 +857,9 @@ function buildPreviewItem({
       label: item.description || "Precio",
       price: formatPreviewPrice(item.price),
     }));
-  const paymentMethods = toLines(details.content.paymentMethods.replace(/,/g, "\n"));
+  const paymentMethods = details.content.paymentMethodsList?.length
+    ? details.content.paymentMethodsList
+    : toLines(details.content.paymentMethods.replace(/,/g, "\n"));
 
   return {
     id: "preview",
@@ -700,6 +874,8 @@ function buildPreviewItem({
     heroImage: fallbackImage,
     heroVariant: details.heroVariant,
     heroMenuTone: details.heroMenuTone,
+    heroMenuColor: details.heroMenuColor,
+    heroMenuScale: details.heroMenuScale,
     heroLogoPositionX: details.heroLogoPositionX,
     heroLogoPositionY: details.heroLogoPositionY,
     heroLogoWidth: details.heroLogoWidth,
@@ -714,6 +890,9 @@ function buildPreviewItem({
     heroMenuMobilePositionY: details.heroMenuMobilePositionY,
     heroTitleImage: details.titleImage,
     heroTitleImageSecondary: details.titleImageSecondary,
+    heroPresentationText: details.heroPresentationText,
+    heroPresentationTextColor: details.heroPresentationTextColor,
+    heroPresentationImage: details.heroPresentationImage,
     heroTitle: details.heroTitle || title || "Título del hero",
     listingTitle: title || "Título del producto",
     listingSubtitle: details.heroSubtitle || "",
@@ -726,7 +905,9 @@ function buildPreviewItem({
     schedule: previewSchedule(details),
     included: details.includedItems.filter((item) => item.trim()),
     program: previewProgram(details),
+    learningSectionTitle: details.content.learningSectionTitle.trim() || "¿Qué aprenderás?",
     whatYouWillLearn: toLines(details.content.learningContent),
+    participationSectionTitle: details.content.participationSectionTitle.trim() || "¿Quién puede participar?",
     whoCanJoin: toLines(details.content.participationContent),
     paymentMethods: paymentMethods.length ? paymentMethods : ["Transferencia bancaria", "Tarjeta", "Efectivo"],
     additionalInfo:
@@ -760,73 +941,119 @@ function PreviewPane({
   status: "draft" | "published";
   details: ClassOfferingDetails;
 }) {
-  const heroIsImage = details.heroVariant === "image";
   const previewItem = buildPreviewItem({ offeringType, title, slug, subtitle, description, details });
   const promoPage = previewItem.kind === "private-booking" ? undefined : previewItem.kind.replace("-card", "");
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-outline-variant bg-white shadow-sm">
-      <div className="border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-md font-semibold text-on-surface-variant">
+    <div className="cms-preview-frame">
+      <div className="cms-public-preview__toolbar">
         Vista previa de escritorio · {status === "published" ? "Publicado" : "Borrador"}
       </div>
       <div
         className="cms-public-preview class-detail-page"
         data-promo-page={promoPage}
       >
-        <div className="cms-public-preview__topbar">
-          <img src="/img/logo-header.png" alt="Casa Rosier" />
-          <nav aria-label="Vista previa">
-            <span>Inicio</span>
-            <span>|</span>
-            <span>Clases +</span>
-            <span>|</span>
-            <span>Workshops +</span>
-            <span>|</span>
-            <span>Reservas Privadas +</span>
-            <span>|</span>
-            <span>Tarjeta de regalo +</span>
-            <span>|</span>
-            <span>El Estudio</span>
-            <span>|</span>
-            <span>Blog</span>
-          </nav>
-        </div>
+        <div className="cms-public-preview__scale">
+          <PreviewHeader item={previewItem} details={details} />
 
-        <header
-          className={`cms-public-preview__hero ${heroIsImage ? "cms-public-preview__hero--image" : "cms-public-preview__hero--text"}`}
-          style={heroIsImage ? { backgroundImage: `url(${details.heroImage || DEFAULT_HERO_IMAGE})` } : undefined}
-        >
-          {heroIsImage ? (
-            <div className="cms-public-preview__hero-overlay" />
-          ) : null}
-          <div className="cms-public-preview__hero-content">
-            {heroIsImage ? (
-              <div className="cms-public-preview__script-stack">
-                {details.titleImage ? (
-                  <Image src={details.titleImage} alt="Texto principal del hero" fill sizes="520px" className="object-contain opacity-80" unoptimized />
-                ) : (
-                  <span className="cms-public-preview__script-fallback cms-public-preview__script-fallback--back">Casa Rosier</span>
-                )}
-                {details.titleImageSecondary ? (
-                  <Image src={details.titleImageSecondary} alt="Texto secundario del hero" fill sizes="520px" className="object-contain" unoptimized />
-                ) : (
-                  <span className="cms-public-preview__script-fallback cms-public-preview__script-fallback--front">{details.heroTitle || title || "Casa Rosier"}</span>
-                )}
-              </div>
-            ) : (
-              <div>
-                <h1>{details.heroTitle || title || "Título del hero"}</h1>
-                <p>{details.heroSubtitle || subtitle || "Clases - Iniciación"}</p>
-              </div>
-            )}
+          <div className="cms-public-preview__body">
+            <DetailPage item={previewItem} />
+            {previewItem.showIdeaPromptSection ? <SocialGallery /> : null}
           </div>
-        </header>
-
-        <div className="cms-public-preview__body">
-          <DetailPage item={previewItem} />
         </div>
       </div>
     </div>
+  );
+}
+
+function PreviewHeader({ item, details }: { item: ExperienceItem; details: ClassOfferingDetails }) {
+  const variant = item.heroVariant ?? "text";
+  const isImageLike = variant === "image" || variant === "presentation";
+  const style = {
+    "--page-hero-image": `url("${assetPath(item.heroImage)}")`,
+    "--hero-logo-position-x": item.heroLogoPositionX ?? "50%",
+    "--hero-logo-position-y": item.heroLogoPositionY ?? "46px",
+    "--hero-logo-width": item.heroLogoWidth ?? "118px",
+    "--hero-logo-tablet-position-x": item.heroLogoTabletPositionX ?? item.heroLogoPositionX ?? "50%",
+    "--hero-logo-tablet-position-y": item.heroLogoTabletPositionY ?? item.heroLogoPositionY ?? "42px",
+    "--hero-logo-tablet-width": item.heroLogoTabletWidth ?? item.heroLogoWidth ?? "106px",
+    "--hero-logo-mobile-position-x": item.heroLogoMobilePositionX ?? item.heroLogoPositionX ?? "50%",
+    "--hero-logo-mobile-position-y": item.heroLogoMobilePositionY ?? "34px",
+    "--hero-logo-mobile-width": item.heroLogoMobileWidth ?? "92px",
+    "--hero-menu-position-y": item.heroMenuPositionY ?? "132px",
+    "--hero-menu-tablet-position-y": item.heroMenuTabletPositionY ?? item.heroMenuPositionY ?? "118px",
+    "--hero-menu-mobile-position-y": item.heroMenuMobilePositionY ?? "96px",
+    "--hero-menu-color": item.heroMenuColor ?? (item.heroMenuTone === "light" ? "#ffffff" : "#3f3933"),
+    "--hero-menu-scale": item.heroMenuScale ?? 1,
+  } as CSSProperties;
+  const scrollThreshold = Number.parseInt(item.heroMenuPositionY ?? "", 10) || 132;
+  const titleContent = (
+    <div>
+      {item.category ? <p className="page-hero__eyebrow">{item.category}</p> : null}
+      <h1 className="page-hero__title">{item.heroTitle || item.title}</h1>
+    </div>
+  );
+
+  return (
+    <>
+      <header
+        className={`header-interno page-hero header-interno--ready header-interno--center header-interno--overlay-warm ${
+          isImageLike ? "header-interno--image-hero" : "header-interno--text-hero page-hero--nav-only"
+        } ${variant === "presentation" ? "header-interno--presentation-hero" : ""} header-interno--menu-${item.heroMenuTone ?? (isImageLike ? "light" : "dark")} header-interno--medium`}
+        style={style}
+        data-header-height="medium"
+        data-header-alignment="center"
+        data-header-overlay="warm"
+      >
+        <NavbarGlobal
+          navigationItems={previewNavigationItems}
+          logoUrl="/img/logo-header.png"
+          scrollMenuBackgroundColor="#8c7457"
+          scrollMenuTextColor="#fff9f1"
+          scrollMenuIconColor="#fff9f1"
+          scrollThreshold={scrollThreshold}
+          tabletScrollThreshold={Number.parseInt(item.heroMenuTabletPositionY ?? "", 10) || scrollThreshold}
+          mobileScrollThreshold={Number.parseInt(item.heroMenuMobilePositionY ?? "", 10) || 96}
+          heroMenuColor={item.heroMenuColor}
+          heroMenuScale={item.heroMenuScale}
+        />
+        {isImageLike ? (
+          <div className="header-interno__inner page-hero__inner container" aria-hidden="true">
+            {variant === "presentation" ? (
+              <div className="page-hero__presentation">
+                <div className="page-hero__presentation-text" style={{ color: details.heroPresentationTextColor || "#FFFFFF" }}>
+                  <MarkdownContent
+                    source={details.heroPresentationText || "# Chagall, Master Drawings\n\nFebruary 27-May 28, 2018"}
+                    className="page-hero__presentation-copy"
+                  />
+                </div>
+                {details.heroPresentationImage ? (
+                  <div className="page-hero__presentation-image">
+                    <Image src={details.heroPresentationImage} alt={item.heroTitle || item.title} fill sizes="420px" className="object-contain" unoptimized />
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="page-hero__script-stack">
+                {details.titleImage ? (
+                  <Image src={details.titleImage} alt={item.heroTitle || item.title} fill sizes="520px" className="page-hero__script-image page-hero__script-image--back" unoptimized />
+                ) : null}
+                {details.titleImageSecondary ? (
+                  <Image src={details.titleImageSecondary} alt={item.heroTitle || item.title} fill sizes="520px" className="page-hero__script-image page-hero__script-image--front" unoptimized />
+                ) : null}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="header-interno__inner page-hero__inner container" aria-hidden="true" />
+        )}
+      </header>
+      {!isImageLike ? (
+        <section className="page-title-block page-title-block--center page-title-block--medium">
+          <div className="page-title-block__inner container">{titleContent}</div>
+        </section>
+      ) : null}
+    </>
   );
 }
 
@@ -857,6 +1084,7 @@ export default function ClassEditForm({
   const [isDirty, setIsDirty] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
   const [draggedGalleryIndex, setDraggedGalleryIndex] = useState<number | null>(null);
+  const [uploadingTarget, setUploadingTarget] = useState<UploadTarget | null>(null);
 
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
@@ -868,33 +1096,16 @@ export default function ClassEditForm({
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
-  useEffect(() => {
-    const buttons = document.querySelectorAll<HTMLButtonElement>('button[form="class-edit-form"][name="intent"]');
-
-    buttons.forEach((button) => {
-      if (!button.dataset.defaultLabel) button.dataset.defaultLabel = button.textContent ?? "";
-      const intent = button.value === "publish" ? "publish" : "draft";
-      button.disabled = isSaving;
-      button.setAttribute("aria-busy", isSaving && savingIntent === intent ? "true" : "false");
-      button.textContent =
-        isSaving && savingIntent === intent
-          ? intent === "publish"
-            ? "Publicando..."
-            : "Guardando..."
-      : button.dataset.defaultLabel ?? "";
-    });
-  }, [isSaving, savingIntent]);
-
   function updateDetails(next: Partial<ClassOfferingDetails>) {
     setDetails((current) => ({ ...current, ...next }));
     setIsDirty(true);
   }
 
-  function setHeroVariant(heroVariant: "image" | "text") {
+  function setHeroVariant(heroVariant: ClassHeroVariant) {
     updateDetails({
       heroVariant,
-      heroMenuTone: heroVariant === "image" ? "light" : "dark",
-      heroImage: heroVariant === "image" ? details.heroImage || DEFAULT_HERO_IMAGE : details.heroImage,
+      heroMenuTone: heroVariant === "image" || heroVariant === "presentation" ? "light" : "dark",
+      heroImage: heroVariant === "image" || heroVariant === "presentation" ? details.heroImage || DEFAULT_HERO_IMAGE : details.heroImage,
     });
   }
 
@@ -908,49 +1119,6 @@ export default function ClassEditForm({
 
   function removePricing(index: number) {
     updateDetails({ pricing: details.pricing.filter((_, i) => i !== index).map((item, order) => ({ ...item, order })) });
-  }
-
-  function updateScheduleDay(index: number, next: Partial<ClassScheduleDay>) {
-    updateDetails({
-      scheduleDays: details.scheduleDays
-        .map((item, i) => (i === index ? { ...item, ...next } : item))
-        .map((item, order) => ({ ...item, order })),
-    });
-  }
-
-  function addScheduleDay() {
-    updateDetails({
-      scheduleDays: [
-        ...details.scheduleDays,
-        {
-          id: createId("schedule"),
-          date: "",
-          startTime: "",
-          endTime: "",
-          title: "",
-          description: "",
-          location: "",
-          availableSeats: null,
-          order: details.scheduleDays.length,
-        },
-      ],
-    });
-  }
-
-  function duplicateScheduleDay(index: number) {
-    const current = details.scheduleDays[index];
-    if (!current) return;
-    updateDetails({
-      scheduleDays: [
-        ...details.scheduleDays.slice(0, index + 1),
-        { ...current, id: createId("schedule"), title: current.title ? `${current.title} (copia)` : "", order: index + 1 },
-        ...details.scheduleDays.slice(index + 1),
-      ].map((item, order) => ({ ...item, order })),
-    });
-  }
-
-  function removeScheduleDay(index: number) {
-    updateDetails({ scheduleDays: details.scheduleDays.filter((_, i) => i !== index).map((item, order) => ({ ...item, order })) });
   }
 
   function updateGalleryImage(index: number, next: Partial<OfferingGalleryImage>) {
@@ -975,6 +1143,7 @@ export default function ClassEditForm({
 
   function handleSelectImage(url: string) {
     if (pickerTarget === "hero") updateDetails({ heroImage: url });
+    if (pickerTarget === "presentation") updateDetails({ heroPresentationImage: url });
     if (pickerTarget === "title") updateDetails({ titleImage: url });
     if (pickerTarget === "titleSecondary") updateDetails({ titleImageSecondary: url });
     if (pickerTarget === "seo") updateDetails({ seoImage: url });
@@ -982,7 +1151,47 @@ export default function ClassEditForm({
     if (pickerTarget === "gallery") {
       updateDetails({ galleryImages: [...details.galleryImages, { image: url, alt: "", seoTitle: "", seoDescription: "", order: details.galleryImages.length }] });
     }
+    if (pickerTarget?.startsWith("gallery:")) {
+      const index = Number(pickerTarget.split(":")[1]);
+      if (Number.isInteger(index)) updateGalleryImage(index, { image: url });
+    }
     setPickerTarget(null);
+  }
+
+  async function uploadImage(target: UploadTarget, file: File) {
+    setUploadingTarget(target);
+    setToast(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "offerings");
+    formData.append("title", file.name);
+    formData.append("alt_text", title || file.name);
+
+    try {
+      const response = await fetch("/api/admin/media/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json().catch(() => ({})) as { asset?: { file_url?: string }; error?: string };
+      if (!response.ok) throw new Error(data.error || "No se pudo subir la imagen.");
+      const url = data.asset?.file_url;
+      if (!url) throw new Error("La subida no devolvió una URL.");
+
+      if (target === "hero") updateDetails({ heroImage: url });
+      if (target === "presentation") updateDetails({ heroPresentationImage: url });
+      if (target === "title") updateDetails({ titleImage: url });
+      if (target === "titleSecondary") updateDetails({ titleImageSecondary: url });
+      if (target === "seo") updateDetails({ seoImage: url });
+      if (target === "videoPoster") updateDetails({ videoPoster: url });
+    } catch (error) {
+      setToast({
+        type: "error",
+        message: error instanceof Error ? error.message : "No se pudo subir la imagen.",
+      });
+    } finally {
+      setUploadingTarget(null);
+    }
   }
 
   function errorTab(errorKey: string): TabKey {
@@ -1020,18 +1229,13 @@ export default function ClassEditForm({
     if (!title.trim()) nextErrors.title = "El título es obligatorio.";
     if (!slug.trim()) nextErrors.slug = "El slug es obligatorio.";
     if (details.heroVariant === "text" && !details.heroTitle.trim()) nextErrors.heroTitle = "Agrega el título del hero.";
+    if (details.heroVariant === "presentation" && !details.heroPresentationText.trim()) nextErrors.heroTitle = "Agrega el texto de presentación.";
     if (details.whatsappNumber && !/^\d+$/.test(details.whatsappNumber)) nextErrors.whatsappNumber = "Usa solo números, sin espacios.";
     details.pricing.forEach((item, index) => {
       if (item.price !== null && Number(item.price) < 0) nextErrors[`pricing-${index}`] = "El precio no puede ser negativo.";
     });
     details.galleryImages.forEach((item, index) => {
       if (item.image && !item.alt.trim()) nextErrors[`gallery-${index}`] = "El texto alternativo es obligatorio.";
-    });
-    details.scheduleDays.forEach((item, index) => {
-      if (!item.date && !item.title.trim()) nextErrors[`schedule-date-${index}`] = "Agrega una fecha o un título del día.";
-      if (item.startTime && !item.endTime) nextErrors[`schedule-end-${index}`] = "Agrega una hora de fin.";
-      if (item.startTime && item.endTime && item.endTime < item.startTime) nextErrors[`schedule-end-${index}`] = "La hora de fin no puede ser anterior a la hora de inicio.";
-      if (item.availableSeats !== null && Number(item.availableSeats) < 0) nextErrors[`schedule-seats-${index}`] = "Las plazas no pueden ser negativas.";
     });
     setErrors(nextErrors);
     return nextErrors;
@@ -1063,9 +1267,9 @@ export default function ClassEditForm({
     try {
       const pricing = details.pricing.filter((item) => item.description.trim() || item.price !== null).map((item, order) => ({ ...item, order }));
       const galleryImages = details.galleryImages.filter((item) => item.image).map((item, order) => ({ ...item, order }));
-      const scheduleDays = details.scheduleDays.map((item, order) => ({ ...item, order }));
+      const scheduleDays: ClassOfferingDetails["scheduleDays"] = [];
       const primaryPrice = pricing.find((item) => item.price !== null)?.price ?? null;
-      const coverImage = details.heroVariant === "image" ? details.heroImage || DEFAULT_HERO_IMAGE : galleryImages[0]?.image || details.videoPoster || offering.cover_image_url;
+      const coverImage = details.heroVariant === "image" || details.heroVariant === "presentation" ? details.heroImage || DEFAULT_HERO_IMAGE : galleryImages[0]?.image || details.videoPoster || offering.cover_image_url;
 
       const response = await fetch(mode === "create" ? "/api/admin/offerings" : `/api/admin/offerings/${offering.id}`, {
         method: mode === "create" ? "POST" : "PUT",
@@ -1090,7 +1294,12 @@ export default function ClassEditForm({
             class: {
               ...details,
               heroMenuTone: details.heroMenuTone,
-              heroImage: details.heroVariant === "image" ? details.heroImage || DEFAULT_HERO_IMAGE : details.heroImage,
+              heroMenuColor: details.heroMenuColor,
+              heroMenuScale: details.heroMenuScale,
+              heroImage: details.heroVariant === "image" || details.heroVariant === "presentation" ? details.heroImage || DEFAULT_HERO_IMAGE : details.heroImage,
+              heroPresentationText: details.heroPresentationText.trim(),
+              heroPresentationTextColor: details.heroPresentationTextColor.trim() || defaultClassDetails.heroPresentationTextColor,
+              heroPresentationImage: details.heroPresentationImage.trim(),
               heroLogoPositionX: details.heroLogoPositionX.trim() || defaultClassDetails.heroLogoPositionX,
               heroLogoPositionY: details.heroLogoPositionY.trim() || defaultClassDetails.heroLogoPositionY,
               heroLogoWidth: details.heroLogoWidth.trim() || defaultClassDetails.heroLogoWidth,
@@ -1103,9 +1312,11 @@ export default function ClassEditForm({
               heroMenuPositionY: details.heroMenuPositionY.trim() || defaultClassDetails.heroMenuPositionY,
               heroMenuTabletPositionY: details.heroMenuTabletPositionY.trim() || defaultClassDetails.heroMenuTabletPositionY,
               heroMenuMobilePositionY: details.heroMenuMobilePositionY.trim() || defaultClassDetails.heroMenuMobilePositionY,
-              ctaHref: details.ctaConsultHref.trim() || details.ctaHref.trim(),
-              ctaConsultHref: details.ctaConsultHref.trim(),
-              ctaEnrollHref: details.ctaEnrollHref.trim(),
+              showConsultCta: details.showConsultCta,
+              showEnrollCta: details.showEnrollCta,
+              ctaHref: details.showConsultCta ? details.ctaConsultHref.trim() || details.ctaHref.trim() : "",
+              ctaConsultHref: details.showConsultCta ? details.ctaConsultHref.trim() : "",
+              ctaEnrollHref: details.showEnrollCta ? details.ctaEnrollHref.trim() : "",
               menuPlacement: menuPlacementForType(offering.type),
               homeSections: [],
               pricing,
@@ -1129,7 +1340,8 @@ export default function ClassEditForm({
                 learningContent: details.content.learningContent.trim(),
                 participationSectionTitle: details.content.participationSectionTitle.trim(),
                 participationContent: details.content.participationContent.trim(),
-                paymentMethods: details.content.paymentMethods.trim(),
+                paymentMethods: (details.content.paymentMethodsList?.length ? details.content.paymentMethodsList : toLines(details.content.paymentMethods)).map((item) => item.trim()).filter(Boolean).join("\n"),
+                paymentMethodsList: (details.content.paymentMethodsList?.length ? details.content.paymentMethodsList : toLines(details.content.paymentMethods)).map((item) => item.trim()).filter(Boolean),
                 contactWhatsapp: details.content.contactWhatsapp.trim(),
                 contactEmail: details.content.contactEmail.trim(),
                 extraInfo: details.content.extraInfo.trim(),
@@ -1213,9 +1425,9 @@ export default function ClassEditForm({
             <Card padding="lg" className="space-y-5 rounded-2xl">
               <div>
                 <h2 className="text-headline-sm text-on-surface">Tipo de hero</h2>
-                <p className="mt-1 text-body-md text-on-surface-variant">Solo hay dos encabezados disponibles: imagen editorial con textos cursivos o fondo blanco con título tipográfico.</p>
+                <p className="mt-1 text-body-md text-on-surface-variant">Elige el encabezado público para esta página de clases.</p>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 lg:grid-cols-3">
                 <button
                   type="button"
                   onClick={() => setHeroVariant("image")}
@@ -1224,6 +1436,15 @@ export default function ClassEditForm({
                   <span className="block text-title-md font-bold text-on-surface">Hero con imagen</span>
                   <span className="mt-1 block text-body-md text-on-surface-variant">Imagen de fondo, gradiente blanco y dos imágenes de texto cursivo.</span>
                   <span className="mt-3 block text-label-md font-semibold text-secondary">Menú configurable sobre imagen</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHeroVariant("presentation")}
+                  className={`rounded-2xl border p-4 text-left transition-colors ${details.heroVariant === "presentation" ? "border-secondary bg-secondary-container/20" : "border-outline-variant hover:bg-surface-container-low"}`}
+                >
+                  <span className="block text-title-md font-bold text-on-surface">Hero con presentación</span>
+                  <span className="mt-1 block text-body-md text-on-surface-variant">Imagen de fondo, texto editable a la izquierda e imagen única a la derecha.</span>
+                  <span className="mt-3 block text-label-md font-semibold text-secondary">Texto enriquecido y color propio</span>
                 </button>
                 <button
                   type="button"
@@ -1239,31 +1460,81 @@ export default function ClassEditForm({
 
             {details.heroVariant === "image" ? (
               <Card padding="lg" className="space-y-5 rounded-2xl">
-                <h2 className="text-headline-sm text-on-surface">Hero con imagen</h2>
-                <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+                <div>
+                  <h2 className="text-headline-sm text-on-surface">Hero con imágenes</h2>
+                  <p className="mt-1 text-body-md text-on-surface-variant">
+                    Configura el fondo y las dos imágenes cursivas superpuestas. El hero público no mostrará texto automático.
+                  </p>
+                </div>
+                <div className="cms-hero-image-grid">
+                  <ImageActionField
+                    label="Imagen de fondo"
+                    value={details.heroImage || DEFAULT_HERO_IMAGE}
+                    alt="Fondo del hero"
+                    uploading={uploadingTarget === "hero"}
+                    onOpenLibrary={() => setPickerTarget("hero")}
+                    onUpload={(file) => uploadImage("hero", file)}
+                  />
+                  <ImageActionField
+                    label="Imagen cursiva 1"
+                    value={details.titleImage}
+                    alt="Texto cursivo 1"
+                    compact
+                    uploading={uploadingTarget === "title"}
+                    onOpenLibrary={() => setPickerTarget("title")}
+                    onUpload={(file) => uploadImage("title", file)}
+                  />
+                  <ImageActionField
+                    label="Imagen cursiva 2"
+                    value={details.titleImageSecondary}
+                    alt="Texto cursivo 2"
+                    compact
+                    uploading={uploadingTarget === "titleSecondary"}
+                    onOpenLibrary={() => setPickerTarget("titleSecondary")}
+                    onUpload={(file) => uploadImage("titleSecondary", file)}
+                  />
+                </div>
+              </Card>
+            ) : details.heroVariant === "presentation" ? (
+              <Card padding="lg" className="space-y-5 rounded-2xl">
+                <div>
+                  <h2 className="text-headline-sm text-on-surface">Hero con presentación</h2>
+                  <p className="mt-1 text-body-md text-on-surface-variant">
+                    Configura la imagen de fondo, el contenido editorial izquierdo y la imagen destacada derecha.
+                  </p>
+                </div>
+                <ImageActionField
+                  label="Imagen de fondo"
+                  value={details.heroImage || DEFAULT_HERO_IMAGE}
+                  alt="Fondo del hero"
+                  uploading={uploadingTarget === "hero"}
+                  onOpenLibrary={() => setPickerTarget("hero")}
+                  onUpload={(file) => uploadImage("hero", file)}
+                />
+                <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
                   <div className="space-y-4">
-                    <ImagePreview src={details.heroImage || DEFAULT_HERO_IMAGE} alt="Fondo del hero" />
-                    <div className="flex flex-wrap gap-3">
-                      <Button type="button" variant="outlined" onClick={() => setPickerTarget("hero")}>Cambiar fondo</Button>
-                      <Button type="button" variant="ghost" onClick={() => updateDetails({ heroImage: DEFAULT_HERO_IMAGE })}>Usar fondo por defecto</Button>
-                    </div>
+                    <RichTextField
+                      label="Texto de presentación"
+                      value={details.heroPresentationText}
+                      onChange={(value) => updateDetails({ heroPresentationText: value })}
+                      minHeight="220px"
+                      placeholder="# Chagall, Master Drawings&#10;&#10;February 27-May 28, 2018&#10;&#10;On view at The Met Fifth Avenue..."
+                    />
+                    <ColorPickerField
+                      label="Color del texto"
+                      value={details.heroPresentationTextColor || "#FFFFFF"}
+                      onChange={(value) => updateDetails({ heroPresentationTextColor: value })}
+                    />
                   </div>
-                  <div className="space-y-4">
-                    <div>
-                      <FieldLabel>Imagen cursiva 1</FieldLabel>
-                      <ImagePreview src={details.titleImage} alt="Texto cursivo 1" aspect="aspect-[3/1]" />
-                      <Button type="button" variant="outlined" size="sm" className="mt-3" onClick={() => setPickerTarget("title")}>
-                        {details.titleImage ? "Reemplazar" : "Seleccionar imagen"}
-                      </Button>
-                    </div>
-                    <div>
-                      <FieldLabel>Imagen cursiva 2</FieldLabel>
-                      <ImagePreview src={details.titleImageSecondary} alt="Texto cursivo 2" aspect="aspect-[3/1]" />
-                      <Button type="button" variant="outlined" size="sm" className="mt-3" onClick={() => setPickerTarget("titleSecondary")}>
-                        {details.titleImageSecondary ? "Reemplazar" : "Seleccionar imagen"}
-                      </Button>
-                    </div>
-                  </div>
+                  <ImageActionField
+                    label="Imagen lateral"
+                    value={details.heroPresentationImage}
+                    alt="Imagen lateral del hero"
+                    compact
+                    uploading={uploadingTarget === "presentation"}
+                    onOpenLibrary={() => setPickerTarget("presentation")}
+                    onUpload={(file) => uploadImage("presentation", file)}
+                  />
                 </div>
               </Card>
             ) : (
@@ -1319,7 +1590,7 @@ export default function ClassEditForm({
                 />
               </div>
               <TextField label="Título del producto en página" value={subtitle} onChange={(event) => { setSubtitle(event.target.value); setIsDirty(true); }} />
-              <TextAreaField label="Texto remarcado café" value={details.highlightDescription} onChange={(event) => updateDetails({ highlightDescription: event.target.value })} />
+              <RichTextField label="Texto remarcado café" value={details.highlightDescription} onChange={(value) => updateDetails({ highlightDescription: value })} minHeight="150px" />
               <RichTextField label="Texto normal / descripción" value={description} onChange={(value) => { setDescription(value); setIsDirty(true); }} minHeight="220px" />
               <div className="grid gap-4 md:grid-cols-2">
                 <TextField label="Duración" value={details.durationText} placeholder="Sesiones de 2 h." onChange={(event) => updateDetails({ durationText: event.target.value })} />
@@ -1341,20 +1612,40 @@ export default function ClassEditForm({
                 </p>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <TextField
-                  label="Consultar"
-                  value={details.ctaConsultHref}
-                  placeholder={defaultCtaHref(details)}
-                  help="Aparece en los botones Consultar o Comprar."
-                  onChange={(event) => updateDetails({ ctaConsultHref: event.target.value, ctaHref: event.target.value })}
-                />
-                <TextField
-                  label="Inscribirme"
-                  value={details.ctaEnrollHref}
-                  placeholder={defaultCtaHref(details)}
-                  help="Aparece en el CTA final de la ficha."
-                  onChange={(event) => updateDetails({ ctaEnrollHref: event.target.value })}
-                />
+                <div className="space-y-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+                  <Switch
+                    checked={details.showConsultCta}
+                    label="Mostrar Consultar / Comprar"
+                    description="Controla el botón principal dentro de la ficha pública."
+                    onCheckedChange={(checked) => updateDetails({ showConsultCta: checked })}
+                  />
+                  {details.showConsultCta ? (
+                    <TextField
+                      label="URL de Consultar"
+                      value={details.ctaConsultHref}
+                      placeholder={defaultCtaHref(details)}
+                      help="Aparece en los botones Consultar o Comprar."
+                      onChange={(event) => updateDetails({ ctaConsultHref: event.target.value, ctaHref: event.target.value })}
+                    />
+                  ) : null}
+                </div>
+                <div className="space-y-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+                  <Switch
+                    checked={details.showEnrollCta}
+                    label="Mostrar Inscribirme"
+                    description="Controla el CTA final de la ficha pública."
+                    onCheckedChange={(checked) => updateDetails({ showEnrollCta: checked })}
+                  />
+                  {details.showEnrollCta ? (
+                    <TextField
+                      label="URL de Inscribirme"
+                      value={details.ctaEnrollHref}
+                      placeholder={defaultCtaHref(details)}
+                      help="Aparece en el CTA final de la ficha."
+                      onChange={(event) => updateDetails({ ctaEnrollHref: event.target.value })}
+                    />
+                  ) : null}
+                </div>
               </div>
             </Card>
 
@@ -1381,52 +1672,20 @@ export default function ClassEditForm({
         {activeTab === "schedule" ? (
           <>
             <Card padding="lg" className="space-y-5 rounded-2xl">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h2 className="text-headline-sm text-on-surface">Horario</h2>
-                  <p className="mt-1 text-body-md text-on-surface-variant">Fechas, turnos, ubicación y plazas disponibles.</p>
-                </div>
-                <Button type="button" variant="outlined" onClick={addScheduleDay}>Añadir día</Button>
+              <div>
+                <h2 className="text-headline-sm text-on-surface">Horario</h2>
+                <p className="mt-1 text-body-md text-on-surface-variant">
+                  Escribe el horario como texto libre y define si debe mostrarse en la página pública.
+                </p>
               </div>
-              <TextAreaField label="Descripción general del horario" value={details.scheduleDescription} onChange={(event) => updateDetails({ scheduleDescription: event.target.value })} className="min-h-[130px]" />
+              <TextAreaField label="Horario en texto" value={details.scheduleDescription} onChange={(event) => updateDetails({ scheduleDescription: event.target.value, scheduleDays: [] })} className="min-h-[160px]" />
               <Switch
                 checked={details.showScheduleOnFrontend}
                 label="Mostrar horarios en la página pública"
-                description="Controla si los días y turnos publicados aparecen dentro de la ficha del producto."
+                description="Controla si el texto de horario aparece dentro de la ficha del producto."
                 onCheckedChange={(checked) => updateDetails({ showScheduleOnFrontend: checked })}
               />
             </Card>
-
-            <div className="space-y-4">
-              {details.scheduleDays.map((day, index) => (
-                <Card key={day.id} padding="lg" className="space-y-4 rounded-2xl">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <h3 className="text-title-md font-bold text-on-surface">Día {index + 1}</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="ghost" size="sm" onClick={() => duplicateScheduleDay(index)}>Duplicar</Button>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeScheduleDay(index)}>Eliminar</Button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <TextField label="Fecha / Día" type="date" required value={day.date} error={errors[`schedule-date-${index}`]} onChange={(event) => updateScheduleDay(index, { date: event.target.value })} />
-                    <TextField label="Hora de inicio" type="time" value={day.startTime} onChange={(event) => updateScheduleDay(index, { startTime: event.target.value })} />
-                    <TextField label="Hora de fin" type="time" value={day.endTime} error={errors[`schedule-end-${index}`]} onChange={(event) => updateScheduleDay(index, { endTime: event.target.value })} />
-                  </div>
-                  <TextField label="Título del día" value={day.title} onChange={(event) => updateScheduleDay(index, { title: event.target.value })} />
-                  <TextAreaField label="Descripción del día" value={day.description} onChange={(event) => updateScheduleDay(index, { description: event.target.value })} />
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_180px]">
-                    <TextField label="Ubicación" value={day.location} onChange={(event) => updateScheduleDay(index, { location: event.target.value })} />
-                    <TextField label="Plazas" type="number" min={0} value={day.availableSeats ?? ""} error={errors[`schedule-seats-${index}`]} onChange={(event) => updateScheduleDay(index, { availableSeats: event.target.value === "" ? null : Number(event.target.value) })} />
-                  </div>
-                </Card>
-              ))}
-              {!details.scheduleDays.length ? (
-                <Card padding="lg" className="rounded-2xl text-center">
-                  <p className="text-body-md text-on-surface-variant">No hay horarios cargados todavía.</p>
-                  <Button type="button" variant="outlined" className="mt-4" onClick={addScheduleDay}>Añadir horario</Button>
-                </Card>
-              ) : null}
-            </div>
           </>
         ) : null}
 
@@ -1457,11 +1716,11 @@ export default function ClassEditForm({
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-headline-sm text-on-surface">Imágenes de producto</h2>
-                  <p className="mt-1 text-body-md text-on-surface-variant">Arrastra las imágenes para cambiar el orden. Cada imagen incluye SEO propio.</p>
+                  <p className="mt-1 text-body-md text-on-surface-variant">Ordena las imágenes y agrega un texto alternativo breve para accesibilidad.</p>
                 </div>
                 <Button type="button" variant="outlined" onClick={() => setPickerTarget("gallery")}>Añadir imagen</Button>
               </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3">
                 {details.galleryImages.map((item, index) => (
                   <div
                     key={`${item.image}-${index}`}
@@ -1472,7 +1731,7 @@ export default function ClassEditForm({
                       if (draggedGalleryIndex !== null) moveGalleryImage(draggedGalleryIndex, index);
                       setDraggedGalleryIndex(null);
                     }}
-                    className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4"
+                    className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3"
                   >
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <span className="text-label-md font-bold uppercase tracking-wide text-on-surface-variant">Imagen {index + 1}</span>
@@ -1488,11 +1747,14 @@ export default function ClassEditForm({
                         </button>
                       </div>
                     </div>
-                    <ImagePreview src={item.image} alt={item.alt || `Imagen ${index + 1}`} />
-                    <div className="mt-4 space-y-3 rounded-xl bg-surface-container-low p-3">
+                    <div className="grid gap-3 md:grid-cols-[160px_minmax(0,1fr)] md:items-start">
+                      <div className="space-y-2">
+                        <ImagePreview src={item.image} alt={item.alt || `Imagen ${index + 1}`} aspect="h-24 w-full md:h-[104px]" />
+                        <Button type="button" variant="outlined" size="sm" className="w-full" onClick={() => setPickerTarget(`gallery:${index}`)}>
+                          Sustituir
+                        </Button>
+                      </div>
                       <TextField label="Texto alternativo (ALT)" required value={item.alt} error={errors[`gallery-${index}`]} onChange={(event) => updateGalleryImage(index, { alt: event.target.value })} />
-                      <TextField label="Título SEO de imagen" value={item.seoTitle ?? ""} onChange={(event) => updateGalleryImage(index, { seoTitle: event.target.value })} />
-                      <TextAreaField label="Descripción SEO de imagen" value={item.seoDescription ?? ""} onChange={(event) => updateGalleryImage(index, { seoDescription: event.target.value })} className="min-h-[80px]" />
                     </div>
                   </div>
                 ))}
@@ -1569,7 +1831,7 @@ export default function ClassEditForm({
               <p className="text-body-md text-on-surface-variant">Guarda como borrador o publica esta página. Al publicar, este producto queda listo para mostrarse en su categoría correspondiente.</p>
               <div className="flex flex-wrap gap-3">
                 <Button type="submit" name="intent" value="draft" variant="outlined" disabled={isSaving} aria-busy={isSaving && savingIntent === "draft"}>
-                  {isSaving && savingIntent === "draft" ? "Guardando..." : "Guardar como boceto"}
+                  {isSaving && savingIntent === "draft" ? "Guardando..." : "Borrador"}
                 </Button>
                 <Button type="submit" name="intent" value="publish" disabled={isSaving} aria-busy={isSaving && savingIntent === "publish"}>
                   {isSaving && savingIntent === "publish" ? "Publicando..." : "Publicar"}
@@ -1585,8 +1847,11 @@ export default function ClassEditForm({
 
         <div className="admin-sticky-actionbar">
           <span className="admin-sticky-actionbar__meta">{isDirty ? "Cambios sin guardar" : "Cambios al día"}</span>
+          <Button type="button" variant="outlined" onClick={() => setActiveTab("preview")}>
+            Vista previa
+          </Button>
           <Button type="submit" name="intent" value="draft" variant="outlined" disabled={isSaving} aria-busy={isSaving && savingIntent === "draft"}>
-            {isSaving && savingIntent === "draft" ? "Guardando..." : "Guardar boceto"}
+            {isSaving && savingIntent === "draft" ? "Guardando..." : "Borrador"}
           </Button>
           <Button type="submit" name="intent" value="publish" disabled={isSaving} aria-busy={isSaving && savingIntent === "publish"}>
             {isSaving && savingIntent === "publish" ? "Publicando..." : "Publicar"}

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { BlogPost } from "@/lib/cms/types";
@@ -20,6 +20,8 @@ function actionMessage(action: string) {
   if (action === "publish") return "Bitácora publicada correctamente.";
   if (action === "draft") return "Bitácora pasada a borrador correctamente.";
   if (action === "archive") return "Bitácora archivada correctamente.";
+  if (action === "feature") return "Bitácora agregada a destacados correctamente.";
+  if (action === "unfeature") return "Bitácora retirada de destacados correctamente.";
   if (action === "trash") return "Bitácora enviada a la papelera correctamente.";
   return "Acción completada correctamente.";
 }
@@ -155,6 +157,9 @@ export default function BlogTable({ items }: { items: BlogPost[] }) {
                           {isPending(post.id, "archive") ? "Archivando..." : "Archivar"}
                         </button>
                       ) : null}
+                      <button className="secondary-btn" type="button" disabled={rowPending} onClick={() => run(post.id, post.is_featured ? "unfeature" : "feature")}>
+                        {isPending(post.id, post.is_featured ? "unfeature" : "feature") ? "Guardando..." : post.is_featured ? "Quitar destacado" : "Destacar"}
+                      </button>
                       <button className="danger-btn" type="button" disabled={rowPending} onClick={() => run(post.id, "trash")}>
                         {isPending(post.id, "trash") ? "Enviando..." : "Papelera"}
                       </button>

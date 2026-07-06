@@ -36,7 +36,7 @@ export default async function EditClassPage({ params }: { params: Promise<{ id: 
               Volver
             </Button>
             <Button type="submit" form="class-edit-form" name="intent" value="draft" variant="outlined">
-              Guardar boceto
+              Borrador
             </Button>
             <Button type="submit" form="class-edit-form" name="intent" value="publish">
               Publicar

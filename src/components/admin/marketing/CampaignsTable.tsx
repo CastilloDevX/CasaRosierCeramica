@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import { useRouter } from "next/navigation";
 import type { MarketingCampaign } from "@/lib/cms/types";
 import EmptyMarketingState from "./EmptyMarketingState";

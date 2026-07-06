@@ -1,19 +1,26 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import type { BlogPost, BlogPostBlock, BlogPostBlockType, BlogPostStatus } from "@/lib/cms/types";
+import { BlogDetail } from "@/components/blog/BlogDetail";
+import { SocialGallery } from "@/components/home/SocialGallery";
+import type { BlogContentBlock, BlogPost as PublicBlogPost, NavigationItem } from "@/data/types";
+import type { BlogPost as CmsBlogPost, BlogPostBlock, BlogPostBlockType, BlogPostStatus } from "@/lib/cms/types";
 import { BLOG_BLOCK_TYPES } from "@/lib/cms/types";
-import { assetPath, internalHref } from "@/lib/assets";
-import { MarkdownContent, renderInlineMarkdown } from "@/components/ui/MarkdownContent";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import Switch from "@/components/ui/Switch";
 import AdminActionModal from "./AdminActionModal";
+import CmsPublicHeroPreview from "./CmsPublicHeroPreview";
 import MediaSelectField from "./MediaSelectField";
 import RichTextField from "./RichTextField";
+import SharedHeroEditor from "./SharedHeroEditor";
+import { normalizeHeroSettings } from "@/lib/cms/hero-settings";
+import type { SiteSettings } from "@/lib/cms/settings";
+import { formatDate } from "@/lib/utils";
 
-type StepKey = "structure" | "preview";
+type StepKey = "hero" | "structure" | "preview";
 
 const categoryOptions = ["Procesos", "Esmaltes", "Taller"] as const;
 const blockLabels: Record<string, string> = {
@@ -145,89 +152,172 @@ function SwitchField({
   );
 }
 
-function ArticlePreview({
+function paragraphsFromText(text: string): BlogContentBlock[] {
+  return text
+    .split(/\n{2,}/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((content) => ({ type: "paragraph", content }));
+}
+
+function blocksToPreviewContent(blocks: BlogPostBlock[]): BlogContentBlock[] {
+  const content: BlogContentBlock[] = [];
+  let pendingImages: Array<{ src: string; alt?: string }> = [];
+
+  const flushImages = () => {
+    if (pendingImages.length === 1) content.push({ type: "image", src: pendingImages[0].src, alt: pendingImages[0].alt });
+    else if (pendingImages.length > 1) content.push({ type: "gallery", images: pendingImages });
+    pendingImages = [];
+  };
+
+  for (const block of blocks.filter((item) => item.is_visible !== false)) {
+    if (block.type === "image") {
+      if (block.image_id) pendingImages.push({ src: block.image_id, alt: block.title || undefined });
+      continue;
+    }
+
+    flushImages();
+
+    if (block.type === "heading") content.push({ type: "heading", level: block.custom_html === "2" ? 2 : 3, content: block.title || block.text });
+    else if (block.type === "quote") content.push({ type: "quote", content: block.text || block.title });
+    else if (block.type === "list") {
+      const items = block.text.split("\n").map((item) => item.replace(/^[-*\d.]+\s*/, "").trim()).filter(Boolean);
+      if (items.length) content.push({ type: "list", items });
+    } else if (block.type === "cta" && block.title && block.source_url) {
+      content.push({ type: "cta", text: block.title, href: block.source_url });
+    } else {
+      content.push(...paragraphsFromText(block.text || block.title));
+    }
+  }
+
+  flushImages();
+  return content;
+}
+
+function BlogPublicPreview({
   title,
   excerpt,
   cover,
   blocks,
+  hero,
+  category,
+  slug,
+  status,
+  isFeatured,
+  featuredOrder,
+  featuredExcerpt,
+  visibleInListing,
+  sortOrder,
+  seoTitle,
+  seoDescription,
+  publishedAt,
+  navigationItems,
+  menuSettings,
 }: {
   title: string;
   excerpt: string;
   cover: string;
   blocks: BlogPostBlock[];
+  hero: CmsBlogPost["hero"];
+  category: string;
+  slug: string;
+  status: BlogPostStatus;
+  isFeatured: boolean;
+  featuredOrder: number;
+  featuredExcerpt: string;
+  visibleInListing: boolean;
+  sortOrder: number;
+  seoTitle: string;
+  seoDescription: string;
+  publishedAt: string;
+  navigationItems: NavigationItem[];
+  menuSettings: SiteSettings["menu"];
 }) {
-  const visibleBlocks = blocks.filter((block) => block.is_visible !== false);
+  const previewPost: PublicBlogPost = {
+    id: "preview",
+    title: title || "Título de la bitácora",
+    slug: slug || "vista-previa",
+    excerpt: excerpt || "Texto introductorio de la bitácora.",
+    coverImage: cover || hero.heroImage || "/img/social-2.jpg",
+    category: category || "Procesos",
+    tags: [],
+    author: "Casa Rosier",
+    authorInitial: "C",
+    status: status === "published" ? "published" : "draft",
+    isFeatured,
+    featuredOrder,
+    featuredImage: cover || undefined,
+    featuredExcerpt: featuredExcerpt || excerpt,
+    featuredOnHome: false,
+    visibleInListing,
+    manualOrder: sortOrder,
+    publishedAt,
+    seoTitle: seoTitle || title,
+    seoDescription: seoDescription || excerpt,
+    hero,
+    contentBlocks: blocksToPreviewContent(blocks),
+  };
+  const heroVariant = hero.heroVariant ?? "image";
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-outline-variant bg-[#fbfaf6] text-[#4b443d] shadow-sm">
-      <div className="border-b border-outline-variant bg-surface-container-low px-4 py-2 text-label-md font-semibold text-on-surface-variant">
-        Vista previa de artículo
+    <div className="cms-preview-frame">
+      <div className="cms-public-preview__toolbar">
+        Vista previa de escritorio · {status === "published" ? "Publicado" : "Borrador"}
       </div>
-      <div className="mx-auto max-w-[1040px] px-8 py-12">
-        <header className="mx-auto mb-8 max-w-[760px] text-center">
-          <h1 className="font-serif text-[clamp(34px,4vw,46px)] leading-none text-[#4a443e]">
-            {title || "Título de la bitácora"}
-          </h1>
-          <MarkdownContent className="mt-5 text-left font-sans text-[17px] leading-7 text-[#716960]" source={excerpt || "Texto introductorio de la bitácora."} />
-        </header>
-        <figure className="mx-auto mb-8 max-w-[760px] overflow-hidden bg-[#eee8e2]">
-          {cover ? (
-            <Image src={assetPath(cover)} alt={title || "Imagen principal"} width={680} height={560} className="aspect-[1.2/1] w-full object-cover" unoptimized />
-          ) : (
-            <div className="grid aspect-[1.2/1] place-items-center text-sm text-[#7b7066]">Imagen principal</div>
-          )}
-        </figure>
-        <article className="mx-auto max-w-[760px]">
-          {visibleBlocks.map((block, index) => {
-            if (block.type === "quote") {
-              return <blockquote className="my-7 font-serif text-[clamp(28px,3vw,36px)] italic leading-tight text-[#9b7053]" key={block.id}><p>{renderInlineMarkdown(block.text || "Frase destacada")}</p></blockquote>;
-            }
-            if (block.type === "heading") {
-              const Tag = block.custom_html === "2" ? "h2" : "h3";
-              return <Tag className="mb-2 mt-5 font-sans text-[17px] font-semibold leading-7 text-[#625b54]" key={block.id}>{block.title || "Subtítulo"}</Tag>;
-            }
-            if (block.type === "image") {
-              const next = visibleBlocks[index + 1];
-              const prev = visibleBlocks[index - 1];
-              const isGalleryImage = next?.type === "image" || prev?.type === "image";
-              if (prev?.type === "image") return null;
-              const images = [block, ...visibleBlocks.slice(index + 1).filter((item, i) => i < 1 && item.type === "image")];
-              if (isGalleryImage) {
-                return (
-                  <div className="my-8 grid grid-cols-2 gap-0" key={block.id}>
-                    {images.map((image) => (
-                      <figure key={image.id} className="overflow-hidden bg-[#eee8e2]">
-                        {image.image_id ? <Image src={assetPath(image.image_id)} alt={image.title || ""} width={360} height={420} className="aspect-[.86/1] w-full object-cover" unoptimized /> : null}
-                      </figure>
-                    ))}
-                  </div>
-                );
-              }
-              return (
-                <figure className="my-8 overflow-hidden bg-[#eee8e2]" key={block.id}>
-                  {block.image_id ? <Image src={assetPath(block.image_id)} alt={block.title || ""} width={680} height={560} className="aspect-[1.2/1] w-full object-cover" unoptimized /> : null}
-                </figure>
-              );
-            }
-            if (block.type === "list") {
-              return <ul className="mb-5 list-disc pl-5 font-sans text-[17px] leading-7 text-[#625b54]" key={block.id}>{block.text.split("\n").filter(Boolean).map((item) => <li key={item}>{renderInlineMarkdown(item.replace(/^[-*\d.]+\s*/, ""))}</li>)}</ul>;
-            }
-            if (block.type === "cta") {
-              return <div className="my-6 text-center" key={block.id}><Link className="blog-post__button" href={internalHref(block.source_url || "/clases")}>{block.title || "Ver clases"}</Link></div>;
-            }
-            return <MarkdownContent className="mb-5 font-sans text-[17px] leading-7 text-[#625b54]" source={block.text} key={block.id} />;
-          })}
-          {!visibleBlocks.length ? <p className="font-sans text-[17px] leading-7 text-[#625b54]">Agrega bloques de contenido para ver la estructura del artículo.</p> : null}
-        </article>
+      <div className="cms-public-preview blog-post-page">
+        <div className="cms-public-preview__scale">
+          <CmsPublicHeroPreview
+            hero={hero}
+            navigationItems={navigationItems}
+            menuSettings={menuSettings}
+            height="small"
+            className="blog-hero"
+          >
+            {heroVariant === "presentation" ? (
+              <div className="page-hero__presentation">
+              <div className="page-hero__presentation-text" style={{ color: hero.heroPresentationTextColor || "#FFFFFF" }}>
+                <MarkdownContent source={hero.heroPresentationText || hero.heroTitle || title} className="page-hero__presentation-copy" />
+              </div>
+              {hero.heroPresentationImage ? (
+                <div className="page-hero__presentation-image">
+                  <Image src={hero.heroPresentationImage} alt={hero.heroTitle || title} fill sizes="420px" className="object-contain" unoptimized />
+                </div>
+              ) : null}
+              </div>
+            ) : (
+              <>
+                <p className="blog-post-hero__category">{previewPost.category}</p>
+                <h1 className="page-hero__title blog-hero__title">{hero.heroTitle || previewPost.title}</h1>
+                <p className="blog-post-hero__meta">{previewPost.author} · {formatDate(previewPost.publishedAt)}</p>
+              </>
+            )}
+          </CmsPublicHeroPreview>
+
+          <div className="cms-public-preview__body">
+            <BlogDetail post={previewPost} adjacent={{ previous: null, next: null }} relatedPosts={[]} />
+            <SocialGallery />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item?: BlogPost }) {
+export default function BlogForm({
+  mode,
+  item,
+  navigationItems,
+  menuSettings,
+}: {
+  mode: "create" | "edit";
+  item?: CmsBlogPost;
+  navigationItems: NavigationItem[];
+  menuSettings: SiteSettings["menu"];
+}) {
   const router = useRouter();
   const itemCategory = item?.category ?? "Procesos";
   const hasKnownCategory = categoryOptions.includes(itemCategory as (typeof categoryOptions)[number]);
-  const [step, setStep] = useState<StepKey>("structure");
+  const [step, setStep] = useState<StepKey>("hero");
   const [title, setTitle] = useState(item?.title ?? "");
   const [slug, setSlug] = useState(item?.slug ?? "");
   const [status, setStatus] = useState<BlogPostStatus>(item?.status ?? "draft");
@@ -244,6 +334,11 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
   const [seoTitle, setSeoTitle] = useState(item?.seo_title ?? "");
   const [seoDescription, setSeoDescription] = useState(item?.seo_description ?? "");
   const [seoImage, setSeoImage] = useState(item?.seo_image ?? "");
+  const [hero, setHero] = useState(() => normalizeHeroSettings(item?.hero, {
+    heroTitle: item?.title ?? "",
+    heroSubtitle: item?.category ?? "Bitácora",
+    heroImage: item?.featured_image_id ?? item?.seo_image ?? "/img/hero-bg.jpg",
+  }));
   const [blocks, setBlocks] = useState<BlogPostBlock[]>(item?.blocks ?? []);
   const [modal, setModal] = useState<{ type: "success" | "error"; title: string; message?: string; redirectToList?: boolean } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -254,6 +349,8 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
   );
   const editorTitle = title.trim() || (mode === "create" ? "Nuevo artículo" : item?.title || "Bitácora");
   const visibleBlockCount = blocks.filter((block) => block.is_visible).length;
+  const currentCategory = categoryMode === "custom" ? customCategory.trim() : categoryMode;
+  const previewPublishedAt = item?.published_at || item?.updated_at || item?.created_at || "2026-01-01T00:00:00.000Z";
 
   function addBlock(type: BlogPostBlockType = "text") {
     setBlocks((current) => [...current, newBlock(type, current.length)]);
@@ -316,6 +413,11 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
         seo_title: seoTitle,
         seo_description: seoDescription,
         seo_image: seoImage,
+        hero: normalizeHeroSettings(hero, {
+          heroTitle: title,
+          heroSubtitle: category || "Bitácora",
+          heroImage: featuredImageId || seoImage || "/img/hero-bg.jpg",
+        }),
         blocks: blocks.map((block, i) => ({ ...block, sort_order: i })),
       }),
     });
@@ -365,7 +467,7 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
         <div className="cms-page-editor-actions">
           <Link className="secondary-btn" href="/admin/bitacora">Volver</Link>
           <button type="button" className="secondary-btn cms-outline-accent" onClick={() => save("draft")} disabled={isLoading}>
-            {isLoading ? "Guardando..." : "Guardar boceto"}
+            {isLoading ? "Guardando..." : "Borrador"}
           </button>
           <button type="button" className="primary-btn" onClick={() => save("published")} disabled={isLoading}>
             {isLoading ? "Publicando..." : "Publicar"}
@@ -374,6 +476,9 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
       </header>
 
       <nav className="cms-editor-tabs" aria-label="Secciones del editor">
+        <button type="button" className={step === "hero" ? "is-active" : ""} onClick={() => setStep("hero")}>
+          Hero
+        </button>
         <button type="button" className={step === "structure" ? "is-active" : ""} onClick={() => setStep("structure")}>
           Estructura
         </button>
@@ -383,7 +488,14 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
       </nav>
 
       <div className="cms-editor-main">
-        {step === "structure" ? (
+        {step === "hero" ? (
+          <SharedHeroEditor
+            details={hero}
+            titleFallback={title || "Título de la bitácora"}
+            subtitleFallback={categoryMode === "custom" ? customCategory : categoryMode}
+            onChange={(next) => setHero((current) => ({ ...current, ...next }))}
+          />
+        ) : step === "structure" ? (
           <div className="space-y-6">
             <section className="form-block cms-editor-card">
               <div className="cms-editor-card__head">
@@ -424,11 +536,17 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
                   <h3>Componente superior de /blog</h3>
                 </div>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <SwitchField checked={isFeatured} onChange={setIsFeatured} label="Mostrar en destacados" description="Aparecerá en el carrusel de destacados." />
-                <TextField label="Orden destacado" type="number" value={featuredOrder} onChange={(event) => setFeaturedOrder(Number(event.target.value))} />
-                <div className="md:col-span-2">
-                  <RichTextField label="Texto para destacado" value={featuredExcerpt} onChange={setFeaturedExcerpt} placeholder={excerpt} minHeight="150px" />
+              <div className="cms-featured-editor">
+                <div className="cms-featured-editor__controls">
+                  <SwitchField checked={isFeatured} onChange={setIsFeatured} label="Mostrar en destacados" description="Aparecerá en el carrusel superior de /blog." />
+                  <TextField label="Orden destacado" type="number" value={featuredOrder} onChange={(event) => setFeaturedOrder(Number(event.target.value))} />
+                  <div className="cms-featured-editor__state" data-active={isFeatured ? "true" : "false"}>
+                    <span>{isFeatured ? "Visible en destacados" : "Oculto en destacados"}</span>
+                    <strong>{featuredOrder || 0}</strong>
+                  </div>
+                </div>
+                <div className="cms-featured-editor__copy">
+                  <RichTextField label="Texto para destacado" value={featuredExcerpt} onChange={setFeaturedExcerpt} placeholder={excerpt} minHeight="170px" />
                 </div>
               </div>
             </section>
@@ -527,15 +645,37 @@ export default function BlogForm({ mode, item }: { mode: "create" | "edit"; item
           </div>
         ) : (
           <div className="space-y-6">
-            <ArticlePreview title={title} excerpt={excerpt} cover={featuredImageId} blocks={blocks} />
+            <BlogPublicPreview
+              title={title}
+              excerpt={excerpt}
+              cover={featuredImageId}
+              blocks={blocks}
+              hero={hero}
+              category={currentCategory || "Procesos"}
+              slug={slug}
+              status={status}
+              isFeatured={isFeatured}
+              featuredOrder={featuredOrder}
+              featuredExcerpt={featuredExcerpt}
+              visibleInListing={visibleInListing}
+              sortOrder={sortOrder}
+              seoTitle={seoTitle}
+              seoDescription={seoDescription}
+              publishedAt={previewPublishedAt}
+              navigationItems={navigationItems}
+              menuSettings={menuSettings}
+            />
           </div>
         )}
       </div>
 
       <div className="admin-sticky-actionbar">
         <span className="admin-sticky-actionbar__meta">{readingTime} min de lectura · {visibleBlockCount} bloques visibles</span>
+        <button type="button" className="secondary-btn" onClick={() => setStep("preview")}>
+          Vista previa
+        </button>
         <button type="button" className="secondary-btn" onClick={() => save("draft")} disabled={isLoading}>
-          {isLoading ? "Guardando..." : "Guardar boceto"}
+          {isLoading ? "Guardando..." : "Borrador"}
         </button>
         <button type="button" className="primary-btn" onClick={() => save("published")} disabled={isLoading}>
           {isLoading ? "Publicando..." : "Publicar"}

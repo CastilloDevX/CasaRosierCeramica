@@ -1,4 +1,4 @@
-import Link from "next/link"; import AdminShell from "@/components/admin/AdminShell"; import TestimonialsTable from "@/components/admin/TestimonialsTable"; import SectionEmptyState from "@/components/admin/SectionEmptyState"; import { getTestimonials } from "@/lib/cms/testimonials";
+import Link from "@/components/admin/AdminLink"; import AdminShell from "@/components/admin/AdminShell"; import TestimonialsTable from "@/components/admin/TestimonialsTable"; import SectionEmptyState from "@/components/admin/SectionEmptyState"; import { getTestimonials } from "@/lib/cms/testimonials";
 
 export default async function Page({ searchParams }: { searchParams?: { status?: string } }) {
   const items = await getTestimonials(); const status = searchParams?.status || "all";

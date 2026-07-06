@@ -5,6 +5,7 @@ import type { SiteSettings } from "@/lib/cms/settings";
 import type { Menu } from "@/lib/cms/types";
 import SettingsSection from "./SettingsSection";
 import MediaSelectField from "./MediaSelectField";
+import ColorPickerField from "./ColorPickerField";
 
 type EditableMenuItem = {
   id?: string;
@@ -203,38 +204,24 @@ export default function SettingsForm({ initial, initialMenu }: { initial: SiteSe
             onChange={(url) => updateSection("menu", { header_logo_url: url })}
           />
           <div className="grid-2">
-            <label className="field">
-              <span>Fondo sticky</span>
-              <input
-                type="color"
-                value={settings.menu.scroll_menu_background_color}
-                onChange={(e) => updateSection("menu", { scroll_menu_background_color: e.target.value })}
-              />
-            </label>
-            <label className="field">
-              <span>Texto sticky</span>
-              <input
-                type="color"
-                value={settings.menu.scroll_menu_text_color}
-                onChange={(e) => updateSection("menu", { scroll_menu_text_color: e.target.value })}
-              />
-            </label>
-            <label className="field">
-              <span>Icono sticky</span>
-              <input
-                type="color"
-                value={settings.menu.scroll_menu_icon_color}
-                onChange={(e) => updateSection("menu", { scroll_menu_icon_color: e.target.value })}
-              />
-            </label>
-            <label className="field">
-              <span>Logo sticky</span>
-              <input
-                type="color"
-                value={settings.menu.scroll_menu_logo_tint_color}
-                onChange={(e) => updateSection("menu", { scroll_menu_logo_tint_color: e.target.value })}
-              />
-            </label>
+            <ColorPickerField
+              label="Fondo sticky"
+              value={settings.menu.scroll_menu_background_color}
+              onChange={(value) => updateSection("menu", { scroll_menu_background_color: value })}
+            />
+            <ColorPickerField
+              label="Texto e íconos sticky"
+              value={settings.menu.scroll_menu_text_color}
+              onChange={(value) => updateSection("menu", {
+                scroll_menu_text_color: value,
+                scroll_menu_icon_color: value,
+              })}
+            />
+            <ColorPickerField
+              label="Logo sticky"
+              value={settings.menu.scroll_menu_logo_tint_color}
+              onChange={(value) => updateSection("menu", { scroll_menu_logo_tint_color: value })}
+            />
             <label className="checkbox-field">
               <input
                 type="checkbox"

@@ -51,6 +51,7 @@ export interface ClassOfferingContent {
   participationSectionTitle: string;
   participationContent: string;
   paymentMethods: string;
+  paymentMethodsList: string[];
   contactWhatsapp: string;
   contactEmail: string;
   extraInfo: string;
@@ -66,11 +67,45 @@ export interface ClassOfferingContent {
   modules: ClassOfferingModule[];
 }
 
-export interface ClassOfferingDetails {
-  heroVariant: "image" | "text";
+export type ClassHeroVariant = "image" | "text" | "presentation";
+
+export interface CmsHeroSettings {
+  heroVariant: ClassHeroVariant;
   heroTitle: string;
   heroSubtitle: string;
+  heroPresentationText: string;
+  heroPresentationTextColor: string;
+  heroPresentationImage: string;
   heroMenuTone: "light" | "dark";
+  heroMenuColor: string;
+  heroMenuScale: number;
+  heroLogoPositionX: string;
+  heroLogoPositionY: string;
+  heroLogoWidth: string;
+  heroLogoTabletPositionX: string;
+  heroLogoTabletPositionY: string;
+  heroLogoTabletWidth: string;
+  heroLogoMobilePositionX: string;
+  heroLogoMobilePositionY: string;
+  heroLogoMobileWidth: string;
+  heroMenuPositionY: string;
+  heroMenuTabletPositionY: string;
+  heroMenuMobilePositionY: string;
+  heroImage: string;
+  titleImage: string;
+  titleImageSecondary: string;
+}
+
+export interface ClassOfferingDetails {
+  heroVariant: ClassHeroVariant;
+  heroTitle: string;
+  heroSubtitle: string;
+  heroPresentationText: string;
+  heroPresentationTextColor: string;
+  heroPresentationImage: string;
+  heroMenuTone: "light" | "dark";
+  heroMenuColor: string;
+  heroMenuScale: number;
   heroLogoPositionX: string;
   heroLogoPositionY: string;
   heroLogoWidth: string;
@@ -86,6 +121,8 @@ export interface ClassOfferingDetails {
   ctaHref: string;
   ctaConsultHref: string;
   ctaEnrollHref: string;
+  showConsultCta: boolean;
+  showEnrollCta: boolean;
   highlightDescription: string;
   homeExcerpt: string;
   durationText: string;
@@ -770,10 +807,34 @@ export interface BlogPost {
   seo_title: string;
   seo_description: string;
   seo_image: string;
+  hero: CmsHeroSettings;
   blocks: BlogPostBlock[];
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+}
+
+export interface StudioPageSettings {
+  id: string;
+  status: "draft" | "published";
+  hero: CmsHeroSettings;
+  introContent: string;
+  showIdeaPromptSection: boolean;
+  seo_title: string;
+  seo_description: string;
+  seo_image: string;
+  updated_at: string;
+}
+
+export interface BlogPageSettings {
+  id: string;
+  status: "draft" | "published";
+  hero: CmsHeroSettings;
+  showIdeaPromptSection: boolean;
+  seo_title: string;
+  seo_description: string;
+  seo_image: string;
+  updated_at: string;
 }
 
 /* ── Product ── */

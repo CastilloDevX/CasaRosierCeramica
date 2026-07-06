@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import AdminLayoutShell from "@/components/layout/AdminLayout";
 import { requireAdminProfile } from "@/lib/auth/supabase-auth";
 
 export default async function AdminLayout({
@@ -11,7 +12,7 @@ export default async function AdminLayout({
   if (!session) redirect("/auth");
 
   return (
-    <>
+    <AdminLayoutShell session={session}>
       {/* Material Symbols has no next/font equivalent and is only needed by the CMS. */}
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link
@@ -19,6 +20,6 @@ export default async function AdminLayout({
         rel="stylesheet"
       />
       {children}
-    </>
+    </AdminLayoutShell>
   );
 }

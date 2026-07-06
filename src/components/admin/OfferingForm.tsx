@@ -11,6 +11,7 @@ import Textarea from "@/components/ui/Textarea";
 import Checkbox from "@/components/ui/Checkbox";
 import Button from "@/components/ui/Button";
 import MediaLibraryModal from "./MediaLibraryModal";
+import RichTextField from "./RichTextField";
 
 function defaultOffering(type?: string): Partial<Offering> {
   return {
@@ -56,6 +57,8 @@ export default function OfferingForm({
   const [isLoading, setIsLoading] = useState(false);
   const [coverUrl, setCoverUrl] = useState(current.cover_image_url);
   const [galleryUrls, setGalleryUrls] = useState<string[]>(current.gallery);
+  const [excerpt, setExcerpt] = useState(current.excerpt);
+  const [description, setDescription] = useState(current.description);
   const [pickerFor, setPickerFor] = useState<"cover" | "gallery" | null>(null);
   const [headers, setHeaders] = useState<Header[]>([]);
   const [headerId, setHeaderId] = useState(current.header_id ?? "");
@@ -90,8 +93,8 @@ export default function OfferingForm({
       title: String(formData.get("title") || "").trim(),
       slug: String(formData.get("slug") || "").trim(),
       subtitle: String(formData.get("subtitle") || "").trim(),
-      excerpt: String(formData.get("excerpt") || "").trim(),
-      description: String(formData.get("description") || "").trim(),
+      excerpt: excerpt.trim(),
+      description: description.trim(),
       price: String(formData.get("price") || "").trim(),
       currency: String(formData.get("currency") || "USD").trim(),
       status: String(formData.get("status") || "draft").trim(),
@@ -183,10 +186,10 @@ export default function OfferingForm({
               <Input label="Subtítulo" name="subtitle" defaultValue={current.subtitle} />
             </div>
             <div className="md:col-span-2">
-              <Textarea label="Descripción corta" name="excerpt" rows={3} defaultValue={current.excerpt} />
+              <RichTextField label="Descripción corta" name="excerpt" value={excerpt} onChange={setExcerpt} minHeight="130px" />
             </div>
             <div className="md:col-span-2">
-              <Textarea label="Descripción completa" name="description" rows={7} defaultValue={current.description} />
+              <RichTextField label="Descripción completa" name="description" value={description} onChange={setDescription} minHeight="240px" />
             </div>
           </div>
         </section>

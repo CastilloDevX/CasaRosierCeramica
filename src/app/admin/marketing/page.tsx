@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import AdminShell from "@/components/admin/AdminShell";
 import MarketingStatCard from "@/components/admin/marketing/MarketingStatCard";
 import EmptyMarketingState from "@/components/admin/marketing/EmptyMarketingState";

@@ -28,6 +28,19 @@ const SINGLETON_IDS = {
   legal: "00000000-0000-0000-0000-000000000003",
 };
 
+const READ_CACHE_TTL_MS = 10_000;
+const readCache = new Map<string, { value: unknown; expiresAt: number }>();
+
+function getCachedRead<T>(filename: string) {
+  const cached = readCache.get(filename);
+  if (!cached || cached.expiresAt <= Date.now()) return null;
+  return cached.value as T;
+}
+
+function setCachedRead(filename: string, value: unknown) {
+  readCache.set(filename, { value, expiresAt: Date.now() + READ_CACHE_TTL_MS });
+}
+
 export function resolveDataPath(filename: string) {
   return `supabase:${filename}`;
 }
@@ -200,23 +213,33 @@ function legalToRow(settings: JsonRecord) {
 }
 
 export async function readJsonFile<T>(filename: string, fallback: T): Promise<T> {
-  try {
-    if (filename === "blog-posts.json") return await readWithChildren("blog_posts", "blog_post_blocks", "blog_post_id", "blocks") as T;
-    if (filename === "forms.json") return await readWithChildren("forms", "form_fields", "form_id", "fields") as T;
-    if (filename === "landing-pages.json") return await readWithChildren("landing_pages", "landing_page_blocks", "landing_page_id", "blocks") as T;
-    if (filename === "menus.json") return await readWithChildren("menus", "menu_items", "menu_id", "items") as T;
-    if (filename === "social-galleries.json") return await readWithChildren("social_galleries", "social_gallery_items", "social_gallery_id", "items") as T;
-    if (filename === "orders.json") return await readWithChildren("orders", "order_items", "order_id", "items") as T;
+  const cached = getCachedRead<T>(filename);
+  if (cached) return cached;
 
-    const table = SIMPLE_FILES[filename];
-    if (!table) return fallback;
-    return await selectAll(table) as T;
+  try {
+    let value: T;
+    if (filename === "blog-posts.json") value = await readWithChildren("blog_posts", "blog_post_blocks", "blog_post_id", "blocks") as T;
+    else if (filename === "forms.json") value = await readWithChildren("forms", "form_fields", "form_id", "fields") as T;
+    else if (filename === "landing-pages.json") value = await readWithChildren("landing_pages", "landing_page_blocks", "landing_page_id", "blocks") as T;
+    else if (filename === "menus.json") value = await readWithChildren("menus", "menu_items", "menu_id", "items") as T;
+    else if (filename === "social-galleries.json") value = await readWithChildren("social_galleries", "social_gallery_items", "social_gallery_id", "items") as T;
+    else if (filename === "orders.json") value = await readWithChildren("orders", "order_items", "order_id", "items") as T;
+    else {
+      const table = SIMPLE_FILES[filename];
+      if (!table) return fallback;
+      value = await selectAll(table) as T;
+    }
+
+    setCachedRead(filename, value);
+    return value;
   } catch {
     return fallback;
   }
 }
 
 export async function writeJsonFile<T>(filename: string, value: T) {
+  setCachedRead(filename, value);
+
   if (filename === "blog-posts.json") return writeWithChildren("blog_posts", "blog_post_blocks", "blog_post_id", "blocks", value);
   if (filename === "forms.json") return writeWithChildren("forms", "form_fields", "form_id", "fields", value);
   if (filename === "landing-pages.json") return writeWithChildren("landing_pages", "landing_page_blocks", "landing_page_id", "blocks", value);

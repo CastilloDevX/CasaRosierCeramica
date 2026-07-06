@@ -21,6 +21,8 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   if (body.action === "publish") { const updated = await updateBlogPost(id, { status: "published", published_at: item.published_at || new Date().toISOString() }); return NextResponse.json({ post: updated }); }
   if (body.action === "draft") { const updated = await updateBlogPost(id, { status: "draft" }); return NextResponse.json({ post: updated }); }
   if (body.action === "archive") { const updated = await updateBlogPost(id, { status: "archived" }); return NextResponse.json({ post: updated }); }
+  if (body.action === "feature") { const updated = await updateBlogPost(id, { is_featured: true, featured_order: Number(body.featured_order ?? (item.featured_order || 99)) }); return NextResponse.json({ post: updated }); }
+  if (body.action === "unfeature") { const updated = await updateBlogPost(id, { is_featured: false }); return NextResponse.json({ post: updated }); }
   return NextResponse.json({ error: "Acción no válida" }, { status: 400 });
 }
 export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {

@@ -1,20 +1,20 @@
+import Image from "next/image";
 import { TestimonialSlider } from "@/components/home/TestimonialSlider";
-import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
+import { HeaderInterno } from "@/components/layout/HeaderInterno";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import { IdeaPromptSection } from "@/features/shared/contextual-sections/IdeaPromptSection";
 import { SitePage } from "@/features/shared/layout/SitePage";
 import { StudioProfileBlock } from "@/features/studio/StudioProfileBlock";
 import { getPublicTestimonials } from "@/lib/cms/public-content";
-import { getPublicNavigationItems } from "@/lib/cms/navigation-public";
-import { getSettings } from "@/lib/cms/settings";
+import { getStudioPageSettings } from "@/lib/cms/studio-page";
 import { getTeachers } from "@/lib/cms/teachers";
 import { assetPath } from "@/lib/assets";
 
 export async function StudioPage() {
-  const [cmsTestimonials, teachers, navigationItems, settings] = await Promise.all([
+  const [cmsTestimonials, teachers, pageSettings] = await Promise.all([
     getPublicTestimonials(),
     getTeachers(),
-    getPublicNavigationItems("main"),
-    getSettings(),
+    getStudioPageSettings(),
   ]);
   const testimonials = cmsTestimonials
     .map((item) => ({
@@ -26,50 +26,68 @@ export async function StudioPage() {
   const specialists = teachers
     .filter((teacher) => teacher.status === "published" && teacher.deleted_at === null)
     .sort((a, b) => a.sort_order - b.sort_order);
+  const hero = pageSettings.hero;
 
   return (
     <SitePage
       bodyClass="studio-page"
       header={
-        <header className="studio-header">
-          <NavbarGlobal
-            navigationItems={navigationItems}
-            logoUrl={settings.menu.header_logo_url}
-            scrollMenuBackgroundColor={settings.menu.scroll_menu_background_color}
-            scrollMenuTextColor={settings.menu.scroll_menu_text_color}
-          />
-        </header>
+        <HeaderInterno
+          variant={hero.heroVariant}
+          image={hero.heroImage}
+          height="large"
+          overlayTitle
+          heroMenuTone={hero.heroMenuTone}
+          heroMenuColor={hero.heroMenuColor}
+          heroMenuScale={hero.heroMenuScale}
+          heroLogoPositionX={hero.heroLogoPositionX}
+          heroLogoPositionY={hero.heroLogoPositionY}
+          heroLogoWidth={hero.heroLogoWidth}
+          heroLogoTabletPositionX={hero.heroLogoTabletPositionX}
+          heroLogoTabletPositionY={hero.heroLogoTabletPositionY}
+          heroLogoTabletWidth={hero.heroLogoTabletWidth}
+          heroLogoMobilePositionX={hero.heroLogoMobilePositionX}
+          heroLogoMobilePositionY={hero.heroLogoMobilePositionY}
+          heroLogoMobileWidth={hero.heroLogoMobileWidth}
+          heroMenuPositionY={hero.heroMenuPositionY}
+          heroMenuTabletPositionY={hero.heroMenuTabletPositionY}
+          heroMenuMobilePositionY={hero.heroMenuMobilePositionY}
+        >
+          {hero.heroVariant === "presentation" ? (
+            <div className="page-hero__presentation">
+              <div className="page-hero__presentation-text" style={{ color: hero.heroPresentationTextColor || "#FFFFFF" }}>
+                <MarkdownContent source={hero.heroPresentationText || hero.heroTitle || "El Estudio"} className="page-hero__presentation-copy" />
+              </div>
+              {hero.heroPresentationImage ? (
+                <div className="page-hero__presentation-image">
+                  <Image src={hero.heroPresentationImage} alt={hero.heroTitle || "El Estudio"} fill sizes="420px" className="object-contain" unoptimized />
+                </div>
+              ) : null}
+            </div>
+          ) : hero.heroVariant === "image" ? (
+            <div className="page-hero__script-stack">
+              {hero.titleImage ? (
+                <Image src={hero.titleImage} alt={hero.heroTitle || "El Estudio"} fill sizes="520px" className="page-hero__script-image page-hero__script-image--back" unoptimized />
+              ) : null}
+              {hero.titleImageSecondary ? (
+                <Image src={hero.titleImageSecondary} alt={hero.heroTitle || "El Estudio"} fill sizes="520px" className="page-hero__script-image page-hero__script-image--front" unoptimized />
+              ) : null}
+            </div>
+          ) : (
+            <div>
+              <h1 className="page-hero__title">{hero.heroTitle || "El Estudio"}</h1>
+              {hero.heroSubtitle ? <p className="page-hero__eyebrow">{hero.heroSubtitle}</p> : null}
+            </div>
+          )}
+        </HeaderInterno>
       }
     >
       <section
         className="studio-editorial-intro section is-visible"
-        aria-labelledby="studio-lead-quote-title"
+        aria-label="Introducción del estudio"
       >
         <div className="studio-editorial-intro__inner">
-          <h2
-            className="studio-editorial-intro__text reveal-text is-visible"
-            id="studio-lead-quote-title"
-          >
-            <span className="reveal-line">
-              <span className="reveal-line-inner">Somos lo</span>
-            </span>
-            <span className="reveal-line">
-              <span className="reveal-line-inner">que somos y</span>
-            </span>
-            <span className="reveal-line">
-              <span className="reveal-line-inner">aqui estamos</span>
-            </span>
-          </h2>
-          <p className="studio-editorial-intro__eyebrow reveal-text is-visible">
-            <span className="reveal-line">
-              <span className="reveal-line-inner">En Barcelona</span>
-            </span>
-          </p>
-          <p className="studio-editorial-intro__lede">
-            Un espacio para aprender ceramica con calma, explorar tecnicas,
-            tocar la materia y encontrar una practica guiada que acompana cada
-            profe el primer gesto.
-          </p>
+          <MarkdownContent className="studio-editorial-intro__lede" source={pageSettings.introContent} />
         </div>
       </section>
       <section
@@ -88,7 +106,7 @@ export async function StudioPage() {
           ))}
         </div>
       </section>
-      <IdeaPromptSection context="studio" />
+      {pageSettings.showIdeaPromptSection ? <IdeaPromptSection context="studio" /> : null}
       <TestimonialSlider testimonials={testimonials} />
     </SitePage>
   );

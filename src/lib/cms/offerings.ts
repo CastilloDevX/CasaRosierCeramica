@@ -62,6 +62,14 @@ function uniqueSlug(items: Offering[], baseSlug: string, currentId?: string) {
   return `${baseSlug}-${counter}`;
 }
 
+function duplicateSlugBase(slug: string, items: Offering[]) {
+  const match = slug.match(/^(.*)-(\d+)$/);
+  if (match?.[1] && items.some((item) => item.slug === match[1])) {
+    return match[1];
+  }
+  return slug;
+}
+
 function normalizeTextArray(value: unknown) {
   if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
   if (typeof value === "string") return value.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean);
@@ -75,8 +83,9 @@ function normalizeDetails(value: unknown) {
 
 function normalizeOffering(input: OfferingInput, existing?: Offering, allItems: Offering[] = []) {
   const title = String(input.title ?? existing?.title ?? "").trim();
-  const slugBase = String(input.slug ?? existing?.slug ?? "").trim() || toSlug(title);
-  const slug = uniqueSlug(allItems, slugBase || toSlug(title), existing?.id);
+  const rawSlug = String(input.slug ?? existing?.slug ?? "").trim();
+  const slugBase = toSlug(rawSlug) || toSlug(title) || "offering";
+  const slug = uniqueSlug(allItems, slugBase, existing?.id);
   const now = new Date().toISOString();
   const type = input.type ?? existing?.type;
   const status = input.status ?? existing?.status ?? "draft";
@@ -161,6 +170,12 @@ async function upsertToSupabase(item: Offering): Promise<void> {
   } catch { /* best-effort */ }
 }
 
+async function saveToSupabase(item: Offering): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase.from(TABLE).upsert(offeringToRow(item), { onConflict: "id" });
+  if (error) throw error;
+}
+
 async function seedSupabase(items: Offering[]): Promise<void> {
   if (items.length === 0) return;
   try {
@@ -215,7 +230,7 @@ export async function getOfferingBySlug(slug: string) {
 }
 
 export async function createOffering(data: OfferingInput) {
-  const offerings = await readJsonFile<Offering[]>(FILE_NAME, []);
+  const offerings = await getOfferings();
   const next = normalizeOffering(data, undefined, offerings);
 
   if (!next.title || !next.type) {
@@ -223,29 +238,27 @@ export async function createOffering(data: OfferingInput) {
   }
 
   const nextItems = [next, ...offerings];
-  await writeJsonFile(FILE_NAME, nextItems);
+  await saveToSupabase(next);
   cacheOfferings(nextItems);
-  await upsertToSupabase(next);
-  await logAction({ action: "create", entity_type: "offering", entity_id: next.id, entity_title: next.title, new_data: next });
+  void logAction({ action: "create", entity_type: "offering", entity_id: next.id, entity_title: next.title, new_data: next });
   return next;
 }
 
 export async function updateOffering(id: string, data: OfferingInput) {
-  const offerings = await readJsonFile<Offering[]>(FILE_NAME, []);
+  const offerings = await getOfferings();
   const index = offerings.findIndex((item) => item.id === id);
   if (index === -1) return null;
 
   const old = offerings[index];
   const next = normalizeOffering(data, old, offerings);
   offerings[index] = next;
-  await writeJsonFile(FILE_NAME, offerings);
+  await saveToSupabase(next);
   cacheOfferings(offerings);
-  await upsertToSupabase(next);
   if (old.status !== next.status) {
-    if (next.status === "published") await logAction({ action: "publish", entity_type: "offering", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
-    else if (old.status === "published") await logAction({ action: "unpublish", entity_type: "offering", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
+    if (next.status === "published") void logAction({ action: "publish", entity_type: "offering", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
+    else if (old.status === "published") void logAction({ action: "unpublish", entity_type: "offering", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
   }
-  await logAction({ action: "update", entity_type: "offering", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
+  void logAction({ action: "update", entity_type: "offering", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
   return next;
 }
 
@@ -255,15 +268,14 @@ export async function duplicateOffering(id: string) {
   if (!original) return null;
   const duplicateData: OfferingInput = { ...original, id: undefined, deleted_at: null };
   const copy = normalizeOffering(
-    { ...duplicateData, title: `${original.title} (copia)`, slug: "", status: "draft", deleted_at: null },
+    { ...duplicateData, title: `${original.title} (copia)`, slug: duplicateSlugBase(original.slug, offerings), status: "draft", deleted_at: null },
     undefined,
     offerings,
   );
   const nextItems = [copy, ...offerings];
-  await writeJsonFile(FILE_NAME, nextItems);
+  await saveToSupabase(copy);
   cacheOfferings(nextItems);
-  await upsertToSupabase(copy);
-  await logAction({ action: "duplicate", entity_type: "offering", entity_id: original.id, entity_title: original.title, new_data: copy });
+  void logAction({ action: "duplicate", entity_type: "offering", entity_id: original.id, entity_title: original.title, new_data: copy });
   return copy;
 }
 

@@ -1,4 +1,4 @@
-import Link from "next/link"; import AdminShell from "@/components/admin/AdminShell"; import FootersTable from "@/components/admin/FootersTable"; import SectionEmptyState from "@/components/admin/SectionEmptyState"; import { getFooters } from "@/lib/cms/footers";
+import Link from "@/components/admin/AdminLink"; import AdminShell from "@/components/admin/AdminShell"; import FootersTable from "@/components/admin/FootersTable"; import SectionEmptyState from "@/components/admin/SectionEmptyState"; import { getFooters } from "@/lib/cms/footers";
 
 export default async function Page({ searchParams }: { searchParams?: { status?: string } }) {
   const items = await getFooters(); const status = searchParams?.status || "all";

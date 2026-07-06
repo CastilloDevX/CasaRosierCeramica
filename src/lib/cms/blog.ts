@@ -3,8 +3,9 @@ import { createAdminClient } from "../supabase/admin";
 import { addTrashItem, getCurrentUserEmail, getTrashItemByEntity, removeTrashItem } from "./trash";
 import { readJsonFile, writeJsonFile } from "./local-storage";
 import { isBlogPostBlockType, isBlogPostStatus } from "./types";
-import type { BlogPost, BlogPostBlock, BlogPostBlockType, BlogPostStatus } from "./types";
+import type { BlogPost, BlogPostBlock } from "./types";
 import { logAction } from "./history-logs";
+import { normalizeHeroSettings } from "./hero-settings";
 
 const TABLE = "blog_posts";
 const BLOCK_TABLE = "blog_post_blocks";
@@ -14,6 +15,16 @@ type BlogInput = Partial<Omit<BlogPost, "id" | "created_at" | "updated_at" | "de
   id?: string;
   deleted_at?: string | null;
 };
+
+function parseContentEnvelope(value: unknown) {
+  if (typeof value !== "string" || !value.trim().startsWith("{")) return { body: String(value ?? ""), hero: undefined as unknown };
+  try {
+    const parsed = JSON.parse(value) as { body?: unknown; hero?: unknown };
+    return { body: String(parsed.body ?? ""), hero: parsed.hero };
+  } catch {
+    return { body: String(value ?? ""), hero: undefined as unknown };
+  }
+}
 
 function toSlug(value: string) {
   return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
@@ -66,7 +77,15 @@ function normalizePost(input: BlogInput, existing?: BlogPost, allItems: BlogPost
   if (!isBlogPostStatus(status)) throw new Error("Estado no válido.");
 
   const blocks = normalizeBlocks(input.blocks ?? existing?.blocks ?? []);
-  const content = String(input.content ?? existing?.content ?? "").trim();
+  const existingEnvelope = parseContentEnvelope(existing?.content);
+  const inputEnvelope = parseContentEnvelope(input.content);
+  const contentBody = String(inputEnvelope.body || existingEnvelope.body || "").trim();
+  const hero = normalizeHeroSettings(input.hero ?? existing?.hero ?? inputEnvelope.hero ?? existingEnvelope.hero, {
+    heroTitle: title,
+    heroSubtitle: String(input.category ?? existing?.category ?? "Bitácora"),
+    heroImage: String(input.featured_image_id ?? existing?.featured_image_id ?? ""),
+  });
+  const content = contentBody;
   const readingTime = input.reading_time ?? estimateReadingTime(content, blocks);
 
   return {
@@ -90,6 +109,7 @@ function normalizePost(input: BlogInput, existing?: BlogPost, allItems: BlogPost
     seo_title: String(input.seo_title ?? existing?.seo_title ?? "").trim(),
     seo_description: String(input.seo_description ?? existing?.seo_description ?? "").trim(),
     seo_image: String(input.seo_image ?? existing?.seo_image ?? "").trim(),
+    hero,
     blocks,
     created_at: existing?.created_at ?? now,
     updated_at: now,
@@ -100,7 +120,7 @@ function normalizePost(input: BlogInput, existing?: BlogPost, allItems: BlogPost
 // ── Mapping helpers ──
 
 function rowToBlogPostBlock(row: Record<string, unknown>): BlogPostBlock {
-  const { blog_post_id, ...rest } = row;
+  const { blog_post_id: _blogPostId, ...rest } = row;
   return rest as unknown as BlogPostBlock;
 }
 
@@ -109,8 +129,10 @@ function blogPostBlockToRow(postId: string, block: BlogPostBlock): Record<string
 }
 
 function rowToBlogPost(row: Record<string, unknown>, blocks: BlogPostBlock[] = []): BlogPost {
+  const envelope = parseContentEnvelope(row.content);
   return {
     ...row,
+    content: envelope.body,
     tags: Array.isArray(row.tags) ? row.tags : [],
     is_featured: Boolean(row.is_featured),
     featured_order: Number(row.featured_order ?? 0),
@@ -118,13 +140,18 @@ function rowToBlogPost(row: Record<string, unknown>, blocks: BlogPostBlock[] = [
     visible_in_listing: row.visible_in_listing !== false,
     sort_order: Number(row.sort_order ?? 0),
     published_at: row.published_at ?? "",
+    hero: normalizeHeroSettings(row.hero ?? envelope.hero, {
+      heroTitle: String(row.title ?? ""),
+      heroSubtitle: String(row.category ?? "Bitácora"),
+      heroImage: String(row.featured_image_id ?? row.seo_image ?? ""),
+    }),
     blocks,
   } as unknown as BlogPost;
 }
 
 function blogPostToRow(post: BlogPost): Record<string, unknown> {
-  const { blocks, ...rest } = post;
-  return rest;
+  const { blocks: _blocks, hero, content, ...rest } = post;
+  return { ...rest, content, hero };
 }
 
 // ── Supabase helpers ──
@@ -190,6 +217,10 @@ async function fetchPostWithBlocks(
   return null;
 }
 
+async function readBlogPostsForMutation() {
+  return (await readAllFromSupabase()) ?? await readJsonFile<BlogPost[]>(FILE_NAME, []);
+}
+
 // ── Public API ──
 
 export async function getBlogPosts() {
@@ -219,7 +250,7 @@ export async function getBlogPostBySlug(slug: string) {
 }
 
 export async function createBlogPost(data: BlogInput) {
-  const items = await readJsonFile<BlogPost[]>(FILE_NAME, []);
+  const items = await readBlogPostsForMutation();
   const next = normalizePost(data, undefined, items);
   await writeJsonFile(FILE_NAME, [next, ...items]);
   await upsertPost(next);
@@ -229,7 +260,7 @@ export async function createBlogPost(data: BlogInput) {
 }
 
 export async function updateBlogPost(id: string, data: BlogInput) {
-  const items = await readJsonFile<BlogPost[]>(FILE_NAME, []);
+  const items = await readBlogPostsForMutation();
   const index = items.findIndex((p) => p.id === id);
   if (index === -1) return null;
   const old = items[index];
@@ -248,7 +279,7 @@ export async function updateBlogPost(id: string, data: BlogInput) {
 }
 
 export async function duplicateBlogPost(id: string) {
-  const items = await readJsonFile<BlogPost[]>(FILE_NAME, []);
+  const items = await readBlogPostsForMutation();
   const original = items.find((p) => p.id === id);
   if (!original) return null;
   const copy = normalizePost({ ...original, title: `${original.title} (copia)`, slug: "", status: "draft", blocks: original.blocks.map((b) => ({ ...b, id: randomUUID() })) }, undefined, items);
@@ -261,7 +292,7 @@ export async function duplicateBlogPost(id: string) {
 
 export async function moveBlogPostToTrash(id: string, deletedBy?: string) {
   const dBy = deletedBy ?? await getCurrentUserEmail();
-  const items = await readJsonFile<BlogPost[]>(FILE_NAME, []);
+  const items = await readBlogPostsForMutation();
   const index = items.findIndex((p) => p.id === id);
   if (index === -1) return null;
   const current = items[index];
@@ -276,14 +307,14 @@ export async function moveBlogPostToTrash(id: string, deletedBy?: string) {
 }
 
 export async function restoreBlogPost(id: string) {
-  const items = await readJsonFile<BlogPost[]>(FILE_NAME, []);
+  const items = await readBlogPostsForMutation();
   const index = items.findIndex((p) => p.id === id);
   const trashItem = await getTrashItemByEntity(id);
   if (index === -1 && !trashItem) return null;
   const restored = trashItem?.restore_data && typeof trashItem.restore_data === "object"
     ? ({ ...(trashItem.restore_data as BlogPost), status: "draft", deleted_at: null, updated_at: new Date().toISOString() } as BlogPost)
     : ({ ...items[index], status: "draft", deleted_at: null, updated_at: new Date().toISOString() } as BlogPost);
-  if (index === -1) { const all = await readJsonFile<BlogPost[]>(FILE_NAME, []); all.unshift(restored); await writeJsonFile(FILE_NAME, all); }
+  if (index === -1) { items.unshift(restored); await writeJsonFile(FILE_NAME, items); }
   else { items[index] = restored; await writeJsonFile(FILE_NAME, items); }
   await upsertPost(restored);
   if (trashItem) await removeTrashItem(trashItem.id);
@@ -292,7 +323,7 @@ export async function restoreBlogPost(id: string) {
 }
 
 export async function deleteBlogPostPermanently(id: string) {
-  const items = await readJsonFile<BlogPost[]>(FILE_NAME, []);
+  const items = await readBlogPostsForMutation();
   const item = items.find((p) => p.id === id);
   const next = items.filter((p) => p.id !== id);
   if (next.length === items.length) return false;

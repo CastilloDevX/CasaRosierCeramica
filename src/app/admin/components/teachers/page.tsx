@@ -1,4 +1,4 @@
-import Link from "next/link"; import AdminShell from "@/components/admin/AdminShell"; import TeachersTable from "@/components/admin/TeachersTable"; import SectionEmptyState from "@/components/admin/SectionEmptyState"; import { getTeachers } from "@/lib/cms/teachers";
+import Link from "@/components/admin/AdminLink"; import AdminShell from "@/components/admin/AdminShell"; import TeachersTable from "@/components/admin/TeachersTable"; import SectionEmptyState from "@/components/admin/SectionEmptyState"; import { getTeachers } from "@/lib/cms/teachers";
 
 export default async function Page({ searchParams }: { searchParams?: { status?: string } }) {
   const items = await getTeachers(); const status = searchParams?.status || "all";

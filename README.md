@@ -13,7 +13,7 @@ El proyecto contiene dos superficies:
   reservas privadas, gift cards, blog, tienda y pagina de estudio.
 - CMS privado: panel administrativo bajo `/admin/*` para gestionar contenido,
   clases, formularios, mensajes, tienda, multimedia, menus, ajustes, marketing,
-  legal, auditoria y papelera.
+  legal, auditoria, papelera y paginas editoriales personalizables.
 
 El acceso administrativo inicia en `/auth`. El enlace publico "Administración"
 esta en el footer y envia al login. La credencial inicial local es:
@@ -68,7 +68,8 @@ Todas las rutas del CMS usan el prefijo `/admin`:
 
 - `/admin/dashboard`
 - `/admin/clases`, `/admin/workshops`, `/admin/experiencias`, `/admin/gift-cards`
-- `/admin/bitacora`, `/admin/pages`, `/admin/landing-pages`
+- `/admin/bitacora`, `/admin/estudio`, `/admin/el-estudio`, `/admin/pages`,
+  `/admin/landing-pages`
 - `/admin/formularios`, `/admin/mensajes`, `/admin/reservas`
 - `/admin/components/*`
 - `/admin/menu`, `/admin/media`
@@ -80,6 +81,21 @@ El diseno del CMS replica el panel fuente basado en Google Stitch/Material
 Design 3: sidebar fijo, paleta purpura-naranja, tipografia Manrope/Inter,
 Material Symbols, metric cards, tablas, acciones rapidas y botones con estados
 consistentes.
+
+### Editores de paginas publicas
+
+El CMS incluye editores completos para paginas publicas con hero personalizable,
+vista previa real y barra anclada de acciones:
+
+- Clases, Workshops, Experiencias y Gift Cards: hero con imagen, hero
+  tipografico y hero con presentacion; posiciones responsive de logo/menu;
+  adiciones opcionales y vista previa final.
+- El Estudio: pestañas de Hero, Especialistas, Texto libre, Adiciones y Vista
+  previa. El contenido se guarda en `studio_page_settings` y en `teachers`.
+- Bitacora: pestañas de Hero, Bitacoras, Adiciones y Vista previa. El contenido
+  se guarda en `blog_page_settings`, `blog_posts` y `blog_post_blocks`.
+- Papelera: filtros por entidad, fecha y buscador, con modal de confirmacion
+  para eliminacion definitiva.
 
 ## Autenticacion
 
@@ -112,6 +128,37 @@ para mantener el panel funcional durante desarrollo.
 
 Las migraciones SQL viven en `supabase/migrations/` e incluyen tablas de
 contenido, tienda, formularios, auditoria, perfiles, RLS y triggers.
+
+Cambios recientes de base de datos para los editores nuevos:
+
+- `022_rich_text_markdown_support.sql`: amplia campos editoriales a `text`.
+- `023_offering_cms_section_controls.sql`: convierte `offerings.details` a
+  `jsonb` para guardar controles de secciones y CTA.
+- `024_studio_page_settings.sql`: crea `studio_page_settings`.
+- `025_blog_post_hero_settings.sql`: agrega `blog_posts.hero` y migra hero
+  embebido en contenido antiguo cuando exista.
+- `026_blog_page_settings.sql`: crea `blog_page_settings`.
+- `027_page_settings_defaults.sql`: inserta defaults iniciales para Estudio y
+  Blog sin sobrescribir contenido ya guardado.
+
+Para aplicar migraciones al proyecto Supabase enlazado:
+
+```powershell
+$env:SUPABASE_ACCESS_TOKEN="tu_token_de_supabase"
+$env:SUPABASE_TELEMETRY_DISABLED="1"
+npx supabase db push --linked --yes
+```
+
+Para revisar que local y remoto esten sincronizados:
+
+```powershell
+$env:SUPABASE_ACCESS_TOKEN="tu_token_de_supabase"
+$env:SUPABASE_TELEMETRY_DISABLED="1"
+npx supabase migration list --linked
+```
+
+No guardes tokens de Supabase en el repositorio. Usalos solo como variables de
+entorno locales o secretos del proveedor de deploy.
 
 ## Scripts
 

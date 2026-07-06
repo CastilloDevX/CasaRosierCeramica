@@ -7,12 +7,14 @@ import { classNames } from "@/lib/utils";
 
 interface HeaderInternoProps {
   image?: string;
-  variant?: "image" | "text";
+  variant?: "image" | "text" | "presentation";
   eyebrow?: string;
   title?: string;
   height?: "small" | "medium" | "large";
   overlayTitle?: boolean;
   heroMenuTone?: "light" | "dark";
+  heroMenuColor?: string;
+  heroMenuScale?: number;
   heroLogoPositionX?: string;
   heroLogoPositionY?: string;
   heroLogoWidth?: string;
@@ -37,6 +39,8 @@ export async function HeaderInterno({
   height = "medium",
   overlayTitle = false,
   heroMenuTone,
+  heroMenuColor,
+  heroMenuScale,
   heroLogoPositionX,
   heroLogoPositionY,
   heroLogoWidth,
@@ -70,6 +74,8 @@ export async function HeaderInterno({
     "--hero-menu-position-y": heroMenuPositionY ?? "132px",
     "--hero-menu-tablet-position-y": heroMenuTabletPositionY ?? heroMenuPositionY ?? "118px",
     "--hero-menu-mobile-position-y": heroMenuMobilePositionY ?? "96px",
+    "--hero-menu-color": heroMenuColor ?? (heroMenuTone === "light" ? "#ffffff" : "#3f3933"),
+    "--hero-menu-scale": heroMenuScale ?? 1,
   } as CSSProperties;
   const scrollThreshold = Number.parseInt(heroMenuPositionY ?? "", 10) || 132;
   const tabletScrollThreshold = Number.parseInt(heroMenuTabletPositionY ?? "", 10) || scrollThreshold;
@@ -88,8 +94,9 @@ export async function HeaderInterno({
       <header
         className={classNames(
           "header-interno page-hero header-interno--ready header-interno--center header-interno--overlay-warm",
-          variant === "image" ? "header-interno--image-hero" : "header-interno--text-hero",
-          `header-interno--menu-${heroMenuTone ?? (variant === "image" ? "light" : "dark")}`,
+          variant === "image" || variant === "presentation" ? "header-interno--image-hero" : "header-interno--text-hero",
+          variant === "presentation" && "header-interno--presentation-hero",
+          `header-interno--menu-${heroMenuTone ?? (variant === "image" || variant === "presentation" ? "light" : "dark")}`,
           `header-interno--${height}`,
           !overlayTitle && Boolean(titleContent) && "page-hero--nav-only",
           className
@@ -110,6 +117,8 @@ export async function HeaderInterno({
           scrollThreshold={scrollThreshold}
           tabletScrollThreshold={tabletScrollThreshold}
           mobileScrollThreshold={mobileScrollThreshold}
+          heroMenuColor={heroMenuColor}
+          heroMenuScale={heroMenuScale}
         />
         {overlayTitle && titleContent && (
           <div

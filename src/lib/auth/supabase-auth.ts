@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { createAdminClient } from "../supabase/admin";
 import { getCurrentLocalSession, LOCAL_ADMIN_EMAIL } from "./local-auth";
 
@@ -119,7 +120,7 @@ export function isAdminRole(role: string): role is AdminRole {
   return ADMIN_ROLES.includes(role as AdminRole);
 }
 
-export async function requireAdminProfile(): Promise<{ user: { id: string; email?: string | null }; profile: AdminProfile } | null> {
+async function requireAdminProfileUncached(): Promise<{ user: { id: string; email?: string | null }; profile: AdminProfile } | null> {
   const localSession = await getCurrentLocalSession();
   if (localSession) {
     return {
@@ -143,6 +144,8 @@ export async function requireAdminProfile(): Promise<{ user: { id: string; email
 
   return { user, profile };
 }
+
+export const requireAdminProfile = cache(requireAdminProfileUncached);
 
 export interface AdminSession {
   userId: string;

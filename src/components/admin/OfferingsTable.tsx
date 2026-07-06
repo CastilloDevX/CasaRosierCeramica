@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import type { Offering, OfferingStatus } from "@/lib/cms/types";
 
 const statusBadge: Record<OfferingStatus, { label: string; variant: string }> = {

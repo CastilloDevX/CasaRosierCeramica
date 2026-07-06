@@ -1,4 +1,4 @@
-import Link from "next/link"; import AdminShell from "@/components/admin/AdminShell"; import FaqsTable from "@/components/admin/FaqsTable"; import SectionEmptyState from "@/components/admin/SectionEmptyState"; import { getFaqs } from "@/lib/cms/faqs";
+import Link from "@/components/admin/AdminLink"; import AdminShell from "@/components/admin/AdminShell"; import FaqsTable from "@/components/admin/FaqsTable"; import SectionEmptyState from "@/components/admin/SectionEmptyState"; import { getFaqs } from "@/lib/cms/faqs";
 
 export default async function Page({ searchParams }: { searchParams?: { status?: string; category?: string } }) {
   const items = await getFaqs(); const status = searchParams?.status || "all"; const cat = searchParams?.category || "all";

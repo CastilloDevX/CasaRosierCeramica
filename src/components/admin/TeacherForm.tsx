@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Teacher, TeacherStatus } from "@/lib/cms/types";
 import MediaSelectField from "./MediaSelectField";
+import RichTextField from "./RichTextField";
 
 export default function TeacherForm({
   mode,
@@ -51,7 +52,9 @@ export default function TeacherForm({
           <div className="span-2">
             <MediaSelectField label="Imagen" value={imageId} onChange={setImageId} />
           </div>
-          <label className="field span-2"><span>Descripción</span><textarea rows={7} value={bio} onChange={(e) => setBio(e.target.value)} /></label>
+          <div className="span-2">
+            <RichTextField label="Descripción" value={bio} onChange={setBio} minHeight="220px" />
+          </div>
           <label className="field"><span>Estado</span><select value={status} onChange={(e) => setStatus(e.target.value as TeacherStatus)}><option value="draft">Borrador</option><option value="published">Publicado</option><option value="archived">Archivado</option></select></label>
           <label className="field"><span>Orden</span><input type="number" value={sortOrder} onChange={(e) => setSortOrder(Number(e.target.value))} /></label>
         </div>

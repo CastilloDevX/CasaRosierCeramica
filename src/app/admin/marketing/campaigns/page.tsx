@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import AdminShell from "@/components/admin/AdminShell";
 import CampaignsTable from "@/components/admin/marketing/CampaignsTable";
 import { getCampaigns } from "@/lib/cms/marketing";

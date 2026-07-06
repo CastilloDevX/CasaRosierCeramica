@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Teacher } from "@/lib/cms/types";

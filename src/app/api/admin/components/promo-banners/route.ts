@@ -1,5 +1,7 @@
 import { requireAdminApi } from "@/lib/auth/supabase-auth";
 import { createPromoBanner, getPromoBanners } from "@/lib/cms/promo-banners";
+import { invalidatePublicContentCache } from "@/lib/cms/public-content";
+import { revalidatePath } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
 
 function getPromoBannerErrorMessage(err: unknown) {
@@ -21,6 +23,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   if (!(await requireAdminApi())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json(); if (!body?.title) return NextResponse.json({ error: "El título es obligatorio." }, { status: 400 });
-  try { const item = await createPromoBanner(body); return NextResponse.json({ promoBanner: item }); }
+  try { const item = await createPromoBanner(body); invalidatePublicContentCache(); revalidatePath("/"); revalidatePath("/admin/components/promo-banners"); return NextResponse.json({ promoBanner: item }); }
   catch (err) { return NextResponse.json({ error: getPromoBannerErrorMessage(err) }, { status: 400 }); }
 }

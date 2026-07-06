@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import AdminShell from "@/components/admin/AdminShell";
 import PagesTable from "@/components/admin/PagesTable";
 import SectionEmptyState from "@/components/admin/SectionEmptyState";

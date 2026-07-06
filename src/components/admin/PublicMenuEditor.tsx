@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { useState } from "react";
+import ColorPickerField from "./ColorPickerField";
 import MediaSelectField from "./MediaSelectField";
 import type { SiteSettings } from "@/lib/cms/settings";
 import type { LinkedEntityType, Menu, MenuItem, MenuItemType } from "@/lib/cms/types";
@@ -181,29 +182,11 @@ function payloadFor(item: EditableMenuItem | EditableMenuChild, parentId: string
   };
 }
 
-function extensionFromUrl(url: string) {
-  try {
-    const path = new URL(url, window.location.origin).pathname;
-    return path.split(".").pop()?.toLowerCase() ?? "";
-  } catch {
-    return url.split("?")[0]?.split(".").pop()?.toLowerCase() ?? "";
-  }
-}
-
-function logoTintHint(extension: string) {
-  if (!extension) return "No se pudo detectar la extensión; se intentará aplicar como máscara.";
-  if (extension === "svg") return "SVG detectado: se puede teñir de forma estable.";
-  if (extension === "png") return "PNG detectado: funciona mejor si el archivo tiene transparencia.";
-  if (extension === "jpg" || extension === "jpeg") return "JPG/JPEG detectado: si trae fondo sólido, el tinte puede cubrir el rectángulo completo.";
-  return "Formato no verificado: el tinte se aplicará solo si el navegador puede usarlo como máscara.";
-}
-
 function InteractiveMenuPreview({
   items,
   logoUrl,
   backgroundColor,
   textColor,
-  iconColor,
   logoTintEnabled,
   logoTintColor,
 }: {
@@ -211,7 +194,6 @@ function InteractiveMenuPreview({
   logoUrl: string;
   backgroundColor: string;
   textColor: string;
-  iconColor: string;
   logoTintEnabled: boolean;
   logoTintColor: string;
 }) {
@@ -223,7 +205,7 @@ function InteractiveMenuPreview({
   } as CSSProperties;
 
   return (
-    <div className="interactive-menu-preview" aria-label="Vista previa del menú interactivo">
+    <div className="interactive-menu-preview" aria-label="Vista previa del menú de scroll">
       <div className="interactive-menu-preview__bar" style={{ backgroundColor }}>
         <div className="interactive-menu-preview__logo">
           {logoTintEnabled ? (
@@ -236,12 +218,12 @@ function InteractiveMenuPreview({
           {visibleItems.map((item, index) => (
             <span className="interactive-menu-preview__item" key={item.key} style={{ color: textColor }}>
               <span>{item.label || "Sin nombre"}</span>
-              {item.children.length ? <span className="interactive-menu-preview__plus" style={{ color: iconColor }}>+</span> : null}
+              {item.children.length ? <span className="interactive-menu-preview__plus">+</span> : null}
               {index < visibleItems.length - 1 ? <span className="interactive-menu-preview__separator" aria-hidden="true">|</span> : null}
             </span>
           ))}
         </nav>
-        <span className="interactive-menu-preview__mobile-icon" style={{ color: iconColor }} aria-hidden="true">
+        <span className="interactive-menu-preview__mobile-icon" style={{ color: textColor }} aria-hidden="true">
           <span />
         </span>
       </div>
@@ -260,17 +242,14 @@ export default function PublicMenuEditor({
   const [logoUrl, setLogoUrl] = useState(initialSettings.menu.header_logo_url);
   const [scrollBackgroundColor, setScrollBackgroundColor] = useState(initialSettings.menu.scroll_menu_background_color);
   const [scrollTextColor, setScrollTextColor] = useState(initialSettings.menu.scroll_menu_text_color);
-  const [scrollIconColor, setScrollIconColor] = useState(initialSettings.menu.scroll_menu_icon_color);
   const [scrollLogoTintEnabled, setScrollLogoTintEnabled] = useState(initialSettings.menu.scroll_menu_logo_tint_enabled);
   const [scrollLogoTintColor, setScrollLogoTintColor] = useState(initialSettings.menu.scroll_menu_logo_tint_color);
-  const [openKey, setOpenKey] = useState(items[0]?.key ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const canSave = Boolean(initialMenu?.id) && !isSaving;
   const saveLabel = isSaving ? "Guardando..." : "Guardar menú";
-  const logoExtension = extensionFromUrl(logoUrl);
 
   function updateItem(key: string, patch: Partial<EditableMenuItem>) {
     setItems((current) => current.map((item) => item.key === key ? { ...item, ...patch } : item));
@@ -305,7 +284,7 @@ export default function PublicMenuEditor({
             header_logo_url: logoUrl,
             scroll_menu_background_color: scrollBackgroundColor,
             scroll_menu_text_color: scrollTextColor,
-            scroll_menu_icon_color: scrollIconColor,
+            scroll_menu_icon_color: scrollTextColor,
             scroll_menu_logo_tint_enabled: scrollLogoTintEnabled,
             scroll_menu_logo_tint_color: scrollLogoTintColor,
           },
@@ -388,63 +367,58 @@ export default function PublicMenuEditor({
 
       <div className="public-menu-editor__panel">
         <div className="public-menu-list" aria-label="Puntos del menú">
-          {items.map((item) => {
-            const isOpen = openKey === item.key;
-            return (
-              <div className="public-menu-card" key={item.key}>
-                <button
-                  type="button"
-                  className="public-menu-card__summary"
-                  aria-expanded={isOpen}
-                  onClick={() => setOpenKey(isOpen ? "" : item.key)}
-                >
-                  <span>
-                    <strong>{item.label || "Sin nombre"}</strong>
-                    <small>{item.children.length ? `${item.children.length} subopciones` : "Sin despliegue"}</small>
-                  </span>
-                  <span className="public-menu-card__chevron">{isOpen ? "Cerrar" : "Editar"}</span>
-                </button>
-
-                {isOpen ? (
-                  <div className="public-menu-card__body">
-                    <label className="field">
-                      <span>Nombre visible</span>
+          <div className="public-menu-simple" role="table" aria-label="Editor simple del menú público">
+            <div className="public-menu-simple__head" role="row">
+              <span role="columnheader">Elemento</span>
+              <span role="columnheader">URL</span>
+            </div>
+            <div className="public-menu-simple__body">
+              {items.map((item) => (
+                <div className="public-menu-simple__group" key={item.key}>
+                  <div className="public-menu-simple__row" role="row">
+                    <label className="public-menu-simple__field public-menu-simple__field--label">
+                      <span>{item.locked ? "Elemento fijo" : "Nombre visible"}</span>
                       <input
                         value={item.label}
+                        readOnly={item.locked}
+                        aria-label={`Nombre visible de ${item.label || "elemento del menú"}`}
                         onChange={(event) => updateItem(item.key, { label: event.target.value })}
                       />
                     </label>
-                    <label className="field">
-                      <span>Destino</span>
-                      <input value={item.url} disabled />
+                    <label className="public-menu-simple__field public-menu-simple__field--url">
+                      <span>URL fija</span>
+                      <input
+                        value={item.url}
+                        readOnly
+                        aria-label={`URL de ${item.label || "elemento del menú"}`}
+                      />
                     </label>
-                    {item.locked ? <p className="public-menu-card__note">Inicio permanece fijo en el menú.</p> : null}
-
-                    {item.children.length ? (
-                      <div className="public-menu-card__children">
-                        <p>Despliegue</p>
-                        {item.children.map((child) => (
-                          <div className="public-menu-child" key={child.key}>
-                            <label className="field">
-                              <span>Nombre</span>
-                              <input
-                                value={child.label}
-                                onChange={(event) => updateChild(item.key, child.key, { label: event.target.value })}
-                              />
-                            </label>
-                            <label className="field">
-                              <span>Destino</span>
-                              <input value={child.url} disabled />
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
                   </div>
-                ) : null}
-              </div>
-            );
-          })}
+
+                  {item.children.map((child) => (
+                    <div className="public-menu-simple__row public-menu-simple__row--child" role="row" key={child.key}>
+                      <label className="public-menu-simple__field public-menu-simple__field--label">
+                        <span>Subelemento</span>
+                        <input
+                          value={child.label}
+                          aria-label={`Nombre visible de ${child.label || "subelemento del menú"}`}
+                          onChange={(event) => updateChild(item.key, child.key, { label: event.target.value })}
+                        />
+                      </label>
+                      <label className="public-menu-simple__field public-menu-simple__field--url">
+                        <span>URL fija</span>
+                        <input
+                          value={child.url}
+                          readOnly
+                          aria-label={`URL de ${child.label || "subelemento del menú"}`}
+                        />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="settings-section">
@@ -455,49 +429,23 @@ export default function PublicMenuEditor({
             </div>
           </div>
           <MediaSelectField label="Logo del encabezado" value={logoUrl} onChange={setLogoUrl} />
+          <p className="public-menu-card__note">
+            Para que el aplicado de color funcione mejor en SVG y PNG, se recomienda que la imagen sea totalmente blanca y tenga transparencia.
+          </p>
         </div>
 
         <div className="settings-section">
           <div className="section-head compact">
             <div>
-              <p className="auth-kicker">Menú interactivo</p>
+              <p className="auth-kicker">Menú de Scroll</p>
               <h3>Menú fijo al bajar</h3>
               <p className="muted">Aparece al bajar la página para mantener la navegación visible.</p>
             </div>
           </div>
           <div className="scroll-menu-color-grid">
-            <label className="field">
-              <span>Fondo</span>
-              <input
-                type="color"
-                value={scrollBackgroundColor}
-                onChange={(event) => setScrollBackgroundColor(event.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>Texto</span>
-              <input
-                type="color"
-                value={scrollTextColor}
-                onChange={(event) => setScrollTextColor(event.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>Icono</span>
-              <input
-                type="color"
-                value={scrollIconColor}
-                onChange={(event) => setScrollIconColor(event.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>Logo del menú fijo</span>
-              <input
-                type="color"
-                value={scrollLogoTintColor}
-                onChange={(event) => setScrollLogoTintColor(event.target.value)}
-              />
-            </label>
+            <ColorPickerField label="Fondo" value={scrollBackgroundColor} onChange={setScrollBackgroundColor} />
+            <ColorPickerField label="Texto e íconos" value={scrollTextColor} onChange={setScrollTextColor} />
+            <ColorPickerField label="Logo del menú fijo" value={scrollLogoTintColor} onChange={setScrollLogoTintColor} />
           </div>
           <label className="checkbox-field scroll-logo-tint-toggle">
             <input
@@ -507,14 +455,15 @@ export default function PublicMenuEditor({
             />
             <span>Aplicar color al logo del menú fijo</span>
           </label>
-          <p className="public-menu-card__note">{logoTintHint(logoExtension)}</p>
+          <p className="public-menu-card__note">
+            El color del logo se aplica como máscara para SVG y PNG; para mejores resultados usa un archivo blanco con transparencia.
+          </p>
 
           <InteractiveMenuPreview
             items={items}
             logoUrl={logoUrl}
             backgroundColor={scrollBackgroundColor}
             textColor={scrollTextColor}
-            iconColor={scrollIconColor}
             logoTintEnabled={scrollLogoTintEnabled}
             logoTintColor={scrollLogoTintColor}
           />

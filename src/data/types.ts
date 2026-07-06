@@ -31,8 +31,10 @@ export interface ExperienceItem {
   description: string[];
   coverImage: string;
   heroImage: string;
-  heroVariant?: "image" | "text";
+  heroVariant?: "image" | "text" | "presentation";
   heroMenuTone?: "light" | "dark";
+  heroMenuColor?: string;
+  heroMenuScale?: number;
   heroLogoPositionX?: string;
   heroLogoPositionY?: string;
   heroLogoWidth?: string;
@@ -47,6 +49,9 @@ export interface ExperienceItem {
   heroMenuMobilePositionY?: string;
   heroTitleImage?: string;
   heroTitleImageSecondary?: string;
+  heroPresentationText?: string;
+  heroPresentationTextColor?: string;
+  heroPresentationImage?: string;
   heroTitle: string;
   listingTitle: string;
   listingSubtitle: string;
@@ -61,7 +66,9 @@ export interface ExperienceItem {
   schedule: ScheduleItem[];
   included: string[];
   program: ProgramItem[];
+  learningSectionTitle?: string;
   whatYouWillLearn: string[];
+  participationSectionTitle?: string;
   whoCanJoin: string[];
   paymentMethods: string[];
   additionalInfo: string;
@@ -144,6 +151,32 @@ export interface BlogPost {
   publishedAt: string;
   seoTitle: string;
   seoDescription: string;
+  hero?: {
+    heroVariant: "image" | "text" | "presentation";
+    heroTitle: string;
+    heroSubtitle: string;
+    heroPresentationText: string;
+    heroPresentationTextColor: string;
+    heroPresentationImage: string;
+    heroMenuTone: "light" | "dark";
+    heroMenuColor: string;
+    heroMenuScale: number;
+    heroLogoPositionX: string;
+    heroLogoPositionY: string;
+    heroLogoWidth: string;
+    heroLogoTabletPositionX: string;
+    heroLogoTabletPositionY: string;
+    heroLogoTabletWidth: string;
+    heroLogoMobilePositionX: string;
+    heroLogoMobilePositionY: string;
+    heroLogoMobileWidth: string;
+    heroMenuPositionY: string;
+    heroMenuTabletPositionY: string;
+    heroMenuMobilePositionY: string;
+    heroImage: string;
+    titleImage: string;
+    titleImageSecondary: string;
+  };
   contentBlocks: BlogContentBlock[];
 }
 

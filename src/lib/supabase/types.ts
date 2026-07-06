@@ -6,6 +6,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export interface Database {
   public: {
     Tables: {
+      blog_page_settings: { Row: BlogPageSettingRow; Insert: BlogPageSettingInsert; Update: BlogPageSettingUpdate; };
       blog_post_blocks: { Row: BlogPostBlockRow; Insert: BlogPostBlockInsert; Update: BlogPostBlockUpdate; };
       blog_posts: { Row: BlogPostRow; Insert: BlogPostInsert; Update: BlogPostUpdate; };
       coupons: { Row: CouponRow; Insert: CouponInsert; Update: CouponUpdate; };
@@ -46,6 +47,39 @@ export interface Database {
       trash_items: { Row: TrashItemRow; Insert: TrashItemInsert; Update: TrashItemUpdate; };
     };
   };
+}
+
+export interface BlogPageSettingRow {
+  id: string;
+  status: string;
+  hero: Json;
+  show_idea_prompt_section: boolean;
+  seo_title: string;
+  seo_description: string;
+  seo_image: string;
+  updated_at: string;
+}
+
+export interface BlogPageSettingInsert {
+  id: string;
+  status?: string;
+  hero?: Json;
+  show_idea_prompt_section?: boolean;
+  seo_title?: string;
+  seo_description?: string;
+  seo_image?: string;
+  updated_at?: string;
+}
+
+export interface BlogPageSettingUpdate {
+  id?: string;
+  status?: string;
+  hero?: Json;
+  show_idea_prompt_section?: boolean;
+  seo_title?: string;
+  seo_description?: string;
+  seo_image?: string;
+  updated_at?: string;
 }
 
 export interface BlogPostBlockRow {
@@ -114,6 +148,7 @@ export interface BlogPostRow {
   seo_title: string | null;
   seo_description: string | null;
   seo_image: string | null;
+  hero: Json;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -140,6 +175,7 @@ export interface BlogPostInsert {
   seo_title?: string | null;
   seo_description?: string | null;
   seo_image?: string | null;
+  hero?: Json;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
@@ -166,6 +202,7 @@ export interface BlogPostUpdate {
   seo_title?: string | null;
   seo_description?: string | null;
   seo_image?: string | null;
+  hero?: Json;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;

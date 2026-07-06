@@ -16,7 +16,7 @@ function includedText(value: string) {
 export function DetailPage({ item }: { item: ExperienceItem }) {
   const isGiftCard = item.kind === "gift-card";
   const consultHref = item.ctaConsultHref || item.ctaHref;
-  const enrollHref = item.ctaEnrollHref || consultHref;
+  const enrollHref = item.ctaEnrollHref || "";
   const [added, setAdded] = useState(false);
   const defaultPrice = useMemo(
     () =>
@@ -58,15 +58,17 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
             />
 
             <aside className="class-detail__side-column">
-              <a
-                className="class-gallery__video-card"
-                href={consultHref}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <img src={assetPath(item.videoCardImage)} alt={item.title} />
-                <span>{item.videoCardLabel}</span>
-              </a>
+              {consultHref ? (
+                <a
+                  className="class-gallery__video-card"
+                  href={consultHref}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <img src={assetPath(item.videoCardImage)} alt={item.title} />
+                  <span>{item.videoCardLabel}</span>
+                </a>
+              ) : null}
               <div className="class-sidecard">
                 <h3>Metodos de pago</h3>
                 <p>Puedes pagar con cualquiera de estos medios</p>
@@ -78,7 +80,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
               </div>
               <div className="class-sidecard class-sidecard--soft">
                 <h3>Informacion adicional</h3>
-                <p>{item.additionalInfo}</p>
+                <MarkdownContent source={item.additionalInfo} />
               </div>
             </aside>
           </section>
@@ -139,30 +141,32 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                     <li key={included}>{renderInlineMarkdown(includedText(included))}</li>
                   ))}
                 </ul>
-                <a
-                  className="class-detail__button"
-                  href={consultHref}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {isGiftCard ? "Comprar" : "Consultar"}
-                </a>
+                {consultHref ? (
+                  <a
+                    className="class-detail__button"
+                    href={consultHref}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {isGiftCard ? "Comprar" : "Consultar"}
+                  </a>
+                ) : null}
               </section>
 
               <section className="class-detail__text-block">
-                <h2>Que aprenderas?</h2>
+                <h2>{item.learningSectionTitle || "¿Qué aprenderás?"}</h2>
                 <MarkdownContent source={item.whatYouWillLearn} />
               </section>
 
               <section className="class-detail__text-block">
-                <h2>Quien puede participar?</h2>
+                <h2>{item.participationSectionTitle || "¿Quién puede participar?"}</h2>
                 <MarkdownContent source={item.whoCanJoin} />
               </section>
 
               <section className="class-detail__program">
                 <h2>Contenido del curso</h2>
                 <Accordion items={item.program} />
-                {isGiftCard ? (
+                {isGiftCard && enrollHref ? (
                   <>
                     <button
                       className="class-detail__button class-detail__button--primary"
@@ -194,7 +198,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                       </div>
                     )}
                   </>
-                ) : (
+                ) : enrollHref ? (
                   <a
                     className="class-detail__button class-detail__button--primary"
                     href={enrollHref}
@@ -203,7 +207,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                   >
                     Inscribirme
                   </a>
-                )}
+                ) : null}
               </section>
             </section>
           </section>

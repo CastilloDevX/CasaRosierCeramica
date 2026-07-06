@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/admin/AdminLink";
 import AdminShell from "@/components/admin/AdminShell";
 import TopBar from "@/components/layout/TopBar";
 import MetricCard from "@/components/ui/MetricCard";
@@ -7,7 +7,7 @@ import Card from "@/components/ui/Card";
 import { getOfferings } from "@/lib/cms/offerings";
 import { getPages } from "@/lib/cms/pages";
 import { getFormSubmissions } from "@/lib/cms/form-submissions";
-import { getHistoryLogs } from "@/lib/cms/history-logs";
+import { getRecentHistoryLogs } from "@/lib/cms/history-logs";
 import { requireAdminProfile } from "@/lib/auth/supabase-auth";
 
 const activityLabels: Record<string, string> = {
@@ -37,7 +37,7 @@ export default async function DashboardPage() {
     getOfferings(),
     getPages(),
     getFormSubmissions(),
-    getHistoryLogs(),
+    getRecentHistoryLogs(5),
   ]);
 
   const activePages = pages.filter((p) => p.status !== "deleted");
@@ -45,9 +45,7 @@ export default async function DashboardPage() {
   const workshops = offerings.filter((o) => o.type === "workshop" && o.status !== "deleted");
   const activeMessages = messages.filter((m) => m.status !== "deleted");
   const unreadMessages = activeMessages.filter((m) => m.status === "new");
-  const recentActivity = historyLogs
-    .filter((item) => item.entity_type !== "auth")
-    .slice(0, 5);
+  const recentActivity = historyLogs;
 
   return (
     <AdminShell>
