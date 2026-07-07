@@ -14,7 +14,7 @@ export default async function Page({ searchParams }: { searchParams?: { status?:
   const items = await getPromoBanners();
   const rawStatus = searchParams?.status;
   const status = rawStatus === "draft" || rawStatus === "published" ? rawStatus : "all";
-  const visibleItems = items.filter((item) => !item.deleted_at && (item.status === "draft" || item.status === "published"));
+  const visibleItems = items.filter((item) => !item.deleted_at && item.status !== "deleted");
   const filtered = visibleItems.filter((item) => status === "all" || item.status === status);
   const counts = {
     all: visibleItems.length,
@@ -28,7 +28,7 @@ export default async function Page({ searchParams }: { searchParams?: { status?:
         <div>
           <p className="auth-kicker">CMS</p>
           <h2>Banners promocionales</h2>
-          <p className="muted">Activa un solo banner visible en el home. Al activar uno, el anterior se archiva automáticamente.</p>
+          <p className="muted">Activa un solo banner visible en el home. Al activar uno, el anterior pasa a borrador automáticamente.</p>
         </div>
         <Link className="primary-btn inline" href="/admin/components/promo-banners/new">
           <span className="material-symbols-outlined" aria-hidden="true">add</span>

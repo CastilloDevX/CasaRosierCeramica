@@ -21,9 +21,13 @@ function limitText(value: unknown, max: number) {
   return String(value ?? "").trim().slice(0, max);
 }
 
+function normalizePromoStatus(status: PromoBanner["status"]) {
+  return status === "archived" ? "draft" : status;
+}
+
 function normalize(input: Input, existing?: PromoBanner) {
   const title = limitText(input.title ?? existing?.title ?? "", LIMITS.title);
-  const status = input.status ?? existing?.status ?? "draft";
+  const status = normalizePromoStatus(input.status ?? existing?.status ?? "draft");
   const now = new Date().toISOString();
   if (!title) throw new Error("El título es obligatorio.");
   if (!isPromoStatus(status)) throw new Error("Estado no válido.");
@@ -102,8 +106,10 @@ function dedupePromoBanners(items: PromoBanner[]) {
 // ── Mapping helpers ──
 
 function rowToPromoBanner(row: Record<string, unknown>): PromoBanner {
+  const status = isPromoStatus(row.status) ? normalizePromoStatus(row.status) : "draft";
   return {
     ...row,
+    status,
     text: String(row.text ?? ""),
     key_text: String(row.key_text ?? ""),
     detail_text: String(row.detail_text ?? ""),
@@ -173,13 +179,13 @@ async function enforceSinglePublished(id: string, items: PromoBanner[]) {
   const now = new Date().toISOString();
   const nextItems = items.map((item) =>
     item.id !== id && item.status === "published"
-      ? { ...item, status: "archived" as const, updated_at: now }
+      ? { ...item, status: "draft" as const, updated_at: now }
       : item,
   );
   await writeJsonFile(FILE_NAME, nextItems);
   try {
     const supabase = createAdminClient();
-    await supabase.from(TABLE).update({ status: "archived", updated_at: now }).eq("status", "published").neq("id", id);
+    await supabase.from(TABLE).update({ status: "draft", updated_at: now }).eq("status", "published").neq("id", id);
   } catch { /* best-effort */ }
 }
 
@@ -232,7 +238,7 @@ async function syncPublishedPromoBannerInLocal(updated: PromoBanner) {
       return updated;
     }
     return item.status === "published"
-      ? { ...item, status: "archived" as const, updated_at: now }
+      ? { ...item, status: "draft" as const, updated_at: now }
       : item;
   });
   await writeJsonFile(FILE_NAME, found ? nextItems : [updated, ...nextItems]);
@@ -339,7 +345,7 @@ export async function activatePromoBannerNow(id: string) {
     const supabase = createAdminClient();
     const { count, error: archiveError } = await supabase
       .from(TABLE)
-      .update({ status: "archived", updated_at: now }, { count: "exact" })
+      .update({ status: "draft", updated_at: now }, { count: "exact" })
       .eq("status", "published")
       .neq("id", id)
       .select("id");

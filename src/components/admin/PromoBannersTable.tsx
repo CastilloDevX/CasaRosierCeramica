@@ -57,11 +57,16 @@ export default function PromoBannersTable({ items }: { items: PromoBanner[] }) {
   const [pending, setPending] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
 
   async function run(id: string, action: string) {
     const pendingKey = `${id}:${action}`;
+    const shouldHideOptimistically = action === "trash";
     setPending(pendingKey);
     setNotice(null);
+    if (shouldHideOptimistically) {
+      setHiddenIds((current) => new Set(current).add(id));
+    }
 
     try {
       const response = await fetch(`/api/admin/components/promo-banners/${id}`, {
@@ -72,6 +77,13 @@ export default function PromoBannersTable({ items }: { items: PromoBanner[] }) {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        if (shouldHideOptimistically) {
+          setHiddenIds((current) => {
+            const next = new Set(current);
+            next.delete(id);
+            return next;
+          });
+        }
         setNotice({
           type: "error",
           title: "No se pudo completar",
@@ -84,19 +96,24 @@ export default function PromoBannersTable({ items }: { items: PromoBanner[] }) {
         ? "Publicado exitosamente."
         : action === "draft"
           ? "Borrador guardado correctamente."
-          : action === "duplicate"
-            ? "Banner duplicado como borrador."
-            : action === "trash"
-              ? "Movido a papelera exitosamente."
-              : "Cambio aplicado correctamente.";
+          : action === "trash"
+            ? "Movido a papelera exitosamente."
+            : "Cambio aplicado correctamente.";
 
       setNotice({
         type: "success",
         title: "Acción completada",
-        message: action === "duplicate" && typeof data.message === "string" ? data.message : fallback,
+        message: fallback,
       });
       router.refresh();
     } catch {
+      if (shouldHideOptimistically) {
+        setHiddenIds((current) => {
+          const next = new Set(current);
+          next.delete(id);
+          return next;
+        });
+      }
       setNotice({
         type: "error",
         title: "No se pudo conectar",
@@ -120,6 +137,7 @@ export default function PromoBannersTable({ items }: { items: PromoBanner[] }) {
             <article
               key={banner.id}
               className={`admin-list-card promo-admin-card ${isVisible ? "promo-admin-card--active" : ""} ${visibility.tone === "error" ? "promo-admin-card--blocked" : ""}`}
+              style={hiddenIds.has(banner.id) ? { display: "none" } : undefined}
             >
               <div className="promo-admin-card__preview">
                 {banner.image_url ? (
@@ -171,10 +189,6 @@ export default function PromoBannersTable({ items }: { items: PromoBanner[] }) {
                     <span className="material-symbols-outlined" aria-hidden="true">edit</span>
                     Editar
                   </a>
-                  <button className="secondary-btn" type="button" onClick={() => run(banner.id, "duplicate")} disabled={Boolean(pending)}>
-                    <span className="material-symbols-outlined" aria-hidden="true">content_copy</span>
-                    {actionPending("duplicate") ? "Duplicando..." : "Duplicar"}
-                  </button>
                   <button
                     className="danger-btn"
                     type="button"

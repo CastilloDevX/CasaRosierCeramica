@@ -45,7 +45,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
         promoBanner: result.promoBanner,
         archivedCount: result.archivedCount,
         message: result.archivedCount > 0
-          ? "Banner activo. El banner anterior se archivó automáticamente."
+          ? "Banner activo. El banner anterior pasó a borrador automáticamente."
           : "Banner activo y visible en el home.",
       });
     }
@@ -53,7 +53,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     return NextResponse.json({ error: getPromoBannerErrorMessage(err) }, { status: 400 });
   }
   const item = await getPromoBannerById(id); if (!item) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
-  const ns = body.action === "publish" ? "published" : body.action === "archive" ? "archived" : body.action === "draft" ? "draft" : null;
+  const ns = body.action === "publish" ? "published" : body.action === "archive" || body.action === "draft" ? "draft" : null;
   if (!ns) return NextResponse.json({ error: "Acción no válida" }, { status: 400 });
   const updated = await updatePromoBanner(id, { ...item, status: ns }); refreshPromoSurfaces(); return NextResponse.json({ promoBanner: updated });
 }
