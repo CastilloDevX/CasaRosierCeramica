@@ -2,6 +2,7 @@ import AdminShell from "@/components/admin/AdminShell";
 import ClassEditForm from "@/components/admin/ClassEditForm";
 import TopBar from "@/components/layout/TopBar";
 import Button from "@/components/ui/Button";
+import { getClassEditorPreviewChrome } from "@/lib/cms/class-editor-preview";
 import type { Offering } from "@/lib/cms/types";
 
 function newClassOffering(): Offering {
@@ -34,7 +35,9 @@ function newClassOffering(): Offering {
   };
 }
 
-export default function NewClassPage() {
+export default async function NewClassPage() {
+  const previewChrome = await getClassEditorPreviewChrome();
+
   return (
     <AdminShell>
       <TopBar
@@ -55,7 +58,7 @@ export default function NewClassPage() {
         }
       />
 
-      <ClassEditForm offering={newClassOffering()} mode="create" />
+      <ClassEditForm offering={newClassOffering()} mode="create" previewChrome={previewChrome} />
     </AdminShell>
   );
 }

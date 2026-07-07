@@ -3,10 +3,12 @@
 import Image from "next/image";
 import Link from "@/components/admin/AdminLink";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import AdminActionModal from "./AdminActionModal";
 import type { Offering } from "@/lib/cms/types";
 
-type Toast = { type: "success" | "error"; message: string };
+type Notice = { type: "success" | "error"; title: string; message: string };
+type ConfirmAction = { id: string; title: string; message: string; confirmLabel: string };
 
 function formatCurrency(value: number | null, currency: string) {
   if (value === null) return "0€";
@@ -21,6 +23,10 @@ function formatStatus(status: Offering["status"]) {
   return "Eliminado";
 }
 
+function isOffering(value: unknown): value is Offering {
+  return Boolean(value && typeof value === "object" && "id" in value && "type" in value && "title" in value);
+}
+
 export default function ClassOfferingsTable({
   offerings,
   basePath = "/admin/clases",
@@ -31,14 +37,16 @@ export default function ClassOfferingsTable({
   typeLabel?: string;
 }) {
   const router = useRouter();
-  const [toast, setToast] = useState<Toast | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 3000);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
+  const [localOfferings, setLocalOfferings] = useState<Offering[]>([]);
+  const isBusy = Boolean(pendingId);
+  const visibleOfferings = useMemo(() => {
+    const localIds = new Set(localOfferings.map((offering) => offering.id));
+    return [...localOfferings, ...offerings.filter((offering) => !localIds.has(offering.id))];
+  }, [localOfferings, offerings]);
 
   function successMessage(action: string) {
     if (action === "duplicate") return `${typeLabel} duplicado correctamente.`;
@@ -49,27 +57,51 @@ export default function ClassOfferingsTable({
   }
 
   async function patchOffering(id: string, action: string) {
-    if (action === "trash" && !window.confirm("¿Mover este registro a la papelera?")) return;
-
-    setToast(null);
+    const shouldHideOptimistically = action === "trash";
+    setNotice(null);
     setPendingId(id);
+    if (shouldHideOptimistically) {
+      setHiddenIds((current) => new Set(current).add(id));
+    }
+
     try {
       const response = await fetch(`/api/admin/offerings/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
+      const data = (await response.json().catch(() => ({}))) as { error?: string; offering?: unknown };
 
       if (response.ok) {
-        setToast({ type: "success", message: successMessage(action) });
+        const returnedOffering = data.offering;
+        if (isOffering(returnedOffering)) {
+          setLocalOfferings((current) => {
+            const withoutCurrent = current.filter((item) => item.id !== returnedOffering.id);
+            return [returnedOffering, ...withoutCurrent];
+          });
+        }
+        setNotice({ type: "success", title: "Acción completada", message: successMessage(action) });
         router.refresh();
         return;
       }
 
-      const data = (await response.json().catch(() => ({}))) as { error?: string };
-      setToast({ type: "error", message: data.error || "No se pudo completar la acción." });
+      if (shouldHideOptimistically) {
+        setHiddenIds((current) => {
+          const next = new Set(current);
+          next.delete(id);
+          return next;
+        });
+      }
+      setNotice({ type: "error", title: "No se pudo completar", message: data.error || "No se pudo completar la acción." });
     } catch {
-      setToast({ type: "error", message: "No se pudo conectar con el servidor. Intenta nuevamente." });
+      if (shouldHideOptimistically) {
+        setHiddenIds((current) => {
+          const next = new Set(current);
+          next.delete(id);
+          return next;
+        });
+      }
+      setNotice({ type: "error", title: "No se pudo conectar", message: "No se pudo conectar con el servidor. Intenta nuevamente." });
     } finally {
       setPendingId(null);
     }
@@ -77,21 +109,28 @@ export default function ClassOfferingsTable({
 
   return (
     <div className="space-y-4">
-      {toast ? (
-        <div
-          className={`rounded-xl border px-4 py-3 text-label-md ${
-            toast.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-              : "border-error bg-error-container text-on-error-container"
-          }`}
-          role={toast.type === "error" ? "alert" : "status"}
-          aria-live="polite"
-        >
-          {toast.message}
-        </div>
-      ) : null}
+      <AdminActionModal
+        open={Boolean(notice)}
+        type={notice?.type}
+        title={notice?.title ?? ""}
+        message={notice?.message}
+        confirmLabel="Entendido"
+        onClose={() => setNotice(null)}
+      />
 
-      {offerings.map((offering, index) => {
+      <AdminActionModal
+        open={Boolean(confirm)}
+        type="confirm"
+        title={confirm?.title ?? ""}
+        message={confirm?.message}
+        confirmLabel={confirm?.confirmLabel}
+        onConfirm={() => {
+          if (confirm) void patchOffering(confirm.id, "trash");
+        }}
+        onClose={() => setConfirm(null)}
+      />
+
+      {visibleOfferings.map((offering, index) => {
         const isPending = pendingId === offering.id;
         const duration = offering.duration || "Duración sin definir";
 
@@ -99,6 +138,7 @@ export default function ClassOfferingsTable({
           <article
             key={offering.id}
             className="flex flex-col gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 transition-colors hover:bg-surface-container-low sm:flex-row sm:items-center"
+            style={hiddenIds.has(offering.id) ? { display: "none" } : undefined}
           >
             <Link
               href={`${basePath}/${offering.id}/edit`}
@@ -157,7 +197,7 @@ export default function ClassOfferingsTable({
               </Link>
               <button
                 type="button"
-                disabled={isPending}
+                disabled={isBusy}
                 onClick={() => patchOffering(offering.id, "duplicate")}
                 className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-label-md font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -167,7 +207,7 @@ export default function ClassOfferingsTable({
               {offering.status === "published" ? (
                 <button
                   type="button"
-                  disabled={isPending}
+                  disabled={isBusy}
                   onClick={() => patchOffering(offering.id, "draft")}
                   className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-label-md font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -177,7 +217,7 @@ export default function ClassOfferingsTable({
               ) : (
                 <button
                   type="button"
-                  disabled={isPending}
+                  disabled={isBusy}
                   onClick={() => patchOffering(offering.id, "publish")}
                   className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-label-md font-semibold text-secondary transition-colors hover:bg-secondary-container/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -187,12 +227,17 @@ export default function ClassOfferingsTable({
               )}
               <button
                 type="button"
-                disabled={isPending}
-                onClick={() => patchOffering(offering.id, "trash")}
+                disabled={isBusy}
+                onClick={() => setConfirm({
+                  id: offering.id,
+                  title: "Mover a papelera",
+                  message: `Se moverá "${offering.title}" a la papelera. Puedes restaurarlo después desde Papelera.`,
+                  confirmLabel: "Papelera",
+                })}
                 className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-label-md font-semibold text-error transition-colors hover:bg-error-container disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-lg">delete</span>
-                Eliminar
+                {isPending ? "Enviando..." : "Papelera"}
               </button>
             </div>
           </article>

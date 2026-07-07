@@ -7,6 +7,11 @@ import type { Menu, MenuItem, MenuLocation } from "./types";
 import { logAction } from "./history-logs";
 
 const FILE_NAME = "menus.json";
+const SUPABASE_READ_TIMEOUT_MS = 1_500;
+const MENUS_CACHE_TTL_MS = 15_000;
+
+let menusCache: { items: Menu[]; expiresAt: number } | null = null;
+const menuLocationCache = new Map<MenuLocation, { item: Menu | null; expiresAt: number }>();
 
 type MenuInput = Partial<Omit<Menu, "id" | "created_at" | "updated_at" | "deleted_at" | "items">> & {
   id?: string;
@@ -20,6 +25,53 @@ type MenuItemInput = Partial<Omit<MenuItem, "id" | "created_at" | "updated_at">>
 export type MenuItemTreeInput = MenuItemInput & {
   children?: MenuItemInput[];
 };
+
+type SupabaseMaybeResponse = {
+  data: unknown;
+  error: unknown;
+};
+
+function getCachedMenus() {
+  if (!menusCache || menusCache.expiresAt <= Date.now()) return null;
+  return menusCache.items;
+}
+
+function cacheMenus(items: Menu[]) {
+  menusCache = { items, expiresAt: Date.now() + MENUS_CACHE_TTL_MS };
+  menuLocationCache.clear();
+}
+
+function invalidateMenuCache() {
+  menusCache = null;
+  menuLocationCache.clear();
+}
+
+function getCachedMenuByLocation(location: MenuLocation) {
+  const cached = menuLocationCache.get(location);
+  if (!cached || cached.expiresAt <= Date.now()) return undefined;
+  return cached.item;
+}
+
+function cacheMenuByLocation(location: MenuLocation, item: Menu | null) {
+  menuLocationCache.set(location, { item, expiresAt: Date.now() + MENUS_CACHE_TTL_MS });
+}
+
+async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, fallback: T) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const wrappedPromise = Promise.resolve(promise);
+    return await Promise.race([
+      wrappedPromise.catch(() => fallback).finally(() => {
+        if (timeout) clearTimeout(timeout);
+      }),
+      new Promise<T>((resolve) => {
+        timeout = setTimeout(() => resolve(fallback), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
 
 export function isProtectedHomeMenuItem(item: Pick<MenuItem, "url" | "parent_id">) {
   return !item.parent_id && ["/#hero", "/", "/home"].includes(item.url);
@@ -131,6 +183,7 @@ async function upsertMenu(menu: Menu): Promise<void> {
     delete data.items;
     await supabase.from("menus").upsert(data as unknown as Record<string, unknown>, { onConflict: "id" });
   } catch { /* best-effort */ }
+  invalidateMenuCache();
 }
 
 async function deleteMenuFromDb(id: string): Promise<void> {
@@ -138,6 +191,7 @@ async function deleteMenuFromDb(id: string): Promise<void> {
     const supabase = createAdminClient();
     await supabase.from("menus").delete().eq("id", id);
   } catch { /* best-effort */ }
+  invalidateMenuCache();
 }
 
 async function upsertMenuItem(menuId: string, item: MenuItem): Promise<void> {
@@ -146,6 +200,7 @@ async function upsertMenuItem(menuId: string, item: MenuItem): Promise<void> {
     const record: Record<string, unknown> = { ...item as unknown as Record<string, unknown>, menu_id: menuId };
     await supabase.from("menu_items").upsert(record, { onConflict: "id" });
   } catch { /* best-effort */ }
+  invalidateMenuCache();
 }
 
 async function upsertMenuItems(menuId: string, items: MenuItem[]): Promise<void> {
@@ -155,6 +210,7 @@ async function upsertMenuItems(menuId: string, items: MenuItem[]): Promise<void>
     const records = items.map((item) => ({ ...item as unknown as Record<string, unknown>, menu_id: menuId }));
     await supabase.from("menu_items").upsert(records, { onConflict: "id" });
   } catch { /* best-effort */ }
+  invalidateMenuCache();
 }
 
 async function deleteChildrenFromDb(parentIds: string[]): Promise<void> {
@@ -163,6 +219,7 @@ async function deleteChildrenFromDb(parentIds: string[]): Promise<void> {
     const supabase = createAdminClient();
     await supabase.from("menu_items").delete().in("parent_id", parentIds);
   } catch { /* best-effort */ }
+  invalidateMenuCache();
 }
 
 async function deleteMenuItemFromDb(itemId: string): Promise<void> {
@@ -171,12 +228,22 @@ async function deleteMenuItemFromDb(itemId: string): Promise<void> {
     await supabase.from("menu_items").delete().eq("parent_id", itemId);
     await supabase.from("menu_items").delete().eq("id", itemId);
   } catch { /* best-effort */ }
+  invalidateMenuCache();
 }
 
 export async function getMenus() {
-  const fromSupabase = await readMenusFromSupabase();
-  if (fromSupabase) return fromSupabase;
-  return readJsonFile<Menu[]>(FILE_NAME, []);
+  const cached = getCachedMenus();
+  if (cached) return cached;
+
+  const fromSupabase = await withTimeout(readMenusFromSupabase(), SUPABASE_READ_TIMEOUT_MS, null);
+  if (fromSupabase) {
+    cacheMenus(fromSupabase);
+    return fromSupabase;
+  }
+
+  const localMenus = await readJsonFile<Menu[]>(FILE_NAME, []);
+  cacheMenus(localMenus);
+  return localMenus;
 }
 
 export async function getMenuById(id: string) {
@@ -195,18 +262,37 @@ export async function getMenuById(id: string) {
 }
 
 export async function getMenuByLocation(location: MenuLocation) {
+  const cached = getCachedMenuByLocation(location);
+  if (cached !== undefined) return cached;
+
   try {
     const supabase = createAdminClient();
-    const { data: menu, error: me } = await supabase.from("menus").select("*").eq("location", location).eq("status", "active").maybeSingle();
+    const menuResponse = await withTimeout<SupabaseMaybeResponse>(
+      supabase.from("menus").select("*").eq("location", location).eq("status", "active").maybeSingle() as unknown as PromiseLike<SupabaseMaybeResponse>,
+      SUPABASE_READ_TIMEOUT_MS,
+      { data: null, error: null }
+    );
+    const menu = menuResponse.data as Record<string, unknown> | null;
+    const me = menuResponse.error;
     if (!me && menu) {
-      const { data: items, error: ie } = await supabase.from("menu_items").select("*").eq("menu_id", menu.id).order("sort_order");
+      const itemResponse = await withTimeout<SupabaseMaybeResponse>(
+        supabase.from("menu_items").select("*").eq("menu_id", String(menu.id)).order("sort_order") as unknown as PromiseLike<SupabaseMaybeResponse>,
+        SUPABASE_READ_TIMEOUT_MS,
+        { data: null, error: null }
+      );
+      const items = itemResponse.data as Array<Record<string, unknown>> | null;
+      const ie = itemResponse.error;
       if (!ie) {
-        return { ...(menu as Record<string, unknown>), items: (items ?? []).map(stripMenuId) } as Menu;
+        const item = { ...(menu as Record<string, unknown>), items: (items ?? []).map(stripMenuId) } as Menu;
+        cacheMenuByLocation(location, item);
+        return item;
       }
     }
   } catch { /* fall through */ }
   const menus = await readJsonFile<Menu[]>(FILE_NAME, []);
-  return menus.find((m) => m.location === location && m.status === "active") ?? null;
+  const item = menus.find((m) => m.location === location && m.status === "active") ?? null;
+  cacheMenuByLocation(location, item);
+  return item;
 }
 
 export async function createMenu(data: MenuInput) {

@@ -1,6 +1,10 @@
 import OfferingsCategoryPage from "@/components/admin/OfferingsCategoryPage";
 
-export default function ClasesPage({ searchParams }: { searchParams?: { q?: string; sort?: string; page?: string } }) {
+type AdminOfferingsSearchParams = { q?: string; sort?: string; page?: string };
+
+export default async function ClasesPage({ searchParams }: { searchParams?: Promise<AdminOfferingsSearchParams> }) {
+  const params = await searchParams;
+
   return (
     <OfferingsCategoryPage
       title="Clases"
@@ -12,7 +16,7 @@ export default function ClasesPage({ searchParams }: { searchParams?: { q?: stri
       emptyTitle="No hay clases creadas todavía."
       emptyDescription="Crea la primera clase para empezar."
       createLabel="Crear nueva clase"
-      searchParams={searchParams}
+      searchParams={params}
     />
   );
 }

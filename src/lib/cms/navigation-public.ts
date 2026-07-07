@@ -1,4 +1,3 @@
-import { unstable_noStore as noStore } from "next/cache";
 import type { NavigationItem } from "@/data/types";
 import { experienceHref } from "@/lib/routes";
 import { getMenuByLocation } from "./menus";
@@ -6,6 +5,8 @@ import { getOfferings } from "./offerings";
 import type { MenuItem, Offering } from "./types";
 
 type DynamicMenuKey = "classes" | "workshops" | "privateBookings" | "giftCards";
+const PUBLIC_NAV_CACHE_TTL_MS = Number(process.env.CMS_PUBLIC_NAV_CACHE_MS ?? 15_000);
+const publicNavigationCache = new Map<string, { items: NavigationItem[]; expiresAt: number }>();
 
 const dynamicMenuConfig: Record<DynamicMenuKey, {
   label: string;
@@ -40,6 +41,24 @@ const staticFallbackItems: NavigationItem[] = [
   },
   { label: "Shop", href: "/shop", order: 6, visible: true },
 ];
+
+export function invalidatePublicNavigationCache() {
+  publicNavigationCache.clear();
+}
+
+function getCachedPublicNavigation(location: string) {
+  const cached = publicNavigationCache.get(location);
+  if (!cached || cached.expiresAt <= Date.now()) return null;
+  return cached.items;
+}
+
+function cachePublicNavigation(location: string, items: NavigationItem[]) {
+  publicNavigationCache.set(location, {
+    items,
+    expiresAt: Date.now() + PUBLIC_NAV_CACHE_TTL_MS,
+  });
+  return items;
+}
 
 function hrefForItem(item: MenuItem) {
   return item.url || "/";
@@ -166,22 +185,6 @@ function offeringToNavigationItem(offering: Offering, order: number): Navigation
   };
 }
 
-function mergeDynamicChildren(existingChildren: NavigationItem[] = [], dynamicChildren: NavigationItem[] = []) {
-  const mergedByHref = new Map<string, NavigationItem>();
-
-  dynamicChildren.forEach((child, index) => {
-    mergedByHref.set(child.href, { ...child, order: index });
-  });
-
-  existingChildren
-    .filter((child) => child.visible !== false && !mergedByHref.has(child.href))
-    .forEach((child, index) => {
-      mergedByHref.set(child.href, { ...child, order: dynamicChildren.length + index });
-    });
-
-  return Array.from(mergedByHref.values()).sort((a, b) => a.order - b.order);
-}
-
 async function getDynamicChildrenByKey() {
   const offerings = await getOfferings();
   const published = offerings
@@ -207,7 +210,7 @@ function withDynamicChildren(items: NavigationItem[], dynamicChildren: Record<Dy
       ...item,
       label: labelForDynamicItem(item, key),
       href: dynamicMenuConfig[key].href,
-      children: mergeDynamicChildren(item.children, dynamicChildren[key]),
+      children: dynamicChildren[key],
     };
   });
 
@@ -227,10 +230,12 @@ function withDynamicChildren(items: NavigationItem[], dynamicChildren: Record<Dy
 }
 
 export async function getPublicNavigationItems(location: "main" | "mobile" | "footer" = "main") {
-  noStore();
+  const cached = getCachedPublicNavigation(location);
+  if (cached) return cached;
+
   const dynamicChildren = location === "footer" ? null : await getDynamicChildrenByKey();
   const menu = await getMenuByLocation(location);
-  if (!menu) return dynamicChildren ? withDynamicChildren(staticFallbackItems, dynamicChildren) : [];
+  if (!menu) return cachePublicNavigation(location, dynamicChildren ? withDynamicChildren(staticFallbackItems, dynamicChildren) : []);
 
   const childrenByParent = new Map<string, MenuItem[]>();
   for (const item of menu.items) {
@@ -246,8 +251,8 @@ export async function getPublicNavigationItems(location: "main" | "mobile" | "fo
     .map((item) => toNavigationItem(item, childrenByParent.get(item.id) ?? []));
 
   if (dynamicChildren) {
-    return withDynamicChildren(items.length ? items : staticFallbackItems, dynamicChildren);
+    return cachePublicNavigation(location, withDynamicChildren(items.length ? items : staticFallbackItems, dynamicChildren));
   }
 
-  return location === "footer" ? items : normalizePublicMenuStructure(items);
+  return cachePublicNavigation(location, location === "footer" ? items : normalizePublicMenuStructure(items));
 }

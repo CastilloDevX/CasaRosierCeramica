@@ -5,6 +5,7 @@ import TopBar from "@/components/layout/TopBar";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
 import { requireAdminProfile } from "@/lib/auth/supabase-auth";
+import { getClassEditorPreviewChrome } from "@/lib/cms/class-editor-preview";
 import { getOfferingById } from "@/lib/cms/offerings";
 import type { Offering, OfferingType } from "@/lib/cms/types";
 
@@ -56,7 +57,10 @@ export async function EditProductOfferingPage({
   const session = await requireAdminProfile();
   if (!session) redirect("/auth");
 
-  const offering = await getOfferingById(id);
+  const [offering, previewChrome] = await Promise.all([
+    getOfferingById(id),
+    getClassEditorPreviewChrome(),
+  ]);
   if (!offering || offering.type !== expectedType) {
     return (
       <AdminShell>
@@ -90,12 +94,12 @@ export async function EditProductOfferingPage({
         }
       />
 
-      <ClassEditForm offering={offering} basePath={basePath} />
+      <ClassEditForm offering={offering} basePath={basePath} previewChrome={previewChrome} />
     </AdminShell>
   );
 }
 
-export function NewProductOfferingPage({
+export async function NewProductOfferingPage({
   type,
   typeLabel,
   basePath,
@@ -104,6 +108,8 @@ export function NewProductOfferingPage({
   typeLabel: string;
   basePath: string;
 }) {
+  const previewChrome = await getClassEditorPreviewChrome();
+
   return (
     <AdminShell>
       <TopBar
@@ -124,7 +130,7 @@ export function NewProductOfferingPage({
         }
       />
 
-      <ClassEditForm offering={newProductOffering(type)} mode="create" basePath={basePath} />
+      <ClassEditForm offering={newProductOffering(type)} mode="create" basePath={basePath} previewChrome={previewChrome} />
     </AdminShell>
   );
 }

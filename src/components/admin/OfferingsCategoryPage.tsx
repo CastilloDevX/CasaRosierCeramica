@@ -61,7 +61,7 @@ export default async function OfferingsCategoryPage({
   const sort = isSortKey(resolvedSearchParams?.sort ?? "") ? resolvedSearchParams?.sort as SortKey : "recent";
   const page = Math.max(1, Number(resolvedSearchParams?.page ?? 1) || 1);
 
-  const baseItems = offerings.filter((item) => item.type === type && ["draft", "published"].includes(item.status));
+  const baseItems = offerings.filter((item) => item.type === type && !item.deleted_at && ["draft", "published"].includes(item.status));
   const items = baseItems
     .filter((item) => {
       const haystack = [item.title, item.slug, item.excerpt, item.type].join(" ").toLowerCase();

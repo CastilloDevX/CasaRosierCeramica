@@ -1,6 +1,10 @@
 import OfferingsCategoryPage from "@/components/admin/OfferingsCategoryPage";
 
-export default function ExperienciasPage({ searchParams }: { searchParams?: { q?: string; sort?: string; page?: string } }) {
+type AdminOfferingsSearchParams = { q?: string; sort?: string; page?: string };
+
+export default async function ExperienciasPage({ searchParams }: { searchParams?: Promise<AdminOfferingsSearchParams> }) {
+  const params = await searchParams;
+
   return (
     <OfferingsCategoryPage
       title="Experiencias"
@@ -12,7 +16,7 @@ export default function ExperienciasPage({ searchParams }: { searchParams?: { q?
       emptyTitle="No hay experiencias creadas todavía."
       emptyDescription="Crea la primera experiencia para empezar."
       createLabel="Crear nueva experiencia"
-      searchParams={searchParams}
+      searchParams={params}
     />
   );
 }

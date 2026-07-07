@@ -164,7 +164,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
               </section>
 
               <section className="class-detail__program">
-                <h2>Contenido del curso</h2>
+                <h2>{item.programSectionTitle || "Contenido del curso"}</h2>
                 <Accordion items={item.program} />
                 {isGiftCard && enrollHref ? (
                   <>

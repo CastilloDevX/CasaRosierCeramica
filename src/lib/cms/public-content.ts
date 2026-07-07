@@ -17,6 +17,8 @@ const publicCache = new Map<string, CacheEntry<unknown>>();
 export function invalidatePublicContentCache() {
   publicCache.delete("public-promo-banner");
   publicCache.delete("public-home-content");
+  publicCache.delete("public-social-gallery");
+  publicCache.delete("public-testimonials");
 }
 
 function cached<T>(key: string, loader: () => Promise<T>, ttlMs = CACHE_TTL_MS) {
@@ -81,10 +83,12 @@ function getActiveBannerFromItems(items: PromoBanner[]) {
 }
 
 export function getPublicSocialGallery(): Promise<SocialGallery | null> {
-  return withFallback(getSocialGalleries, getLocalSocialGalleries).then((galleries) =>
-    galleries
-      .filter((item) => item.deleted_at === null)
-      .sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at))[0] ?? null,
+  return cached("public-social-gallery", () =>
+    withFallback(getSocialGalleries, getLocalSocialGalleries).then((galleries) =>
+      galleries
+        .filter((item) => item.deleted_at === null)
+        .sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at))[0] ?? null,
+    ),
   );
 }
 

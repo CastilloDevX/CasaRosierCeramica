@@ -5,9 +5,12 @@ import { useState } from "react";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
 
-export default function FooterContactForm() {
+export default function FooterContactForm({ preview = false }: { preview?: boolean }) {
   const [state, setState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
+  const fieldProps = preview
+    ? { disabled: true, required: false }
+    : { required: true };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,18 +46,18 @@ export default function FooterContactForm() {
     setMessage(data.error || "No se pudo enviar el mensaje. Intentalo de nuevo.");
   }
 
-  return (
-    <form className="contact-form" onSubmit={handleSubmit}>
+  const content = (
+    <>
       <div className="contact-form__row">
         <div>
           <label htmlFor="nombre">Nombre</label>
           <input
             id="nombre"
             className="contact-form__input"
-            name="name"
+            name={preview ? undefined : "name"}
             type="text"
             placeholder="Nombre"
-            required
+            {...fieldProps}
           />
         </div>
         <div>
@@ -62,10 +65,10 @@ export default function FooterContactForm() {
           <input
             id="email"
             className="contact-form__input"
-            name="email"
+            name={preview ? undefined : "email"}
             type="email"
             placeholder="Correo electronico *"
-            required
+            {...fieldProps}
           />
         </div>
       </div>
@@ -74,10 +77,10 @@ export default function FooterContactForm() {
         <input
           id="telefono"
           className="contact-form__input"
-          name="phone"
+          name={preview ? undefined : "phone"}
           type="tel"
           placeholder="Numero de telefono"
-          required
+          {...fieldProps}
         />
       </div>
       <div>
@@ -85,12 +88,12 @@ export default function FooterContactForm() {
         <textarea
           id="comentario"
           className="contact-form__textarea"
-          name="message"
+          name={preview ? undefined : "message"}
           placeholder="Comentario"
-          required
+          {...fieldProps}
         />
       </div>
-      <button className="contact-form__submit" type="submit" disabled={state === "submitting"}>
+      <button className="contact-form__submit" type={preview ? "button" : "submit"} disabled={preview || state === "submitting"}>
         {state === "submitting" ? "Enviando..." : "Enviar"}
       </button>
       {message ? (
@@ -98,6 +101,20 @@ export default function FooterContactForm() {
           {message}
         </p>
       ) : null}
+    </>
+  );
+
+  if (preview) {
+    return (
+      <div className="contact-form" aria-label="Formulario de contacto del footer">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <form className="contact-form" onSubmit={handleSubmit}>
+      {content}
     </form>
   );
 }

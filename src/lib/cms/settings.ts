@@ -6,6 +6,10 @@ const FILE_NAME = "settings.json";
 
 const SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 const MENU_VISUAL_SETTINGS_ID = "00000000-0000-0000-0000-000000000002";
+const SUPABASE_READ_TIMEOUT_MS = 1_500;
+const SETTINGS_CACHE_TTL_MS = 15_000;
+
+let settingsCache: { item: SiteSettings; expiresAt: number } | null = null;
 
 export interface SiteSettings {
   site: {
@@ -256,6 +260,31 @@ type MenuVisualSettingsRow = {
   scroll_menu_logo_tint_color?: string | null;
 };
 
+function getCachedSettings() {
+  if (!settingsCache || settingsCache.expiresAt <= Date.now()) return null;
+  return settingsCache.item;
+}
+
+function cacheSettings(settings: SiteSettings) {
+  settingsCache = { item: settings, expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS };
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise.catch(() => fallback).finally(() => {
+        if (timeout) clearTimeout(timeout);
+      }),
+      new Promise<T>((resolve) => {
+        timeout = setTimeout(() => resolve(fallback), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 function rowToMenuSettings(row: MenuVisualSettingsRow): Partial<SiteSettings["menu"]> {
   return {
     header_logo_url: row.header_logo_url ?? DEFAULT_SETTINGS.menu.header_logo_url,
@@ -362,12 +391,16 @@ function mergeSettings(current: SiteSettings, partial: Partial<SiteSettings>): S
 }
 
 export async function getSettings(): Promise<SiteSettings> {
-  const fromSupabase = await readFromSupabase();
+  const cached = getCachedSettings();
+  if (cached) return cached;
+
+  const fromSupabase = await withTimeout(readFromSupabase(), SUPABASE_READ_TIMEOUT_MS, null);
   if (fromSupabase) {
+    cacheSettings(fromSupabase);
     return fromSupabase;
   }
   const data = await readJsonFile<Partial<SiteSettings>>(FILE_NAME, {});
-  return {
+  const settings = {
     site: { ...DEFAULT_SETTINGS.site, ...(data.site ?? {}) },
     menu: { ...DEFAULT_SETTINGS.menu, ...(data.menu ?? {}) },
     contact: { ...DEFAULT_SETTINGS.contact, ...(data.contact ?? {}) },
@@ -376,6 +409,8 @@ export async function getSettings(): Promise<SiteSettings> {
     seo: { ...DEFAULT_SETTINGS.seo, ...(data.seo ?? {}) },
     system: { ...DEFAULT_SETTINGS.system, ...(data.system ?? {}) },
   };
+  cacheSettings(settings);
+  return settings;
 }
 
 export async function updateSettings(data: Partial<SiteSettings>): Promise<SiteSettings> {
@@ -385,6 +420,7 @@ export async function updateSettings(data: Partial<SiteSettings>): Promise<SiteS
   try {
     await writeJsonFile(FILE_NAME, next);
   } catch { /* migrations may not be applied yet */ }
+  cacheSettings(next);
   return next;
 }
 
@@ -412,5 +448,6 @@ export async function resetSettings(): Promise<SiteSettings> {
   const next = { ...DEFAULT_SETTINGS, system: { ...DEFAULT_SETTINGS.system, updated_at: new Date().toISOString() } };
   await writeToSupabase(next);
   await writeJsonFile(FILE_NAME, next);
+  cacheSettings(next);
   return next;
 }

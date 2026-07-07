@@ -3,16 +3,45 @@ import { createAdminClient } from "../supabase/admin";
 import { addTrashItem, getCurrentUserEmail, getTrashItemByEntity, removeTrashItem } from "./trash";
 import { readJsonFile, writeJsonFile } from "./local-storage";
 import { isFooterStatus } from "./types";
-import type { FooterComponent, FooterStatus, SocialLink } from "./types";
+import type { FooterComponent, SocialLink } from "./types";
 import type { Json } from "../supabase/types";
 import { logAction } from "./history-logs";
 
 const TABLE = "footers";
 const FILE_NAME = "footers.json";
+const SUPABASE_READ_TIMEOUT_MS = 1_500;
+const FOOTERS_CACHE_TTL_MS = 15_000;
+
+let footersCache: { items: FooterComponent[]; expiresAt: number } | null = null;
 
 type Input = Partial<Omit<FooterComponent, "id" | "created_at" | "updated_at" | "deleted_at" | "social_links">> & {
   id?: string; deleted_at?: string | null; social_links?: SocialLink[];
 };
+
+function getCachedFooters() {
+  if (!footersCache || footersCache.expiresAt <= Date.now()) return null;
+  return footersCache.items;
+}
+
+function cacheFooters(items: FooterComponent[]) {
+  footersCache = { items, expiresAt: Date.now() + FOOTERS_CACHE_TTL_MS };
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise.catch(() => fallback).finally(() => {
+        if (timeout) clearTimeout(timeout);
+      }),
+      new Promise<T>((resolve) => {
+        timeout = setTimeout(() => resolve(fallback), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
 
 const DEFAULT_SOCIAL_LINKS: SocialLink[] = [
   {
@@ -117,9 +146,25 @@ async function deleteFromSupabase(id: string): Promise<void> {
 }
 
 export async function getFooters() {
-  const fromSupabase = await readAllFromSupabase();
-  if (fromSupabase) return fromSupabase;
-  return readJsonFile<FooterComponent[]>(FILE_NAME, []);
+  const cached = getCachedFooters();
+  if (cached) return cached;
+
+  const fromSupabase = await withTimeout(readAllFromSupabase(), SUPABASE_READ_TIMEOUT_MS, null);
+  if (fromSupabase) {
+    cacheFooters(fromSupabase);
+    return fromSupabase;
+  }
+
+  const localFooters = await readJsonFile<FooterComponent[]>(FILE_NAME, []);
+  cacheFooters(localFooters);
+  return localFooters;
+}
+
+export async function getPublicFooter() {
+  const footers = await getFooters();
+  return footers.find((item) => item.status === "published" && item.deleted_at === null)
+    ?? footers.find((item) => item.deleted_at === null)
+    ?? null;
 }
 
 export async function getFooterById(id: string) {
@@ -139,6 +184,7 @@ export async function createFooter(data: Input) {
   const next = normalize(data);
   await writeJsonFile(FILE_NAME, [next, ...all]);
   await upsertToSupabase(next);
+  cacheFooters([next, ...all]);
   await logAction({ action: "create", entity_type: "footer", entity_id: next.id, entity_title: next.name, new_data: next });
   return next;
 }
@@ -152,6 +198,7 @@ export async function updateFooter(id: string, data: Input) {
   all[idx] = next;
   await writeJsonFile(FILE_NAME, all);
   await upsertToSupabase(next);
+  cacheFooters(all);
   if (old.status !== next.status) {
     if (next.status === "published") await logAction({ action: "publish", entity_type: "footer", entity_id: next.id, entity_title: next.name, old_data: old, new_data: next });
     else if (old.status === "published") await logAction({ action: "unpublish", entity_type: "footer", entity_id: next.id, entity_title: next.name, old_data: old, new_data: next });
@@ -167,6 +214,7 @@ export async function duplicateFooter(id: string) {
   const copy = normalize({ ...orig, name: `${orig.name} (copia)`, status: "draft" });
   await writeJsonFile(FILE_NAME, [copy, ...all]);
   await upsertToSupabase(copy);
+  cacheFooters([copy, ...all]);
   await logAction({ action: "duplicate", entity_type: "footer", entity_id: orig.id, entity_title: orig.name, new_data: copy });
   return copy;
 }
@@ -181,6 +229,7 @@ export async function moveFooterToTrash(id: string, deletedBy?: string) {
   all[idx] = t;
   await writeJsonFile(FILE_NAME, all);
   await upsertToSupabase(t);
+  cacheFooters(all);
   await addTrashItem({ id: randomUUID(), entity_type: "footer", entity_id: id, title: t.name, deleted_by: dBy, deleted_at: d, restore_data: all[idx] });
   await logAction({ action: "trash", entity_type: "footer", entity_id: id, entity_title: t.name, old_data: all[idx], user_email: dBy });
   return t;
@@ -197,6 +246,7 @@ export async function restoreFooter(id: string) {
   if (idx === -1) { const a = await readJsonFile<FooterComponent[]>(FILE_NAME, []); a.unshift(r); await writeJsonFile(FILE_NAME, a); }
   else { all[idx] = r; await writeJsonFile(FILE_NAME, all); }
   await upsertToSupabase(r);
+  cacheFooters(idx === -1 ? [r, ...all] : all);
   if (ti) await removeTrashItem(ti.id);
   await logAction({ action: "restore", entity_type: "footer", entity_id: r.id, entity_title: r.name });
   return r;
@@ -209,6 +259,7 @@ export async function deleteFooterPermanently(id: string) {
   if (next.length === all.length) return false;
   await writeJsonFile(FILE_NAME, next);
   await deleteFromSupabase(id);
+  cacheFooters(next);
   const ti = await getTrashItemByEntity(id);
   if (ti) await removeTrashItem(ti.id);
   if (item) await logAction({ action: "delete_permanently", entity_type: "footer", entity_id: id, entity_title: item.name, old_data: item });

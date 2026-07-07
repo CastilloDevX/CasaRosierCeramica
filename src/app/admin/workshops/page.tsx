@@ -1,6 +1,10 @@
 import OfferingsCategoryPage from "@/components/admin/OfferingsCategoryPage";
 
-export default function WorkshopsPage({ searchParams }: { searchParams?: { q?: string; sort?: string; page?: string } }) {
+type AdminOfferingsSearchParams = { q?: string; sort?: string; page?: string };
+
+export default async function WorkshopsPage({ searchParams }: { searchParams?: Promise<AdminOfferingsSearchParams> }) {
+  const params = await searchParams;
+
   return (
     <OfferingsCategoryPage
       title="Workshops"
@@ -12,7 +16,7 @@ export default function WorkshopsPage({ searchParams }: { searchParams?: { q?: s
       emptyTitle="No hay workshops creados todavía."
       emptyDescription="Crea el primer workshop para empezar."
       createLabel="Crear nuevo workshop"
-      searchParams={searchParams}
+      searchParams={params}
     />
   );
 }

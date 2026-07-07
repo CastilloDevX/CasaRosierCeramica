@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { DetailPage } from "@/components/collections/DetailPage";
 import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
+import { PublicFooterContent } from "@/components/layout/PublicFooterContent";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -13,6 +14,7 @@ import { SocialGallery } from "@/components/home/SocialGallery";
 import type { NavigationItem } from "@/data/types";
 import type { ExperienceItem, ExperienceKind } from "@/data/types";
 import { assetPath } from "@/lib/assets";
+import type { ClassEditorPreviewChrome } from "@/lib/cms/class-editor-preview";
 import AdminActionModal from "./AdminActionModal";
 import ColorPickerField from "./ColorPickerField";
 import MediaLibraryModal from "./MediaLibraryModal";
@@ -339,11 +341,15 @@ function TextField({
   required,
   error,
   help,
+  validationKey,
   value,
   ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { label: string; required?: boolean; error?: string; help?: string }) {
+}: React.InputHTMLAttributes<HTMLInputElement> & { label: string; required?: boolean; error?: string; help?: string; validationKey?: string }) {
   return (
-    <div className="space-y-1.5">
+    <div
+      className={`space-y-1.5 rounded-xl ${error ? "ring-2 ring-error/30 ring-offset-2 ring-offset-surface-container-lowest" : ""}`}
+      data-validation-key={validationKey}
+    >
       <FieldLabel required={required}>{label}</FieldLabel>
       <input
         {...props}
@@ -362,11 +368,15 @@ function TextAreaField({
   label,
   error,
   help,
+  validationKey,
   value,
   ...props
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; error?: string; help?: string }) {
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; error?: string; help?: string; validationKey?: string }) {
   return (
-    <div className="space-y-1.5">
+    <div
+      className={`space-y-1.5 rounded-xl ${error ? "ring-2 ring-error/30 ring-offset-2 ring-offset-surface-container-lowest" : ""}`}
+      data-validation-key={validationKey}
+    >
       <FieldLabel>{label}</FieldLabel>
       <textarea
         {...props}
@@ -614,6 +624,7 @@ function HeroResponsivePreview({
     left: heroValue(details, keys.logoX) || "50%",
     top: heroValue(details, keys.logoY) || "46px",
     width: heroValue(details, keys.logoWidth) || "118px",
+    aspectRatio: "2.2 / 1",
     backgroundColor: navColor,
     WebkitMaskImage: 'url("/img/logo-header.png")',
     maskImage: 'url("/img/logo-header.png")',
@@ -644,8 +655,9 @@ function HeroResponsivePreview({
   const scriptPreviewStyle = {
     width: device === "desktop" ? "min(82%, 700px)" : device === "tablet" ? "min(82%, 600px)" : "min(88%, 340px)",
     aspectRatio: "3.35 / 1",
-    transform: device === "desktop" ? "translateY(-40px)" : device === "tablet" ? "translateY(-24px)" : "translateY(-8px)",
+    transform: device === "desktop" ? "translateY(28px)" : device === "tablet" ? "translateY(18px)" : "translateY(10px)",
   } as CSSProperties;
+  const heroContentTop = isPresentationHero ? "58%" : isImageHero ? "54%" : "50%";
 
   return (
     <Card padding="lg" className="space-y-5 rounded-2xl">
@@ -660,7 +672,7 @@ function HeroResponsivePreview({
         <div className="relative mx-auto overflow-hidden rounded-xl border border-outline-variant bg-[#fbfaf6] shadow-sm" style={frameStyle}>
           {device === "desktop" ? (
             <>
-              <span className="absolute z-20 h-12 -translate-x-1/2" style={logoStyle} aria-label="Casa Rosier" />
+              <span className="absolute z-20 -translate-x-1/2" style={logoStyle} aria-label="Casa Rosier" />
 
               <div
                 className="absolute left-1/2 z-20 flex items-center justify-center whitespace-nowrap text-[12px] font-bold"
@@ -705,7 +717,7 @@ function HeroResponsivePreview({
             </div>
           )}
 
-          <div className="absolute inset-x-8 top-1/2 z-10 -translate-y-1/2 text-center">
+          <div className="absolute inset-x-8 z-10 -translate-y-1/2 text-center" style={{ top: heroContentTop }}>
             {isPresentationHero ? (
               <div className={`cms-hero-presentation-preview cms-hero-presentation-preview--${device}`}>
                 <div className="page-hero__presentation-text" style={{ color: details.heroPresentationTextColor || "#FFFFFF" }}>
@@ -826,6 +838,46 @@ const previewNavigationItems: NavigationItem[] = [
   { label: "Shop", href: "/shop", order: 6, visible: true },
 ];
 
+const fallbackPreviewChrome: ClassEditorPreviewChrome = {
+  navigationItems: previewNavigationItems,
+  menuSettings: {
+    header_logo_url: "/img/logo-header.png",
+    scroll_menu_background_color: "#8c7457",
+    scroll_menu_text_color: "#fff9f1",
+    scroll_menu_icon_color: "#fff9f1",
+    scroll_menu_logo_tint_enabled: false,
+    scroll_menu_logo_tint_color: "#fff9f1",
+  },
+  socialGallery: null,
+  footer: null,
+};
+
+function socialGalleryPosts(previewChrome: ClassEditorPreviewChrome) {
+  return previewChrome.socialGallery?.items
+    .filter((item) => item.is_visible !== false && item.image_url)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((item) => ({
+      image: item.image_url,
+      title: item.title,
+      body: item.description,
+      instagramUrl: item.instagram_url,
+    }));
+}
+
+function PublicSocialGalleryPreview({ previewChrome }: { previewChrome: ClassEditorPreviewChrome }) {
+  const gallery = previewChrome.socialGallery;
+  const posts = socialGalleryPosts(previewChrome);
+
+  return (
+    <SocialGallery
+      title={gallery?.title || undefined}
+      subtitle={gallery?.description || undefined}
+      posts={posts?.length ? posts : undefined}
+      sourceHref={gallery?.cta_url || undefined}
+    />
+  );
+}
+
 function buildPreviewItem({
   offeringType,
   title,
@@ -905,6 +957,7 @@ function buildPreviewItem({
     schedule: previewSchedule(details),
     included: details.includedItems.filter((item) => item.trim()),
     program: previewProgram(details),
+    programSectionTitle: details.content.modulesSectionTitle.trim() || "Contenido del curso",
     learningSectionTitle: details.content.learningSectionTitle.trim() || "¿Qué aprenderás?",
     whatYouWillLearn: toLines(details.content.learningContent),
     participationSectionTitle: details.content.participationSectionTitle.trim() || "¿Quién puede participar?",
@@ -932,6 +985,7 @@ function PreviewPane({
   description,
   status,
   details,
+  previewChrome,
 }: {
   offeringType: Offering["type"];
   title: string;
@@ -940,6 +994,7 @@ function PreviewPane({
   description: string;
   status: "draft" | "published";
   details: ClassOfferingDetails;
+  previewChrome: ClassEditorPreviewChrome;
 }) {
   const previewItem = buildPreviewItem({ offeringType, title, slug, subtitle, description, details });
   const promoPage = previewItem.kind === "private-booking" ? undefined : previewItem.kind.replace("-card", "");
@@ -954,19 +1009,28 @@ function PreviewPane({
         data-promo-page={promoPage}
       >
         <div className="cms-public-preview__scale">
-          <PreviewHeader item={previewItem} details={details} />
+          <PreviewHeader item={previewItem} details={details} previewChrome={previewChrome} />
 
           <div className="cms-public-preview__body">
             <DetailPage item={previewItem} />
-            {previewItem.showIdeaPromptSection ? <SocialGallery /> : null}
+            {previewItem.showIdeaPromptSection ? <PublicSocialGalleryPreview previewChrome={previewChrome} /> : null}
           </div>
+          <PublicFooterContent footer={previewChrome.footer} preview />
         </div>
       </div>
     </div>
   );
 }
 
-function PreviewHeader({ item, details }: { item: ExperienceItem; details: ClassOfferingDetails }) {
+function PreviewHeader({
+  item,
+  details,
+  previewChrome,
+}: {
+  item: ExperienceItem;
+  details: ClassOfferingDetails;
+  previewChrome: ClassEditorPreviewChrome;
+}) {
   const variant = item.heroVariant ?? "text";
   const isImageLike = variant === "image" || variant === "presentation";
   const style = {
@@ -1006,11 +1070,13 @@ function PreviewHeader({ item, details }: { item: ExperienceItem; details: Class
         data-header-overlay="warm"
       >
         <NavbarGlobal
-          navigationItems={previewNavigationItems}
-          logoUrl="/img/logo-header.png"
-          scrollMenuBackgroundColor="#8c7457"
-          scrollMenuTextColor="#fff9f1"
-          scrollMenuIconColor="#fff9f1"
+          navigationItems={previewChrome.navigationItems}
+          logoUrl={previewChrome.menuSettings.header_logo_url}
+          scrollMenuBackgroundColor={previewChrome.menuSettings.scroll_menu_background_color}
+          scrollMenuTextColor={previewChrome.menuSettings.scroll_menu_text_color}
+          scrollMenuIconColor={previewChrome.menuSettings.scroll_menu_icon_color}
+          scrollMenuLogoTintEnabled={previewChrome.menuSettings.scroll_menu_logo_tint_enabled}
+          scrollMenuLogoTintColor={previewChrome.menuSettings.scroll_menu_logo_tint_color}
           scrollThreshold={scrollThreshold}
           tabletScrollThreshold={Number.parseInt(item.heroMenuTabletPositionY ?? "", 10) || scrollThreshold}
           mobileScrollThreshold={Number.parseInt(item.heroMenuMobilePositionY ?? "", 10) || 96}
@@ -1061,10 +1127,12 @@ export default function ClassEditForm({
   offering,
   mode = "edit",
   basePath = "/admin/clases",
+  previewChrome = fallbackPreviewChrome,
 }: {
   offering: Offering;
   mode?: "create" | "edit";
   basePath?: string;
+  previewChrome?: ClassEditorPreviewChrome;
 }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("hero");
@@ -1079,6 +1147,7 @@ export default function ClassEditForm({
   const [details, setDetails] = useState<ClassOfferingDetails>(() => toClassDetails(offering));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<FormNotice | null>(null);
+  const [pendingValidationFocus, setPendingValidationFocus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [savingIntent, setSavingIntent] = useState<SaveIntent | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -1198,8 +1267,21 @@ export default function ClassEditForm({
     if (errorKey === "heroTitle") return "hero";
     if (errorKey.startsWith("schedule-")) return "schedule";
     if (errorKey.startsWith("pricing-") || errorKey === "title" || errorKey === "slug" || errorKey === "whatsappNumber") return "basic";
-    if (errorKey.startsWith("gallery-")) return "additions";
+    if (errorKey.startsWith("gallery-")) return "content";
     return "basic";
+  }
+
+  function focusValidationTarget(errorKey: string) {
+    const selector = `[data-validation-key="${CSS.escape(errorKey)}"]`;
+    window.setTimeout(() => {
+      const target = document.querySelector<HTMLElement>(selector);
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      const focusable = target.matches("input, textarea, select, button, [contenteditable='true']")
+        ? target
+        : target.querySelector<HTMLElement>("input, textarea, select, button, [contenteditable='true']");
+      window.setTimeout(() => focusable?.focus({ preventScroll: true }), 250);
+    }, 80);
   }
 
   function errorLabel(errorKey: string) {
@@ -1252,7 +1334,9 @@ export default function ClassEditForm({
     const validationErrors = validate();
     const validationKeys = Object.keys(validationErrors);
     if (validationKeys.length > 0) {
-      setActiveTab(errorTab(validationKeys[0]));
+      const firstErrorKey = validationKeys[0];
+      setPendingValidationFocus(firstErrorKey);
+      setActiveTab(errorTab(firstErrorKey));
       setToast({
         type: "error",
         message: `Encontré ${validationKeys.length === 1 ? "1 campo que necesita atención" : `${validationKeys.length} campos que necesitan atención`}.`,
@@ -1399,7 +1483,14 @@ export default function ClassEditForm({
         message={toast?.message}
         details={toast?.details}
         confirmLabel="Entendido"
-        onClose={() => setToast(null)}
+        onClose={() => {
+          const focusKey = toast?.type === "error" ? pendingValidationFocus : null;
+          setToast(null);
+          if (focusKey) {
+            focusValidationTarget(focusKey);
+            setPendingValidationFocus(null);
+          }
+        }}
       />
 
       <div className="mb-6 border-b border-outline-variant">
@@ -1419,7 +1510,7 @@ export default function ClassEditForm({
         </div>
       </div>
 
-      <form id="class-edit-form" onSubmit={handleSubmit} className="space-y-6">
+      <form id="class-edit-form" onSubmit={handleSubmit} className="class-edit-form space-y-6">
         {activeTab === "hero" ? (
           <>
             <Card padding="lg" className="space-y-5 rounded-2xl">
@@ -1520,6 +1611,7 @@ export default function ClassEditForm({
                       minHeight="220px"
                       placeholder="# Chagall, Master Drawings&#10;&#10;February 27-May 28, 2018&#10;&#10;On view at The Met Fifth Avenue..."
                     />
+                    {errors.heroTitle ? <p className="text-label-md text-error" data-validation-key="heroTitle">{errors.heroTitle}</p> : null}
                     <ColorPickerField
                       label="Color del texto"
                       value={details.heroPresentationTextColor || "#FFFFFF"}
@@ -1541,7 +1633,7 @@ export default function ClassEditForm({
               <Card padding="lg" className="space-y-5 rounded-2xl">
                 <h2 className="text-headline-sm text-on-surface">Hero tipográfico</h2>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <TextField label="Título del hero" required value={details.heroTitle} error={errors.heroTitle} onChange={(event) => updateDetails({ heroTitle: event.target.value })} />
+                  <TextField label="Título del hero" required value={details.heroTitle} error={errors.heroTitle} validationKey="heroTitle" onChange={(event) => updateDetails({ heroTitle: event.target.value })} />
                   <TextField label="Subtítulo del hero" value={details.heroSubtitle} placeholder="Clases - Iniciación" onChange={(event) => updateDetails({ heroSubtitle: event.target.value })} />
                 </div>
                 <div className="rounded-2xl border border-outline-variant bg-white px-6 py-16 text-center">
@@ -1577,6 +1669,7 @@ export default function ClassEditForm({
                   required
                   value={title}
                   error={errors.title}
+                  validationKey="title"
                   onChange={(event) => { setTitle(event.target.value); setIsDirty(true); }}
                   onBlur={() => { if (!slug.trim()) setSlug(slugify(title)); }}
                 />
@@ -1585,6 +1678,7 @@ export default function ClassEditForm({
                   required
                   value={slug}
                   error={errors.slug}
+                  validationKey="slug"
                   help="Si el slug ya existe, se agregará automáticamente un número al final."
                   onChange={(event) => { setSlug(slugify(event.target.value)); setIsDirty(true); }}
                 />
@@ -1598,6 +1692,7 @@ export default function ClassEditForm({
                   label="WhatsApp"
                   value={details.whatsappNumber}
                   error={errors.whatsappNumber}
+                  validationKey="whatsappNumber"
                   help="Formato internacional sin espacios. Ej: 34633788860"
                   onChange={(event) => updateDetails({ whatsappNumber: event.target.value })}
                 />
@@ -1658,7 +1753,7 @@ export default function ClassEditForm({
                 {details.pricing.length ? details.pricing.map((item, index) => (
                   <div key={index} className="grid grid-cols-1 gap-3 rounded-xl border border-outline-variant p-4 md:grid-cols-[1fr_140px_auto] md:items-start">
                     <TextField label="Descripción" placeholder="Bono 4 clases" value={item.description} onChange={(event) => updatePricing(index, { description: event.target.value })} />
-                    <TextField label="Precio (€)" type="number" min={0} value={item.price ?? ""} error={errors[`pricing-${index}`]} onChange={(event) => updatePricing(index, { price: event.target.value === "" ? null : Number(event.target.value) })} />
+                    <TextField label="Precio (€)" type="number" min={0} value={item.price ?? ""} error={errors[`pricing-${index}`]} validationKey={`pricing-${index}`} onChange={(event) => updatePricing(index, { price: event.target.value === "" ? null : Number(event.target.value) })} />
                     <button type="button" onClick={() => removePricing(index)} className="mt-7 inline-flex h-10 w-10 items-center justify-center rounded-lg text-error hover:bg-error-container" aria-label="Eliminar precio">
                       <span className="material-symbols-outlined">delete</span>
                     </button>
@@ -1754,7 +1849,7 @@ export default function ClassEditForm({
                           Sustituir
                         </Button>
                       </div>
-                      <TextField label="Texto alternativo (ALT)" required value={item.alt} error={errors[`gallery-${index}`]} onChange={(event) => updateGalleryImage(index, { alt: event.target.value })} />
+                      <TextField label="Texto alternativo (ALT)" required value={item.alt} error={errors[`gallery-${index}`]} validationKey={`gallery-${index}`} onChange={(event) => updateGalleryImage(index, { alt: event.target.value })} />
                     </div>
                   </div>
                 ))}
@@ -1811,7 +1906,7 @@ export default function ClassEditForm({
               </div>
               {details.showIdeaPromptSection ? (
                 <div className="overflow-hidden rounded-2xl border border-outline-variant bg-white">
-                  <SocialGallery />
+                  <PublicSocialGalleryPreview previewChrome={previewChrome} />
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-outline-variant bg-surface-container-low p-8 text-center">
@@ -1825,7 +1920,7 @@ export default function ClassEditForm({
 
         {activeTab === "preview" ? (
           <>
-            <PreviewPane offeringType={offering.type} title={title} slug={slug} subtitle={subtitle} description={description} status={status} details={details} />
+            <PreviewPane offeringType={offering.type} title={title} slug={slug} subtitle={subtitle} description={description} status={status} details={details} previewChrome={previewChrome} />
             <Card padding="lg" className="space-y-5 rounded-2xl">
               <h2 className="text-headline-sm text-on-surface">Publicación</h2>
               <p className="text-body-md text-on-surface-variant">Guarda como borrador o publica esta página. Al publicar, este producto queda listo para mostrarse en su categoría correspondiente.</p>

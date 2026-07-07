@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
-import Switch from "@/components/ui/Switch";
 import RichTextField from "./RichTextField";
 import type { ClassOfferingContent, ClassOfferingModule } from "@/lib/cms/types";
 
@@ -38,12 +36,6 @@ function createModuleId() {
     : `mod-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function createActivityId() {
-  return typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `act-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
 function FieldLabel({ children }: { children: string }) {
   return (
     <label className="text-label-md font-bold uppercase tracking-wide text-on-surface-variant">
@@ -76,8 +68,6 @@ function TextField({
 export { defaultContent, type ClassOfferingContent };
 
 export default function ClassContentTab({ content, onChange, onDirty }: ClassContentTabProps) {
-  const [activitiesOpen, setActivitiesOpen] = useState(content.activitiesSection.enabled);
-
   function update(field: keyof ClassOfferingContent, value: unknown) {
     onChange({ ...content, [field]: value });
     onDirty();
@@ -111,28 +101,6 @@ export default function ClassContentTab({ content, onChange, onDirty }: ClassCon
     if (!window.confirm("¿Eliminar este módulo?")) return;
     const modules = content.modules.filter((_, i) => i !== index).map((item, order) => ({ ...item, order }));
     update("modules", modules);
-  }
-
-  function addActivityItem() {
-    const items = [
-      ...content.activitiesSection.items,
-      { id: createActivityId(), title: "", description: "", image: "", order: content.activitiesSection.items.length },
-    ];
-    onChange({ ...content, activitiesSection: { ...content.activitiesSection, items } });
-    onDirty();
-  }
-
-  function updateActivityItem(index: number, next: Partial<ClassOfferingModule>) {
-    const items = content.activitiesSection.items.map((item, i) => (i === index ? { ...item, ...next } : item));
-    onChange({ ...content, activitiesSection: { ...content.activitiesSection, items } });
-    onDirty();
-  }
-
-  function removeActivityItem(index: number) {
-    if (!window.confirm("¿Eliminar esta actividad?")) return;
-    const items = content.activitiesSection.items.filter((_, i) => i !== index).map((item, order) => ({ ...item, order }));
-    onChange({ ...content, activitiesSection: { ...content.activitiesSection, items } });
-    onDirty();
   }
 
   const paymentMethods = content.paymentMethodsList?.length
@@ -239,73 +207,6 @@ export default function ClassContentTab({ content, onChange, onDirty }: ClassCon
           minHeight="150px"
         />
 
-        <Switch
-          checked={content.showEnrollButtonAtEnd}
-          label="Mostrar botón “Inscribirse” al final del contenido"
-          description="Este botón aparece después de la sección de contenido, módulos y actividades."
-          onCheckedChange={(checked) => update("showEnrollButtonAtEnd", checked)}
-        />
-      </Card>
-
-      {/* ── Bloque colapsable: Actividades ── */}
-      <Card padding="lg" className="space-y-5 rounded-2xl">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-headline-sm text-on-surface">¿Qué tipo de actividades pueden hacer?</h2>
-          <div className="w-full max-w-[220px]">
-            <Switch
-              checked={activitiesOpen}
-              label="Mostrar sección"
-              onCheckedChange={(checked) => {
-                setActivitiesOpen(checked);
-                onChange({ ...content, activitiesSection: { ...content.activitiesSection, enabled: checked } });
-                onDirty();
-              }}
-              className="py-3"
-            />
-          </div>
-        </div>
-
-        {activitiesOpen ? (
-          <div className="space-y-5">
-            <TextField
-              label="Título de sección"
-              value={content.activitiesSection.title}
-              placeholder="ej: Actividades prácticas"
-              onChange={(event) => { onChange({ ...content, activitiesSection: { ...content.activitiesSection, title: event.target.value } }); onDirty(); }}
-            />
-            <RichTextField
-              label="Contenido"
-              value={content.activitiesSection.content}
-              placeholder="Describe las actividades que se pueden realizar..."
-              onChange={(value) => { onChange({ ...content, activitiesSection: { ...content.activitiesSection, content: value } }); onDirty(); }}
-              minHeight="150px"
-            />
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <FieldLabel>Lista de actividades</FieldLabel>
-                <Button type="button" variant="outlined" size="sm" onClick={addActivityItem}>+ Añadir actividad</Button>
-              </div>
-              {content.activitiesSection.items.length === 0 ? (
-                <p className="text-body-md text-on-surface-variant">No hay actividades añadidas.</p>
-              ) : (
-                content.activitiesSection.items.map((item, index) => (
-                  <div key={item.id} className="rounded-xl border border-outline-variant p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                      <span className="text-label-md font-bold text-on-surface">Actividad {index + 1}</span>
-                      <button type="button" onClick={() => removeActivityItem(index)} className="text-error hover:text-error/80">
-                        <span className="material-symbols-outlined">delete</span>
-                      </button>
-                    </div>
-                    <div className="space-y-3">
-                      <TextField label="Título" value={item.title} onChange={(event) => updateActivityItem(index, { title: event.target.value })} />
-                      <RichTextField label="Descripción" value={item.description} onChange={(value) => updateActivityItem(index, { description: value })} minHeight="120px" />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        ) : null}
       </Card>
 
       {/* ── Bloque: Módulos del Curso ── */}
@@ -318,17 +219,6 @@ export default function ClassContentTab({ content, onChange, onDirty }: ClassCon
           placeholder="programa del curso"
           onChange={(event) => update("modulesSectionTitle", event.target.value)}
         />
-
-        <div className="rounded-xl border border-secondary-container/40 bg-secondary-container/10 p-5 text-body-md text-on-surface">
-          <FieldLabel>Título del acordeón principal</FieldLabel>
-          <input
-            value={content.modulesAccordionTitle}
-            onChange={(event) => update("modulesAccordionTitle", event.target.value)}
-            placeholder="Ver programa completo"
-            className="mt-2 block w-full rounded-xl border border-outline-variant bg-white px-4 py-3 text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary-container"
-          />
-          <p className="mt-2 text-label-md text-on-surface-variant/70">Este título aparece en el acordeón que agrupa todos los módulos</p>
-        </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">

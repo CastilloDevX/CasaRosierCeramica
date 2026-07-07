@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 let adminClient: SupabaseClient | null = null;
 const READ_CACHE_TTL_MS = Number(process.env.CMS_SUPABASE_READ_CACHE_MS ?? 10_000);
+const READ_TIMEOUT_MS = Number(process.env.CMS_SUPABASE_READ_TIMEOUT_MS ?? 1_500);
+const WRITE_TIMEOUT_MS = Number(process.env.CMS_SUPABASE_WRITE_TIMEOUT_MS ?? 10_000);
 const readCache = new Map<string, { response: Response; expiresAt: number }>();
 const pendingReads = new Map<string, Promise<Response>>();
 
@@ -23,6 +25,31 @@ function getRequestCacheKey(input: RequestInfo | URL, init?: RequestInit) {
   return `${method}:${url}:${headers}`;
 }
 
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  timeoutMs: number,
+) {
+  const controller = new AbortController();
+  const upstreamSignal = init?.signal;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  const abort = () => controller.abort();
+  if (upstreamSignal?.aborted) {
+    controller.abort();
+  } else {
+    upstreamSignal?.addEventListener("abort", abort, { once: true });
+  }
+
+  try {
+    timeout = setTimeout(() => controller.abort(), timeoutMs);
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    if (timeout) clearTimeout(timeout);
+    upstreamSignal?.removeEventListener("abort", abort);
+  }
+}
+
 async function cachedAdminFetch(input: RequestInfo | URL, init?: RequestInit) {
   const request = input instanceof Request ? input : null;
   const method = (init?.method ?? request?.method ?? "GET").toUpperCase();
@@ -30,7 +57,7 @@ async function cachedAdminFetch(input: RequestInfo | URL, init?: RequestInit) {
   if (method !== "GET" && method !== "HEAD") {
     readCache.clear();
     pendingReads.clear();
-    return fetch(input, init);
+    return fetchWithTimeout(input, init, WRITE_TIMEOUT_MS);
   }
 
   const key = getRequestCacheKey(input, init);
@@ -45,7 +72,7 @@ async function cachedAdminFetch(input: RequestInfo | URL, init?: RequestInit) {
     return response.clone();
   }
 
-  const requestPromise = fetch(input, init)
+  const requestPromise = fetchWithTimeout(input, init, READ_TIMEOUT_MS)
     .then((response) => {
       if (response.ok && READ_CACHE_TTL_MS > 0) {
         readCache.set(key, { response: response.clone(), expiresAt: Date.now() + READ_CACHE_TTL_MS });

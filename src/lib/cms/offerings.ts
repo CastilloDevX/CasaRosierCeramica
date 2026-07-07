@@ -3,13 +3,14 @@ import { createAdminClient } from "../supabase/admin";
 import { addTrashItem, getCurrentUserEmail, getTrashItemByEntity, removeTrashItem } from "./trash";
 import { readJsonFile, writeJsonFile } from "./local-storage";
 import { isOfferingStatus, isOfferingType } from "./types";
-import type { Offering } from "./types";
+import type { ClassOfferingDetails, Offering } from "./types";
 import type { Json } from "../supabase/types";
 import { logAction } from "./history-logs";
 
 const TABLE = "offerings";
+const HERO_SETTINGS_TABLE = "offering_public_hero_settings";
 const FILE_NAME = "offerings.json";
-const SUPABASE_READ_TIMEOUT_MS = 10_000;
+const SUPABASE_READ_TIMEOUT_MS = 1_500;
 const OFFERINGS_CACHE_TTL_MS = 15_000;
 
 let offeringsCache: { items: Offering[]; expiresAt: number } | null = null;
@@ -122,11 +123,12 @@ function normalizeOffering(input: OfferingInput, existing?: Offering, allItems: 
 }
 
 function rowToOffering(row: Record<string, unknown>): Offering {
+  const details = mergeHeroSettingsIntoDetails(normalizeDetails(row.details), row.public_hero_settings);
   return {
     ...row,
     schedule: Array.isArray(row.schedule) ? row.schedule : [],
     gallery: Array.isArray(row.gallery) ? row.gallery : [],
-    details: normalizeDetails(row.details),
+    details,
   } as Offering;
 }
 
@@ -140,13 +142,111 @@ function offeringToRow(offering: Offering): Record<string, unknown> {
   };
 }
 
+function heroSettingsFromDetails(offering: Offering) {
+  if (!["class", "workshop", "experience", "gift_card"].includes(offering.type)) return null;
+  const details = normalizeDetails(offering.details);
+  const classDetails = details.class && typeof details.class === "object" && !Array.isArray(details.class)
+    ? details.class as Record<string, unknown>
+    : {};
+  const text = (value: unknown, fallback: string) => {
+    const next = typeof value === "string" ? value.trim() : "";
+    return next || fallback;
+  };
+  const scale = Number(classDetails.heroMenuScale);
+  const heroVariant = ["image", "text", "presentation"].includes(String(classDetails.heroVariant)) ? String(classDetails.heroVariant) : "text";
+  const heroMenuTone = ["light", "dark"].includes(String(classDetails.heroMenuTone)) ? String(classDetails.heroMenuTone) : heroVariant === "image" || heroVariant === "presentation" ? "light" : "dark";
+
+  return {
+    offering_id: offering.id,
+    hero_variant: heroVariant,
+    hero_menu_tone: heroMenuTone,
+    hero_menu_color: text(classDetails.heroMenuColor, heroMenuTone === "light" ? "#ffffff" : "#3f3933"),
+    hero_menu_scale: Number.isFinite(scale) && scale > 0 ? scale : 1,
+    hero_logo_position_x: text(classDetails.heroLogoPositionX, "50%"),
+    hero_logo_position_y: text(classDetails.heroLogoPositionY, "46px"),
+    hero_logo_width: text(classDetails.heroLogoWidth, "118px"),
+    hero_logo_tablet_position_x: text(classDetails.heroLogoTabletPositionX, text(classDetails.heroLogoPositionX, "50%")),
+    hero_logo_tablet_position_y: text(classDetails.heroLogoTabletPositionY, text(classDetails.heroLogoPositionY, "42px")),
+    hero_logo_tablet_width: text(classDetails.heroLogoTabletWidth, text(classDetails.heroLogoWidth, "106px")),
+    hero_logo_mobile_position_x: text(classDetails.heroLogoMobilePositionX, text(classDetails.heroLogoPositionX, "50%")),
+    hero_logo_mobile_position_y: text(classDetails.heroLogoMobilePositionY, "34px"),
+    hero_logo_mobile_width: text(classDetails.heroLogoMobileWidth, "92px"),
+    hero_menu_position_y: text(classDetails.heroMenuPositionY, "132px"),
+    hero_menu_tablet_position_y: text(classDetails.heroMenuTabletPositionY, text(classDetails.heroMenuPositionY, "118px")),
+    hero_menu_mobile_position_y: text(classDetails.heroMenuMobilePositionY, "96px"),
+    updated_at: offering.updated_at,
+  };
+}
+
+function mergeHeroSettingsIntoDetails(details: Offering["details"], settings: unknown): Offering["details"] {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return details;
+  const row = settings as Record<string, unknown>;
+  const classDetails = details.class && typeof details.class === "object" && !Array.isArray(details.class)
+    ? details.class as Record<string, unknown>
+    : {};
+  const nextClass = {
+    ...classDetails,
+    heroVariant: row.hero_variant ?? classDetails.heroVariant,
+    heroMenuTone: row.hero_menu_tone ?? classDetails.heroMenuTone,
+    heroMenuColor: row.hero_menu_color ?? classDetails.heroMenuColor,
+    heroMenuScale: row.hero_menu_scale !== undefined ? Number(row.hero_menu_scale) : classDetails.heroMenuScale,
+    heroLogoPositionX: row.hero_logo_position_x ?? classDetails.heroLogoPositionX,
+    heroLogoPositionY: row.hero_logo_position_y ?? classDetails.heroLogoPositionY,
+    heroLogoWidth: row.hero_logo_width ?? classDetails.heroLogoWidth,
+    heroLogoTabletPositionX: row.hero_logo_tablet_position_x ?? classDetails.heroLogoTabletPositionX,
+    heroLogoTabletPositionY: row.hero_logo_tablet_position_y ?? classDetails.heroLogoTabletPositionY,
+    heroLogoTabletWidth: row.hero_logo_tablet_width ?? classDetails.heroLogoTabletWidth,
+    heroLogoMobilePositionX: row.hero_logo_mobile_position_x ?? classDetails.heroLogoMobilePositionX,
+    heroLogoMobilePositionY: row.hero_logo_mobile_position_y ?? classDetails.heroLogoMobilePositionY,
+    heroLogoMobileWidth: row.hero_logo_mobile_width ?? classDetails.heroLogoMobileWidth,
+    heroMenuPositionY: row.hero_menu_position_y ?? classDetails.heroMenuPositionY,
+    heroMenuTabletPositionY: row.hero_menu_tablet_position_y ?? classDetails.heroMenuTabletPositionY,
+    heroMenuMobilePositionY: row.hero_menu_mobile_position_y ?? classDetails.heroMenuMobilePositionY,
+  } as Partial<ClassOfferingDetails>;
+  return { ...details, class: nextClass };
+}
+
+async function readHeroSettingsMap(ids: string[]) {
+  if (ids.length === 0) return new Map<string, Record<string, unknown>>();
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.from(HERO_SETTINGS_TABLE).select("*").in("offering_id", ids);
+    if (error || !data) return new Map<string, Record<string, unknown>>();
+    return new Map((data as Array<Record<string, unknown>>).map((item) => [String(item.offering_id), item]));
+  } catch {
+    return new Map<string, Record<string, unknown>>();
+  }
+}
+
+async function readOneHeroSettings(id: string) {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.from(HERO_SETTINGS_TABLE).select("*").eq("offering_id", id).maybeSingle();
+    if (error || !data) return null;
+    return data as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+async function syncHeroSettingsToSupabase(item: Offering): Promise<void> {
+  const row = heroSettingsFromDetails(item);
+  if (!row) return;
+  try {
+    const supabase = createAdminClient();
+    await supabase.from(HERO_SETTINGS_TABLE).upsert(row, { onConflict: "offering_id" });
+  } catch { /* best-effort until the migration exists in every environment */ }
+}
+
 async function readAllFromSupabase(): Promise<Offering[] | null> {
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase.from(TABLE).select("*");
     if (error) throw error;
     if (!data || data.length === 0) return null;
-    return (data as Array<Record<string, unknown>>).map(rowToOffering);
+    const rows = data as Array<Record<string, unknown>>;
+    const settings = await readHeroSettingsMap(rows.map((row) => String(row.id)));
+    return rows.map((row) => rowToOffering({ ...row, public_hero_settings: settings.get(String(row.id)) }));
   } catch {
     return null;
   }
@@ -157,7 +257,9 @@ async function readOneFromSupabase(column: "id" | "slug", value: string): Promis
     const supabase = createAdminClient();
     const { data, error } = await supabase.from(TABLE).select("*").eq(column, value).maybeSingle();
     if (error || !data) return null;
-    return rowToOffering(data as Record<string, unknown>);
+    const row = data as Record<string, unknown>;
+    const settings = column === "id" ? await readOneHeroSettings(value) : await readOneHeroSettings(String(row.id));
+    return rowToOffering({ ...row, public_hero_settings: settings });
   } catch {
     return null;
   }
@@ -167,6 +269,7 @@ async function upsertToSupabase(item: Offering): Promise<void> {
   try {
     const supabase = createAdminClient();
     await supabase.from(TABLE).upsert(offeringToRow(item), { onConflict: "id" });
+    await syncHeroSettingsToSupabase(item);
   } catch { /* best-effort */ }
 }
 
@@ -174,6 +277,7 @@ async function saveToSupabase(item: Offering): Promise<void> {
   const supabase = createAdminClient();
   const { error } = await supabase.from(TABLE).upsert(offeringToRow(item), { onConflict: "id" });
   if (error) throw error;
+  await syncHeroSettingsToSupabase(item);
 }
 
 async function seedSupabase(items: Offering[]): Promise<void> {

@@ -1,6 +1,10 @@
 import OfferingsCategoryPage from "@/components/admin/OfferingsCategoryPage";
 
-export default function GiftCardsPage({ searchParams }: { searchParams?: { q?: string; sort?: string; page?: string } }) {
+type AdminOfferingsSearchParams = { q?: string; sort?: string; page?: string };
+
+export default async function GiftCardsPage({ searchParams }: { searchParams?: Promise<AdminOfferingsSearchParams> }) {
+  const params = await searchParams;
+
   return (
     <OfferingsCategoryPage
       title="Gift Cards"
@@ -12,7 +16,7 @@ export default function GiftCardsPage({ searchParams }: { searchParams?: { q?: s
       emptyTitle="No hay gift cards creadas todavía."
       emptyDescription="Crea la primera gift card para empezar."
       createLabel="Crear nueva gift card"
-      searchParams={searchParams}
+      searchParams={params}
     />
   );
 }

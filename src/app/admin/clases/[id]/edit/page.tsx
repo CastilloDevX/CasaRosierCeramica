@@ -5,13 +5,17 @@ import TopBar from "@/components/layout/TopBar";
 import EmptyState from "@/components/ui/EmptyState";
 import Button from "@/components/ui/Button";
 import { requireAdminProfile } from "@/lib/auth/supabase-auth";
+import { getClassEditorPreviewChrome } from "@/lib/cms/class-editor-preview";
 import { getOfferingById } from "@/lib/cms/offerings";
 
 export default async function EditClassPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdminProfile();
   if (!session) redirect("/auth");
 
-  const offering = await getOfferingById((await params).id);
+  const [offering, previewChrome] = await Promise.all([
+    getOfferingById((await params).id),
+    getClassEditorPreviewChrome(),
+  ]);
   if (!offering || offering.type !== "class") {
     return (
       <AdminShell>
@@ -45,7 +49,7 @@ export default async function EditClassPage({ params }: { params: Promise<{ id: 
         }
       />
 
-      <ClassEditForm offering={offering} />
+      <ClassEditForm offering={offering} previewChrome={previewChrome} />
     </AdminShell>
   );
 }

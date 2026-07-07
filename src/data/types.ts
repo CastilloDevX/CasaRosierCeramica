@@ -66,6 +66,7 @@ export interface ExperienceItem {
   schedule: ScheduleItem[];
   included: string[];
   program: ProgramItem[];
+  programSectionTitle?: string;
   learningSectionTitle?: string;
   whatYouWillLearn: string[];
   participationSectionTitle?: string;

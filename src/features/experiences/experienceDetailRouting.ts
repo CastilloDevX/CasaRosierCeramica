@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ExperienceItem, ExperienceKind } from "@/data/types";
-import { getOfferings } from "@/lib/cms/offerings";
+import { getOfferingBySlug, getOfferings } from "@/lib/cms/offerings";
+import { normalizeHeroSettings } from "@/lib/cms/hero-settings";
 import type { ClassOfferingDetails, Offering } from "@/lib/cms/types";
 
 type LegacyProgramItem = {
@@ -165,6 +166,11 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
   const schedule = scheduleForOffering(offering, details);
   const consultHref = ctaConsultHref(details);
   const enrollHref = ctaEnrollHref(details);
+  const hero = normalizeHeroSettings(details, {
+    heroTitle: details.heroTitle || offering.title,
+    heroSubtitle: details.heroSubtitle || stringValue(details.category) || offering.type,
+    heroImage: details.heroImage || offering.cover_image_url || "img/hero-bg.jpg",
+  });
 
   return {
     id: offering.id,
@@ -176,29 +182,29 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     excerpt: offering.excerpt,
     description: splitParagraphs(offering.description),
     coverImage: offering.cover_image_url || galleryImages[0] || details.heroImage || "img/hero-bg.jpg",
-    heroImage: details.heroImage || offering.cover_image_url || "img/hero-bg.jpg",
-    heroVariant: details.heroVariant ?? "text",
-    heroMenuTone: details.heroMenuTone ?? (details.heroVariant === "image" || details.heroVariant === "presentation" ? "light" : "dark"),
-    heroMenuColor: stringValue(details.heroMenuColor) || (details.heroMenuTone === "light" ? "#ffffff" : "#3f3933"),
-    heroMenuScale: typeof details.heroMenuScale === "number" ? details.heroMenuScale : Number(details.heroMenuScale) || 1,
-    heroLogoPositionX: details.heroLogoPositionX,
-    heroLogoPositionY: details.heroLogoPositionY,
-    heroLogoWidth: details.heroLogoWidth,
-    heroLogoTabletPositionX: details.heroLogoTabletPositionX,
-    heroLogoTabletPositionY: details.heroLogoTabletPositionY,
-    heroLogoTabletWidth: details.heroLogoTabletWidth,
-    heroLogoMobilePositionX: details.heroLogoMobilePositionX,
-    heroLogoMobilePositionY: details.heroLogoMobilePositionY,
-    heroLogoMobileWidth: details.heroLogoMobileWidth,
-    heroMenuPositionY: details.heroMenuPositionY,
-    heroMenuTabletPositionY: details.heroMenuTabletPositionY,
-    heroMenuMobilePositionY: details.heroMenuMobilePositionY,
+    heroImage: hero.heroImage || offering.cover_image_url || "img/hero-bg.jpg",
+    heroVariant: hero.heroVariant,
+    heroMenuTone: hero.heroMenuTone,
+    heroMenuColor: hero.heroMenuColor,
+    heroMenuScale: hero.heroMenuScale,
+    heroLogoPositionX: hero.heroLogoPositionX,
+    heroLogoPositionY: hero.heroLogoPositionY,
+    heroLogoWidth: hero.heroLogoWidth,
+    heroLogoTabletPositionX: hero.heroLogoTabletPositionX,
+    heroLogoTabletPositionY: hero.heroLogoTabletPositionY,
+    heroLogoTabletWidth: hero.heroLogoTabletWidth,
+    heroLogoMobilePositionX: hero.heroLogoMobilePositionX,
+    heroLogoMobilePositionY: hero.heroLogoMobilePositionY,
+    heroLogoMobileWidth: hero.heroLogoMobileWidth,
+    heroMenuPositionY: hero.heroMenuPositionY,
+    heroMenuTabletPositionY: hero.heroMenuTabletPositionY,
+    heroMenuMobilePositionY: hero.heroMenuMobilePositionY,
     heroTitleImage: details.titleImage,
     heroTitleImageSecondary: details.titleImageSecondary,
-    heroPresentationText: stringValue(details.heroPresentationText),
-    heroPresentationTextColor: stringValue(details.heroPresentationTextColor) || "#FFFFFF",
-    heroPresentationImage: stringValue(details.heroPresentationImage),
-    heroTitle: details.heroTitle || offering.title,
+    heroPresentationText: hero.heroPresentationText,
+    heroPresentationTextColor: hero.heroPresentationTextColor,
+    heroPresentationImage: hero.heroPresentationImage,
+    heroTitle: hero.heroTitle || offering.title,
     listingTitle: offering.title,
     listingSubtitle: details.heroSubtitle || "",
     introHighlight: details.highlightDescription || stringValue(details.introHighlight) || offering.excerpt,
@@ -212,13 +218,14 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     schedule,
     included: details.includedItems?.length ? details.includedItems : splitList(details.included),
     program: programForDetails(content, details),
+    programSectionTitle: stringValue(content.modulesSectionTitle) || "Contenido del curso",
     learningSectionTitle: stringValue(content.learningSectionTitle) || "¿Qué aprenderás?",
     whatYouWillLearn: splitParagraphs(content.learningContent || details.whatYouWillLearn),
     participationSectionTitle: stringValue(content.participationSectionTitle) || "¿Quién puede participar?",
     whoCanJoin: splitParagraphs(content.participationContent || details.whoCanJoin),
     paymentMethods: splitList(content.paymentMethodsList?.length ? content.paymentMethodsList : content.paymentMethods || details.paymentMethods),
     additionalInfo: content.extraInfo || stringValue(details.additionalInfo) || `Cualquier consulta o información adicional que necesites, puedes escribir al WhatsApp ${details.whatsappNumber || content.contactWhatsapp || "633788860"}.`,
-    showIdeaPromptSection: details.showIdeaPromptSection ?? true,
+    showIdeaPromptSection: details.showIdeaPromptSection === true,
     ctaHref: consultHref,
     ctaConsultHref: consultHref,
     ctaEnrollHref: enrollHref,
@@ -233,12 +240,14 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
 export async function getPublicExperienceItems() {
   const offerings = await getOfferings();
   return offerings
-    .filter((item) => item.status === "published")
+    .filter((item) => item.status === "published" && !item.deleted_at)
     .map(cmsOfferingToExperienceItem);
 }
 
 async function bySlug(slug: string) {
-  return (await getPublicExperienceItems()).find((item) => item.slug === slug) ?? null;
+  const offering = await getOfferingBySlug(slug);
+  if (!offering || offering.status !== "published" || offering.deleted_at) return null;
+  return cmsOfferingToExperienceItem(offering);
 }
 
 export async function generateExperienceStaticParams(kind: ExperienceKind) {
