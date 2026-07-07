@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminActionModal from "./AdminActionModal";
 import type { PromoBanner, PromoStatus } from "@/lib/cms/types";
@@ -27,27 +27,6 @@ type ConfirmAction = {
   confirmLabel: string;
 };
 
-function parseStartDate(value: string) {
-  if (!value) return null;
-  const date = new Date(`${value}T00:00:00`);
-  return Number.isNaN(date.valueOf()) ? null : date;
-}
-
-function parseEndDate(value: string) {
-  if (!value) return null;
-  const date = new Date(`${value}T23:59:59`);
-  return Number.isNaN(date.valueOf()) ? null : date;
-}
-
-function formatDate(value: string) {
-  if (!value) return "";
-  return new Date(`${value}T00:00:00`).toLocaleDateString("es-MX", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 function stripMarkdown(value: string) {
   return value
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
@@ -56,42 +35,11 @@ function stripMarkdown(value: string) {
 }
 
 function getVisibilityState(banner: PromoBanner) {
-  const now = new Date();
-  const start = parseStartDate(banner.start_date);
-  const end = parseEndDate(banner.end_date);
-
-  if (start && end && end < start) {
-    return {
-      tone: "error",
-      label: "Fechas inválidas",
-      message: "La fecha final es anterior a la inicial. No se mostrará hasta corregirlo.",
-      canShowNow: false,
-    };
-  }
-
   if (banner.status !== "published") {
     return {
       tone: "idle",
       label: "Inactivo",
       message: "No se muestra en el home.",
-      canShowNow: false,
-    };
-  }
-
-  if (start && start > now) {
-    return {
-      tone: "warning",
-      label: "Programado",
-      message: `Se mostrará desde ${formatDate(banner.start_date)}.`,
-      canShowNow: false,
-    };
-  }
-
-  if (end && end < now) {
-    return {
-      tone: "error",
-      label: "Vencido",
-      message: `Terminó el ${formatDate(banner.end_date)}.`,
       canShowNow: false,
     };
   }
@@ -109,11 +57,6 @@ export default function PromoBannersTable({ items }: { items: PromoBanner[] }) {
   const [pending, setPending] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
-
-  const activeBanner = useMemo(
-    () => items.find((banner) => getVisibilityState(banner).canShowNow) ?? null,
-    [items],
-  );
 
   async function run(id: string, action: string) {
     const pendingKey = `${id}:${action}`;
@@ -138,17 +81,19 @@ export default function PromoBannersTable({ items }: { items: PromoBanner[] }) {
       }
 
       const fallback = action === "publish"
-        ? "Banner activo y visible en el home."
-        : action === "duplicate"
-          ? "Banner duplicado como borrador."
-          : action === "trash"
-            ? "Banner movido a la papelera."
-            : "Cambio aplicado.";
+        ? "Publicado exitosamente."
+        : action === "draft"
+          ? "Borrador guardado correctamente."
+          : action === "duplicate"
+            ? "Banner duplicado como borrador."
+            : action === "trash"
+              ? "Movido a papelera exitosamente."
+              : "Cambio aplicado correctamente.";
 
       setNotice({
         type: "success",
         title: "Acción completada",
-        message: typeof data.message === "string" ? data.message : fallback,
+        message: action === "duplicate" && typeof data.message === "string" ? data.message : fallback,
       });
       router.refresh();
     } catch {
@@ -164,24 +109,6 @@ export default function PromoBannersTable({ items }: { items: PromoBanner[] }) {
 
   return (
     <>
-      <section className="promo-activation-panel" aria-label="Estado de activación de banners">
-        <div>
-          <p className="auth-kicker">Banner activo</p>
-          <h3>{activeBanner ? activeBanner.title : "Ningún banner visible ahora"}</h3>
-          <p>
-            {activeBanner
-              ? "Solo este banner se mostrará en el home. Activar otro archivará este automáticamente."
-              : "Activa un banner para mostrarlo inmediatamente en el home."}
-          </p>
-        </div>
-        <span className={`promo-activation-panel__status ${activeBanner ? "is-on" : "is-off"}`}>
-          <span className="material-symbols-outlined" aria-hidden="true">
-            {activeBanner ? "radio_button_checked" : "radio_button_unchecked"}
-          </span>
-          {activeBanner ? "1 activo" : "0 activos"}
-        </span>
-      </section>
-
       <div className="admin-card-list promo-card-list">
         {items.map((banner) => {
           const visibility = getVisibilityState(banner);
@@ -225,8 +152,6 @@ export default function PromoBannersTable({ items }: { items: PromoBanner[] }) {
 
                 <div className="admin-list-card__meta">
                   <span>Botón: {banner.button_text || "Sin texto"}</span>
-                  <span>{banner.start_date ? `Inicia ${formatDate(banner.start_date)}` : "Sin fecha de inicio"}</span>
-                  <span>{banner.end_date ? `Finaliza ${formatDate(banner.end_date)}` : "Sin fecha de fin"}</span>
                   <span>{banner.link_url || "Sin link"}</span>
                 </div>
 
@@ -234,12 +159,12 @@ export default function PromoBannersTable({ items }: { items: PromoBanner[] }) {
                   {shouldActivate ? (
                     <button className="primary-btn" type="button" onClick={() => run(banner.id, "publish")} disabled={Boolean(pending)}>
                       <span className="material-symbols-outlined" aria-hidden="true">radio_button_checked</span>
-                      {actionPending("publish") ? "Activando..." : "Activar ahora"}
+                      {actionPending("publish") ? "Publicando..." : "Publicar"}
                     </button>
                   ) : (
                     <button className="secondary-btn" type="button" onClick={() => run(banner.id, "draft")} disabled={Boolean(pending)}>
                       <span className="material-symbols-outlined" aria-hidden="true">toggle_off</span>
-                      {actionPending("draft") ? "Desactivando..." : "Desactivar"}
+                      {actionPending("draft") ? "Guardando..." : "Borrador"}
                     </button>
                   )}
                   <a className="link-btn" href={`/admin/components/promo-banners/${banner.id}/edit`}>
@@ -257,13 +182,13 @@ export default function PromoBannersTable({ items }: { items: PromoBanner[] }) {
                     onClick={() => setConfirm({
                       id: banner.id,
                       action: "trash",
-                      title: "Eliminar banner",
+                      title: "Mover a papelera",
                       message: `Se moverá "${banner.title}" a la papelera. Puedes restaurarlo después desde Papelera.`,
-                      confirmLabel: "Eliminar",
+                      confirmLabel: "Papelera",
                     })}
                   >
                     <span className="material-symbols-outlined" aria-hidden="true">delete</span>
-                    {actionPending("trash") ? "Eliminando..." : "Eliminar"}
+                    {actionPending("trash") ? "Enviando..." : "Papelera"}
                   </button>
                 </div>
               </div>
@@ -278,6 +203,7 @@ export default function PromoBannersTable({ items }: { items: PromoBanner[] }) {
         title={notice?.title ?? ""}
         message={notice?.message}
         details={notice?.details}
+        confirmLabel="Entendido"
         onClose={() => setNotice(null)}
       />
 

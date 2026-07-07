@@ -17,6 +17,7 @@ function getPromoBannerErrorMessage(err: unknown) {
 function refreshPromoSurfaces() {
   invalidatePublicContentCache();
   revalidatePath("/");
+  revalidatePath("/home");
   revalidatePath("/admin/components/promo-banners");
 }
 

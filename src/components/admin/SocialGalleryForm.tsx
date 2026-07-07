@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { SocialGallery, SocialGalleryItem } from "@/lib/cms/types";
+import AdminActionModal from "./AdminActionModal";
 import MediaSelectField from "./MediaSelectField";
 
-type Toast = { type: "success" | "error"; message: string };
+type Notice = { type: "success" | "error"; title: string; message: string };
 
 function createGalleryItem(order: number): SocialGalleryItem {
   const now = new Date().toISOString();
@@ -36,14 +37,14 @@ export default function SocialGalleryForm({
   const [title, setTitle] = useState(item?.title ?? "Y tu, cuando tuviste\ntu ultima idea?");
   const [description, setDescription] = useState(item?.description ?? "siguenos en instagram - @casarosier");
   const [items, setItems] = useState<SocialGalleryItem[]>(item?.items ?? []);
-  const [toast, setToast] = useState<Toast | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 4200);
+    if (!notice || notice.type === "success") return;
+    const timer = window.setTimeout(() => setNotice(null), 4200);
     return () => window.clearTimeout(timer);
-  }, [toast]);
+  }, [notice]);
 
   function addItem() {
     setItems((current) =>
@@ -82,7 +83,7 @@ export default function SocialGalleryForm({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setIsLoading(true);
-    setToast(null);
+    setNotice(null);
 
     const body = {
       name: "Galeria social principal",
@@ -107,14 +108,26 @@ export default function SocialGalleryForm({
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({ error: "No se pudo guardar la galería social." }));
-        setToast({ type: "error", message: (data as { error?: string }).error || "No se pudo guardar la galería social." });
+        setNotice({
+          type: "error",
+          title: "No se pudo completar",
+          message: (data as { error?: string }).error || "No se pudo guardar la galería social.",
+        });
         return;
       }
 
-      setToast({ type: "success", message: "Galería social guardada correctamente." });
+      setNotice({
+        type: "success",
+        title: "Acción completada",
+        message: "Galería social publicada exitosamente.",
+      });
       router.refresh();
     } catch {
-      setToast({ type: "error", message: "No se pudo conectar con el servidor. Intenta nuevamente." });
+      setNotice({
+        type: "error",
+        title: "No se pudo conectar",
+        message: "No se pudo conectar con el servidor. Intenta nuevamente.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -122,15 +135,14 @@ export default function SocialGalleryForm({
 
   return (
     <form className="editor-form social-gallery-editor" onSubmit={handleSubmit}>
-      {toast ? (
-        <div
-          className={`admin-toast admin-toast--${toast.type}`}
-          role={toast.type === "error" ? "alert" : "status"}
-          aria-live="polite"
-        >
-          {toast.message}
-        </div>
-      ) : null}
+      <AdminActionModal
+        open={Boolean(notice)}
+        type={notice?.type}
+        title={notice?.title ?? ""}
+        message={notice?.message}
+        confirmLabel="Entendido"
+        onClose={() => setNotice(null)}
+      />
 
       <section className="form-block">
         <h3>Contenido de la sección</h3>

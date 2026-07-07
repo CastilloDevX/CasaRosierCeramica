@@ -8,19 +8,18 @@ const filterLabels: Record<string, string> = {
   all: "Todos",
   draft: "Borrador",
   published: "Publicado",
-  archived: "Archivado",
 };
 
 export default async function Page({ searchParams }: { searchParams?: { status?: string } }) {
   const items = await getPromoBanners();
-  const status = searchParams?.status || "all";
-  const visibleItems = items.filter((item) => item.status !== "deleted");
+  const rawStatus = searchParams?.status;
+  const status = rawStatus === "draft" || rawStatus === "published" ? rawStatus : "all";
+  const visibleItems = items.filter((item) => !item.deleted_at && (item.status === "draft" || item.status === "published"));
   const filtered = visibleItems.filter((item) => status === "all" || item.status === status);
   const counts = {
     all: visibleItems.length,
     draft: visibleItems.filter((item) => item.status === "draft").length,
     published: visibleItems.filter((item) => item.status === "published").length,
-    archived: visibleItems.filter((item) => item.status === "archived").length,
   };
 
   return (
@@ -39,11 +38,11 @@ export default async function Page({ searchParams }: { searchParams?: { status?:
 
       <div className="filters promo-banners-filters">
         <div className="filter-group">
-          {["all", "draft", "published", "archived"].map((key) => (
+          {["all", "draft", "published"].map((key) => (
             <Link
               key={key}
               className={key === status ? "chip active" : "chip"}
-              href={`/admin/components/promo-banners?status=${key}`}
+              href={key === "all" ? "/admin/components/promo-banners" : `/admin/components/promo-banners?status=${key}`}
             >
               {filterLabels[key]} <span>{counts[key as keyof typeof counts]}</span>
             </Link>

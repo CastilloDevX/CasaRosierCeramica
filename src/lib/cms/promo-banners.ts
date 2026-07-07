@@ -28,13 +28,15 @@ function normalize(input: Input, existing?: PromoBanner) {
   if (!title) throw new Error("El título es obligatorio.");
   if (!isPromoStatus(status)) throw new Error("Estado no válido.");
   const vv = input.visual_variant ?? existing?.visual_variant ?? "default";
+  const imageUrl = String(input.image_url ?? existing?.image_url ?? "").trim();
+  if (status === "published" && !imageUrl) throw new Error("Para publicar debes establecer una imagen.");
   return {
     id: existing?.id ?? input.id ?? randomUUID(),
     title,
     text: limitText(input.text ?? existing?.text ?? "", LIMITS.text),
     key_text: limitText(input.key_text ?? existing?.key_text ?? "", LIMITS.key_text),
     detail_text: limitText(input.detail_text ?? existing?.detail_text ?? "", LIMITS.detail_text),
-    image_url: String(input.image_url ?? existing?.image_url ?? "").trim(),
+    image_url: imageUrl,
     button_text: limitText(input.button_text ?? existing?.button_text ?? "Ver mas", LIMITS.button_text),
     link_url: String(input.link_url ?? existing?.link_url ?? "").trim(),
     start_date: String(input.start_date ?? existing?.start_date ?? "").trim(),
@@ -45,6 +47,56 @@ function normalize(input: Input, existing?: PromoBanner) {
     updated_at: now,
     deleted_at: input.status === "deleted" ? existing?.deleted_at ?? now : null,
   } satisfies PromoBanner;
+}
+
+function promoBannerTime(item: PromoBanner) {
+  return Math.max(
+    new Date(item.updated_at || 0).getTime(),
+    new Date(item.created_at || 0).getTime(),
+  );
+}
+
+function promoBannerKeepScore(item: PromoBanner) {
+  const isDeleted = item.status === "deleted" || Boolean(item.deleted_at);
+  return (isDeleted ? 0 : 10_000_000_000_000_000) + promoBannerTime(item);
+}
+
+function promoBannerContentKey(item: PromoBanner) {
+  return [
+    item.title,
+    item.key_text,
+    item.text,
+    item.detail_text,
+    item.image_url,
+    item.button_text,
+    item.link_url,
+    item.visual_variant,
+  ].map((value) => String(value ?? "").trim().toLowerCase()).join("\u001f");
+}
+
+function pickNewestPromoBanner(current: PromoBanner | undefined, next: PromoBanner) {
+  if (!current) return next;
+  return promoBannerKeepScore(next) >= promoBannerKeepScore(current) ? next : current;
+}
+
+function dedupePromoBanners(items: PromoBanner[]) {
+  const byId = new Map<string, PromoBanner>();
+  for (const item of items) {
+    byId.set(item.id, pickNewestPromoBanner(byId.get(item.id), item));
+  }
+
+  const byContent = new Map<string, PromoBanner>();
+  for (const item of byId.values()) {
+    byContent.set(promoBannerContentKey(item), pickNewestPromoBanner(byContent.get(promoBannerContentKey(item)), item));
+  }
+
+  const kept = new Set(Array.from(byContent.values()).map((item) => item.id));
+  return {
+    items: Array.from(byContent.values()),
+    duplicateIds: Array.from(byId.values())
+      .filter((item) => !kept.has(item.id))
+      .map((item) => item.id),
+  };
 }
 
 // ── Mapping helpers ──
@@ -138,6 +190,14 @@ async function deletePromoBannerFromDb(id: string): Promise<void> {
   } catch { /* best-effort */ }
 }
 
+async function deletePromoBannersFromDb(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  try {
+    const supabase = createAdminClient();
+    await supabase.from(TABLE).delete().in("id", ids);
+  } catch { /* best-effort */ }
+}
+
 async function insertPromoBannerInDb(item: PromoBanner) {
   const supabase = createAdminClient();
   const { data, error } = await supabase.from(TABLE).insert(promoBannerToRow(item)).select("*").single();
@@ -152,14 +212,54 @@ async function updatePromoBannerInDb(id: string, patch: Partial<PromoBanner>) {
   return data ? rowToPromoBanner(data as Record<string, unknown>) : null;
 }
 
+async function updatePromoBannerInLocal(id: string, updater: (item: PromoBanner) => PromoBanner) {
+  const all = await readJsonFile<PromoBanner[]>(FILE_NAME, []);
+  const idx = all.findIndex((item) => item.id === id);
+  if (idx === -1) return null;
+  const next = updater(all[idx]);
+  all[idx] = next;
+  await writeJsonFile(FILE_NAME, all);
+  return next;
+}
+
+async function syncPublishedPromoBannerInLocal(updated: PromoBanner) {
+  const all = await readJsonFile<PromoBanner[]>(FILE_NAME, []);
+  const now = new Date().toISOString();
+  let found = false;
+  const nextItems = all.map((item) => {
+    if (item.id === updated.id) {
+      found = true;
+      return updated;
+    }
+    return item.status === "published"
+      ? { ...item, status: "archived" as const, updated_at: now }
+      : item;
+  });
+  await writeJsonFile(FILE_NAME, found ? nextItems : [updated, ...nextItems]);
+}
+
+async function removePromoBannerFromLocal(id: string) {
+  const all = await readJsonFile<PromoBanner[]>(FILE_NAME, []);
+  await writeJsonFile(FILE_NAME, all.filter((item) => item.id !== id));
+}
+
+async function cleanupPromoBannerDuplicates() {
+  const items = await readJsonFile<PromoBanner[]>(FILE_NAME, []);
+  const cleaned = dedupePromoBanners(items);
+  if (cleaned.duplicateIds.length === 0) return cleaned.items;
+  await deletePromoBannersFromDb(cleaned.duplicateIds);
+  await writeJsonFile(FILE_NAME, cleaned.items);
+  return cleaned.items;
+}
+
 // ── Public API ──
 
 export async function getPromoBanners() {
   const fromSupabase = await readAllFromSupabase();
-  if (fromSupabase) return fromSupabase;
+  if (fromSupabase) return dedupePromoBanners(fromSupabase).items;
   const localBanners = await readJsonFile<PromoBanner[]>(FILE_NAME, []);
   await seedSupabase(localBanners);
-  return localBanners;
+  return dedupePromoBanners(localBanners).items;
 }
 
 export async function getPromoBannerById(id: string) {
@@ -179,7 +279,8 @@ export async function getActivePromoBanner() {
   const items = await getPromoBanners();
   return items
     .filter((item) => {
-      if (item.status !== "published" || item.deleted_at) return false;
+      if (item.status === "deleted" || item.deleted_at) return false;
+      if (item.status !== "published") return false;
       if (item.start_date && new Date(item.start_date) > now) return false;
       if (item.end_date && new Date(item.end_date) < now) return false;
       return true;
@@ -193,6 +294,7 @@ export async function createPromoBanner(data: Input) {
   await writeJsonFile(FILE_NAME, [next, ...all]);
   await upsertPromoBanner(next);
   if (next.status === "published") await enforceSinglePublished(next.id, [next, ...all]);
+  await cleanupPromoBannerDuplicates();
   await logAction({ action: "create", entity_type: "promo_banner", entity_id: next.id, entity_title: next.title, new_data: next });
   return next;
 }
@@ -207,6 +309,7 @@ export async function updatePromoBanner(id: string, data: Input) {
   await writeJsonFile(FILE_NAME, all);
   await upsertPromoBanner(next);
   if (next.status === "published") await enforceSinglePublished(next.id, all);
+  await cleanupPromoBannerDuplicates();
   if (old.status !== next.status) {
     if (next.status === "published") await logAction({ action: "publish", entity_type: "promo_banner", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
     else if (old.status === "published") await logAction({ action: "unpublish", entity_type: "promo_banner", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
@@ -255,6 +358,8 @@ export async function activatePromoBannerNow(id: string) {
     if (old.status !== "published") {
       await logAction({ action: "publish", entity_type: "promo_banner", entity_id: updated.id, entity_title: updated.title, old_data: old, new_data: updated });
     }
+    await syncPublishedPromoBannerInLocal(updated);
+    await cleanupPromoBannerDuplicates();
     await logAction({ action: "update", entity_type: "promo_banner", entity_id: updated.id, entity_title: updated.title, old_data: old, new_data: updated });
     return { promoBanner: updated, archivedCount };
   } catch {
@@ -265,6 +370,7 @@ export async function activatePromoBannerNow(id: string) {
     all[idx] = next;
     await writeJsonFile(FILE_NAME, all);
     await enforceSinglePublished(id, all);
+    await cleanupPromoBannerDuplicates();
     await logAction({ action: "publish", entity_type: "promo_banner", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
     return { promoBanner: next, archivedCount };
   }
@@ -275,6 +381,8 @@ export async function movePromoBannerToTrash(id: string, deletedBy?: string) {
   const old = await getPromoBannerById(id); if (!old) return null;
   const d = new Date().toISOString(); const t: PromoBanner = { ...old, status: "deleted", deleted_at: d, updated_at: d };
   await updatePromoBannerInDb(id, { status: t.status, deleted_at: t.deleted_at, updated_at: t.updated_at });
+  await updatePromoBannerInLocal(id, () => t);
+  await cleanupPromoBannerDuplicates();
   await addTrashItem({ id: randomUUID(), entity_type: "promo_banner", entity_id: id, title: t.title, deleted_by: dBy, deleted_at: d, restore_data: t }); await logAction({ action: "trash", entity_type: "promo_banner", entity_id: id, entity_title: t.title, old_data: old, user_email: dBy }); return t;
 }
 
@@ -285,10 +393,11 @@ export async function restorePromoBanner(id: string) {
   if (idx === -1) { const a = await readJsonFile<PromoBanner[]>(FILE_NAME, []); a.unshift(r); await writeJsonFile(FILE_NAME, a); }
   else { all[idx] = r; await writeJsonFile(FILE_NAME, all); }
   await upsertPromoBanner(r);
+  await cleanupPromoBannerDuplicates();
   if (ti) await removeTrashItem(ti.id); await logAction({ action: "restore", entity_type: "promo_banner", entity_id: r.id, entity_title: r.title }); return r;
 }
 
 export async function deletePromoBannerPermanently(id: string) {
   const item = await getPromoBannerById(id); if (!item) return false;
-  await deletePromoBannerFromDb(id); const ti = await getTrashItemByEntity(id); if (ti) await removeTrashItem(ti.id); await logAction({ action: "delete_permanently", entity_type: "promo_banner", entity_id: id, entity_title: item.title, old_data: item }); return true;
+  await deletePromoBannerFromDb(id); await removePromoBannerFromLocal(id); const ti = await getTrashItemByEntity(id); if (ti) await removeTrashItem(ti.id); await logAction({ action: "delete_permanently", entity_type: "promo_banner", entity_id: id, entity_title: item.title, old_data: item }); return true;
 }

@@ -108,20 +108,28 @@ function normalize(input: Input, existing?: SocialGallery, all: SocialGallery[] 
 }
 
 function mapDbItemToTs(item: Record<string, unknown>, mediaUrlByFile = new Map<string, string>()): SocialGalleryItem {
-  const rest = { ...item };
-  const url = rest.url;
-  const imageId = typeof rest.image_id === "string" ? rest.image_id : "";
-  const imageUrl = typeof rest.image_url === "string" ? rest.image_url : "";
+  const imageId = typeof item.image_id === "string" ? item.image_id : "";
+  const imageUrl = typeof item.image_url === "string" ? item.image_url : "";
+  let resolvedImageUrl = imageUrl;
   if (imageId && mediaUrlByFile.has(imageId)) {
-    rest.image_url = mediaUrlByFile.get(imageId);
+    resolvedImageUrl = mediaUrlByFile.get(imageId) ?? imageUrl;
   } else if (imageUrl.startsWith("/")) {
     const fileName = imageUrl.replace(/^\/+/, "");
-    rest.image_url = mediaUrlByFile.get(fileName) ?? imageUrl;
+    resolvedImageUrl = mediaUrlByFile.get(fileName) ?? imageUrl;
   }
-  delete rest.social_gallery_id;
-  delete rest.platform;
-  delete rest.url;
-  return { ...rest, instagram_url: (url as string) ?? "" } as SocialGalleryItem;
+
+  return {
+    id: typeof item.id === "string" ? item.id : randomUUID(),
+    image_id: imageId,
+    image_url: resolvedImageUrl,
+    title: typeof item.title === "string" ? item.title : "",
+    description: typeof item.description === "string" ? item.description : "",
+    instagram_url: typeof item.url === "string" ? item.url : "",
+    sort_order: typeof item.sort_order === "number" ? item.sort_order : 0,
+    is_visible: item.is_visible !== false,
+    created_at: typeof item.created_at === "string" ? item.created_at : new Date().toISOString(),
+    updated_at: typeof item.updated_at === "string" ? item.updated_at : new Date().toISOString(),
+  };
 }
 
 function mapTsItemToDb(galleryId: string, item: SocialGalleryItem): Record<string, unknown> {
@@ -344,45 +352,48 @@ export async function deleteSocialGalleryPermanently(id: string) {
 }
 
 export async function addSocialGalleryItem(galleryId: string, item: SocialGalleryItem) {
-  const all = await readJsonFile<SocialGallery[]>(FILE_NAME, []);
-  const idx = all.findIndex((x) => x.id === galleryId);
-  if (idx === -1) return null;
+  const gallery = await getSocialGalleryById(galleryId);
+  if (!gallery) return null;
   const now = new Date().toISOString();
   const entry: SocialGalleryItem = { ...item, id: item.id || randomUUID(), sort_order: 0, is_visible: true, created_at: now, updated_at: now };
-  all[idx].items = [entry, ...all[idx].items].map((galleryItem, order) => ({ ...galleryItem, sort_order: order, updated_at: galleryItem.id === entry.id ? now : galleryItem.updated_at }));
-  all[idx].updated_at = new Date().toISOString();
-  await writeJsonFile(FILE_NAME, all);
-  await replaceGalleryItems(galleryId, all[idx].items);
+  const items = [entry, ...gallery.items].map((galleryItem, order) => ({ ...galleryItem, sort_order: order, updated_at: galleryItem.id === entry.id ? now : galleryItem.updated_at }));
+  const next = normalize({ ...gallery, items }, gallery, [gallery]);
+  await upsertGallery(next);
+  await replaceGalleryItems(galleryId, next.items);
+  await logAction({ action: "update", entity_type: "social_gallery", entity_id: next.id, entity_title: next.name, old_data: gallery, new_data: next });
   return entry;
 }
 
 export async function removeSocialGalleryItem(galleryId: string, itemId: string) {
-  const all = await readJsonFile<SocialGallery[]>(FILE_NAME, []);
-  const idx = all.findIndex((x) => x.id === galleryId);
-  if (idx === -1) return false;
-  all[idx].items = all[idx].items.filter((i) => i.id !== itemId);
-  all[idx].updated_at = new Date().toISOString();
-  await writeJsonFile(FILE_NAME, all);
-  try {
-    const supabase = createAdminClient();
-    await supabase.from("social_gallery_items").delete().eq("id", itemId).eq("social_gallery_id", galleryId);
-  } catch { /* best-effort */ }
+  const gallery = await getSocialGalleryById(galleryId);
+  if (!gallery || !gallery.items.some((item) => item.id === itemId)) return false;
+  const items = gallery.items
+    .filter((item) => item.id !== itemId)
+    .map((item, order) => ({ ...item, sort_order: order, updated_at: new Date().toISOString() }));
+  const next = normalize({ ...gallery, items }, gallery, [gallery]);
+  await upsertGallery(next);
+  await replaceGalleryItems(galleryId, next.items);
+  await logAction({ action: "update", entity_type: "social_gallery", entity_id: next.id, entity_title: next.name, old_data: gallery, new_data: next });
   return true;
 }
 
 export async function reorderSocialGalleryItems(galleryId: string, orderedIds: string[]) {
-  const all = await readJsonFile<SocialGallery[]>(FILE_NAME, []);
-  const idx = all.findIndex((x) => x.id === galleryId);
-  if (idx === -1) return null;
-  const map = new Map(all[idx].items.map((i) => [i.id, i]));
-  all[idx].items = orderedIds.map((id, order) => { const item = map.get(id); return item ? { ...item, sort_order: order, updated_at: new Date().toISOString() } : null; }).filter(Boolean) as SocialGalleryItem[];
-  all[idx].updated_at = new Date().toISOString();
-  await writeJsonFile(FILE_NAME, all);
-  try {
-    const supabase = createAdminClient();
-    for (const item of all[idx].items) {
-      await supabase.from("social_gallery_items").update({ sort_order: item.sort_order }).eq("id", item.id).eq("social_gallery_id", galleryId);
-    }
-  } catch { /* best-effort */ }
-  return all[idx].items;
+  const gallery = await getSocialGalleryById(galleryId);
+  if (!gallery) return null;
+  const currentById = new Map(gallery.items.map((item) => [item.id, item]));
+  const ordered = orderedIds
+    .map((id) => currentById.get(id))
+    .filter(Boolean) as SocialGalleryItem[];
+  const orderedIdSet = new Set(ordered.map((item) => item.id));
+  const missing = gallery.items.filter((item) => !orderedIdSet.has(item.id));
+  const items = [...ordered, ...missing].map((item, order) => ({
+    ...item,
+    sort_order: order,
+    updated_at: new Date().toISOString(),
+  }));
+  const next = normalize({ ...gallery, items }, gallery, [gallery]);
+  await upsertGallery(next);
+  await replaceGalleryItems(galleryId, next.items);
+  await logAction({ action: "update", entity_type: "social_gallery", entity_id: next.id, entity_title: next.name, old_data: gallery, new_data: next });
+  return next.items;
 }

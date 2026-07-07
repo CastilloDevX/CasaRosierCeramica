@@ -71,7 +71,8 @@ function getActiveBannerFromItems(items: PromoBanner[]) {
   const now = new Date();
   return items
     .filter((item) => {
-      if (item.status !== "published" || item.deleted_at) return false;
+      if (item.status === "deleted" || item.deleted_at) return false;
+      if (item.status !== "published") return false;
       if (item.start_date && new Date(item.start_date) > now) return false;
       if (item.end_date && new Date(item.end_date) < now) return false;
       return true;

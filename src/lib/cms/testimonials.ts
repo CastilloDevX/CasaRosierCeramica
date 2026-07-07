@@ -123,6 +123,37 @@ export async function updateTestimonial(id: string, data: Input) {
   return next;
 }
 
+export async function reorderTestimonials(orderedIds: string[]) {
+  const all = await getTestimonials();
+  const now = new Date().toISOString();
+  const byId = new Map(all.map((item) => [item.id, item]));
+  const ordered = orderedIds
+    .map((id) => byId.get(id))
+    .filter(Boolean) as Testimonial[];
+  const orderedSet = new Set(ordered.map((item) => item.id));
+  const rest = all
+    .filter((item) => !orderedSet.has(item.id))
+    .sort((a, b) => a.sort_order - b.sort_order || +new Date(b.updated_at) - +new Date(a.updated_at));
+  let changed = false;
+  const next = [...ordered, ...rest].map((item, index) => {
+    if (item.sort_order === index) return item;
+    changed = true;
+    return { ...item, sort_order: index, updated_at: now };
+  });
+
+  if (!changed) return next;
+  await writeJsonFile(FILE_NAME, next);
+  await seedSupabase(next);
+  await logAction({
+    action: "update",
+    entity_type: "testimonial",
+    entity_id: "bulk-reorder",
+    entity_title: "Orden de testimonios",
+    new_data: { orderedIds },
+  });
+  return next;
+}
+
 export async function duplicateTestimonial(id: string) {
   const all = await getTestimonials();
   const orig = all.find((x) => x.id === id);
