@@ -134,8 +134,11 @@ async function upsertToSupabase(item: FooterComponent): Promise<void> {
   try {
     const supabase = createAdminClient();
     const record: Record<string, unknown> = { ...item, social_links: item.social_links as unknown as Json };
-    await supabase.from(TABLE).upsert(record, { onConflict: "id" });
-  } catch { /* best-effort */ }
+    const { error } = await supabase.from(TABLE).upsert(record, { onConflict: "id" });
+    if (error) throw error;
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("No se pudo guardar el footer en Supabase.");
+  }
 }
 
 async function deleteFromSupabase(id: string): Promise<void> {

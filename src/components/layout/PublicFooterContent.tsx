@@ -93,8 +93,8 @@ export function PublicFooterContent({
                   target="_blank"
                   rel="noreferrer"
                   style={{
-                    "--contact-social-bg": link.button_color || footer?.social_button_color || "#2f2723",
-                    "--contact-social-icon": link.icon_color || footer?.social_icon_color || "#ffffff",
+                    "--contact-social-bg": footer?.social_button_color || "#2f2723",
+                    "--contact-social-icon": footer?.social_icon_color || "#ffffff",
                   } as CSSProperties}
                   key={`${link.platform}-${index}`}
                 >
@@ -103,7 +103,7 @@ export function PublicFooterContent({
                     aria-hidden="true"
                     style={{
                       "--contact-social-icon-url": `url("${link.icon_url || fallbackSocialIcon(link.platform)}")`,
-                      "--contact-social-icon": link.icon_color || footer?.social_icon_color || "#ffffff",
+                      "--contact-social-icon": footer?.social_icon_color || "#ffffff",
                     } as CSSProperties}
                   />
                 </a>

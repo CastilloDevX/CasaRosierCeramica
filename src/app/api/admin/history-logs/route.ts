@@ -1,5 +1,5 @@
 import { requireAdminApi } from "@/lib/auth/supabase-auth";
-import { getHistoryLogs } from "@/lib/cms/history-logs";
+import { getHistoryLogsPage, type DateSort } from "@/lib/cms/history-logs";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -7,9 +7,9 @@ export async function GET(request: NextRequest) {
   const action = request.nextUrl.searchParams.get("action") || undefined;
   const entityType = request.nextUrl.searchParams.get("entity_type") || undefined;
   const date = request.nextUrl.searchParams.get("date") || undefined;
-  let items = await getHistoryLogs();
-  if (action) items = items.filter((x) => x.action === action);
-  if (entityType) items = items.filter((x) => x.entity_type === entityType);
-  if (date) items = items.filter((x) => x.created_at.startsWith(date));
-  return NextResponse.json({ logs: items });
+  const page = Number(request.nextUrl.searchParams.get("page") || 1);
+  const pageSize = Number(request.nextUrl.searchParams.get("page_size") || 30);
+  const sort = (request.nextUrl.searchParams.get("sort") || "newest") as DateSort;
+  const result = await getHistoryLogsPage({ page, pageSize, sort, action, entityType, date });
+  return NextResponse.json({ logs: result.items, ...result });
 }

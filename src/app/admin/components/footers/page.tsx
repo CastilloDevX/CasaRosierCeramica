@@ -51,7 +51,6 @@ export default async function Page() {
             <h1>Footer</h1>
             <p>Edicion del footer global que se muestra en todas las paginas</p>
             <div className="cms-page-editor-meta">
-              <span className={`status-pill status-pill--${footer.status}`}>{footer.status}</span>
               <span>{footer.social_links.length} redes sociales</span>
               <span>Enlaces legales fijos</span>
             </div>

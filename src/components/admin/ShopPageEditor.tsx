@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import Link from "@/components/admin/AdminLink";
 import { ShopGrid } from "@/components/shop/ShopGrid";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import type { NavigationItem, ShopCategory, ShopItem } from "@/data/types";
 import { normalizeHeroSettings } from "@/lib/cms/hero-settings";
 import type { Product, ProductCategory, ShopPageSettings, CmsHeroSettings } from "@/lib/cms/types";
@@ -29,6 +31,7 @@ export default function ShopPageEditor({
   shopCategories,
   navigationItems,
   menuSettings,
+  initialTab = "hero",
 }: {
   page: ShopPageSettings;
   products: Product[];
@@ -37,15 +40,15 @@ export default function ShopPageEditor({
   shopCategories: ShopCategory[];
   navigationItems: NavigationItem[];
   menuSettings: SiteSettings["menu"];
+  initialTab?: TabKey;
 }) {
-  const [tab, setTab] = useState<TabKey>("hero");
+  const [tab, setTab] = useState<TabKey>(initialTab);
   const [status, setStatus] = useState(page.status);
   const [hero, setHero] = useState(() => normalizeHeroSettings(page.hero, {
     heroTitle: "Shop",
     heroSubtitle: "Casa Rosier",
   }));
-  const [showCharacteristicsInPreview, setShowCharacteristicsInPreview] = useState(page.showCharacteristicsInPreview);
-  const [previewCharacteristicLabels, setPreviewCharacteristicLabels] = useState(page.previewCharacteristicLabels.join("\n"));
+  const previewCharacteristicLabels = page.previewCharacteristicLabels.join("\n");
   const [seoTitle] = useState(page.seo_title);
   const [seoDescription] = useState(page.seo_description);
   const [seoImage] = useState(page.seo_image);
@@ -61,7 +64,7 @@ export default function ShopPageEditor({
       body: JSON.stringify({
         status: nextStatus,
         hero,
-        showCharacteristicsInPreview,
+        showCharacteristicsInPreview: true,
         previewCharacteristicLabels: previewCharacteristicLabels.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean),
         seo_title: seoTitle,
         seo_description: seoDescription,
@@ -93,7 +96,7 @@ export default function ShopPageEditor({
             <span className={`status-pill status-pill--${status}`}>{status}</span>
             <span>{published.length} articulos publicados</span>
             <span>{categories.length} categorias</span>
-            <span>{showCharacteristicsInPreview ? "Caracteristicas visibles" : "Caracteristicas ocultas"}</span>
+            <span>Caracteristicas visibles</span>
           </div>
         </div>
         <div className="cms-page-editor-actions">
@@ -120,17 +123,6 @@ export default function ShopPageEditor({
               subtitleFallback="Casa Rosier"
               onChange={(next) => setHero((current) => ({ ...current, ...next }))}
             />
-            <section className="form-block cms-editor-card">
-              <h3>Vista previa de articulos</h3>
-              <label className="field checkbox-field">
-                <input type="checkbox" checked={showCharacteristicsInPreview} onChange={(event) => setShowCharacteristicsInPreview(event.target.checked)} />
-                <span>Mostrar caracteristicas en vista previa</span>
-              </label>
-              <label className="field">
-                <span>Caracteristicas visibles</span>
-                <textarea rows={4} value={previewCharacteristicLabels} onChange={(event) => setPreviewCharacteristicLabels(event.target.value)} />
-              </label>
-            </section>
           </div>
         ) : null}
 
@@ -163,6 +155,36 @@ export default function ShopPageEditor({
 }
 
 function ShopHeroPreviewContent({ hero }: { hero: CmsHeroSettings }) {
+  const variant = hero.heroVariant ?? "text";
+
+  if (variant === "presentation") {
+    return (
+      <div className="page-hero__presentation">
+        <div className="page-hero__presentation-text" style={{ color: hero.heroPresentationTextColor || "#FFFFFF" }}>
+          <MarkdownContent source={hero.heroPresentationText || hero.heroTitle || "Shop"} className="page-hero__presentation-copy" />
+        </div>
+        {hero.heroPresentationImage ? (
+          <div className="page-hero__presentation-image">
+            <Image src={hero.heroPresentationImage} alt={hero.heroTitle || "Shop"} fill sizes="420px" className="object-contain" unoptimized />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (variant === "image") {
+    return (
+      <div className="page-hero__script-stack">
+        {hero.titleImage ? (
+          <Image src={hero.titleImage} alt={hero.heroTitle || "Shop"} fill sizes="520px" className="page-hero__script-image page-hero__script-image--back" unoptimized />
+        ) : null}
+        {hero.titleImageSecondary ? (
+          <Image src={hero.titleImageSecondary} alt={hero.heroTitle || "Shop"} fill sizes="520px" className="page-hero__script-image page-hero__script-image--front" unoptimized />
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div>
       <p className="page-hero__eyebrow">{hero.heroSubtitle || "Casa Rosier"}</p>
@@ -184,12 +206,13 @@ function ShopPagePreview({
   navigationItems: NavigationItem[];
   menuSettings: SiteSettings["menu"];
 }) {
+  const heroVariant = hero.heroVariant ?? "text";
   return (
     <div className="cms-preview-frame">
       <div className="cms-public-preview__toolbar">Vista previa de escritorio · Publicado</div>
       <div className="cms-public-preview shop-page">
         <div className="cms-public-preview__scale">
-          <CmsPublicHeroPreview hero={hero} navigationItems={navigationItems} menuSettings={menuSettings} height="medium">
+          <CmsPublicHeroPreview hero={hero} navigationItems={navigationItems} menuSettings={menuSettings} height={heroVariant === "image" || heroVariant === "presentation" ? "large" : "medium"}>
             <ShopHeroPreviewContent hero={hero} />
           </CmsPublicHeroPreview>
           <ShopGrid published={published} shopCategories={shopCategories} />

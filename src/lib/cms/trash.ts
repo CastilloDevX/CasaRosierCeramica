@@ -5,6 +5,32 @@ import type { TrashItem } from "./types";
 
 const TABLE = "trash_items";
 const FILE_NAME = "trash.json";
+export type TrashDateSort = "newest" | "oldest";
+export type PaginatedTrashItems = {
+  items: TrashItem[];
+  entityOptions: string[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  sort: TrashDateSort;
+  entityType: string;
+  query: string;
+};
+
+export type TrashPageOptions = {
+  page?: number;
+  pageSize?: number;
+  sort?: TrashDateSort;
+  entityType?: string;
+  query?: string;
+};
+
+function normalizePagination(page = 1, pageSize = 30) {
+  const safePageSize = Math.min(Math.max(Number(pageSize) || 30, 1), 100);
+  const safePage = Math.max(Number(page) || 1, 1);
+  return { page: safePage, pageSize: safePageSize };
+}
 
 // ── Mapping helpers ──
 
@@ -64,6 +90,72 @@ export async function getTrashItems() {
   const fromSupabase = await readAllFromSupabase();
   if (fromSupabase) return fromSupabase;
   return readJsonFile<TrashItem[]>(FILE_NAME, []);
+}
+
+export async function getTrashItemsPage(options: TrashPageOptions = {}): Promise<PaginatedTrashItems> {
+  const { page, pageSize } = normalizePagination(options.page, options.pageSize);
+  const sort: TrashDateSort = options.sort === "oldest" ? "oldest" : "newest";
+  const entityType = options.entityType && options.entityType !== "all" ? options.entityType : "all";
+  const queryText = String(options.query ?? "").trim();
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  try {
+    const supabase = createAdminClient();
+    const { data: entityRows } = await supabase.from(TABLE).select("entity_type");
+    const entityOptions = Array.from(new Set((entityRows ?? []).map((row) => String(row.entity_type)).filter(Boolean))).sort();
+
+    let query = supabase
+      .from(TABLE)
+      .select("*", { count: "exact" })
+      .order("deleted_at", { ascending: sort === "oldest" })
+      .range(from, to);
+
+    if (entityType !== "all") query = query.eq("entity_type", entityType);
+    if (queryText) {
+      const escaped = queryText.replace(/[%_,]/g, "\\$&");
+      query = query.or(`title.ilike.%${escaped}%,entity_type.ilike.%${escaped}%,deleted_by.ilike.%${escaped}%`);
+    }
+
+    const { data, error, count } = await query;
+    if (error) throw error;
+    const total = count ?? 0;
+    return {
+      items: (data ?? []).map(rowToTrashItem),
+      entityOptions,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(Math.ceil(total / pageSize), 1),
+      sort,
+      entityType,
+      query: queryText,
+    };
+  } catch {
+    let items = await readJsonFile<TrashItem[]>(FILE_NAME, []);
+    const entityOptions = Array.from(new Set(items.map((item) => item.entity_type))).sort();
+    if (entityType !== "all") items = items.filter((item) => item.entity_type === entityType);
+    if (queryText) {
+      const search = queryText.toLowerCase();
+      items = items.filter((item) => [item.title, item.entity_type, item.deleted_by, item.deleted_at].join(" ").toLowerCase().includes(search));
+    }
+    items = items.sort((a, b) => {
+      const diff = Date.parse(a.deleted_at) - Date.parse(b.deleted_at);
+      return sort === "oldest" ? diff : -diff;
+    });
+    const total = items.length;
+    return {
+      items: items.slice(from, from + pageSize),
+      entityOptions,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(Math.ceil(total / pageSize), 1),
+      sort,
+      entityType,
+      query: queryText,
+    };
+  }
 }
 
 export async function addTrashItem(item: TrashItem) {

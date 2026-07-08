@@ -12,15 +12,10 @@ import { getHomePageSettings } from "@/lib/cms/home-page";
 import { getPublicHomeContent } from "@/lib/cms/public-content";
 
 function pickHomeItems<T extends { id: string }>(items: T[], selectedIds: string[]) {
-  if (selectedIds.length) {
-    const selected = new Set(selectedIds);
-    const ordered = items
-      .filter((item) => selected.has(item.id))
-      .sort((a, b) => selectedIds.indexOf(a.id) - selectedIds.indexOf(b.id));
-    if (ordered.length) return ordered;
-  }
-  const featured = items.filter((item) => "isFeatured" in item ? Boolean(item.isFeatured) : false);
-  return featured.length ? featured : items;
+  const selected = new Set(selectedIds);
+  return items
+    .filter((item) => selected.has(item.id))
+    .sort((a, b) => selectedIds.indexOf(a.id) - selectedIds.indexOf(b.id));
 }
 
 export async function HomePage() {
@@ -62,21 +57,25 @@ export async function HomePage() {
       header={<HeaderHome />}
     >
       <IntroSlider slides={homePage.introSlides} />
-      <FeaturedSection
-        id="clases-destacadas"
-        title={homePage.classesTitle}
-        subtitle={homePage.classesSubtitle}
-        items={homeClasses}
-        variant="classes"
-      />
-      <FeaturedSection
-        id="workshops-destacados"
-        title={homePage.workshopsTitle}
-        subtitle={homePage.workshopsSubtitle}
-        items={homeWorkshops}
-        variant="workshops"
-      />
-      <HomeGiftCardSection title={homePage.giftTitle} subtitle={homePage.giftSubtitle} items={homeGiftCards} />
+      {homeClasses.length ? (
+        <FeaturedSection
+          id="clases-destacadas"
+          title={homePage.classesTitle}
+          subtitle={homePage.classesSubtitle}
+          items={homeClasses}
+          variant="classes"
+        />
+      ) : null}
+      {homeWorkshops.length ? (
+        <FeaturedSection
+          id="workshops-destacados"
+          title={homePage.workshopsTitle}
+          subtitle={homePage.workshopsSubtitle}
+          items={homeWorkshops}
+          variant="workshops"
+        />
+      ) : null}
+      {homeGiftCards.length ? <HomeGiftCardSection title={homePage.giftTitle} subtitle={homePage.giftSubtitle} items={homeGiftCards} /> : null}
       <IdeaPromptSection context="home" />
       <TestimonialSlider testimonials={testimonials} />
     </SitePage>

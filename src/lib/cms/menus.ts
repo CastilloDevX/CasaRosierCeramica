@@ -130,7 +130,7 @@ function normalizeMenuItem(input: MenuItemInput, existing?: MenuItem) {
   if (existing && isProtectedHomeMenuItem(existing)) {
     return {
       ...normalized,
-      label: existing.label || "Inicio",
+      label: normalized.label || existing.label || "Inicio",
       type: "internal",
       url: "/#hero",
       linked_entity_type: "none",
@@ -181,8 +181,11 @@ async function upsertMenu(menu: Menu): Promise<void> {
     const supabase = createAdminClient();
     const data = { ...menu } as Record<string, unknown>;
     delete data.items;
-    await supabase.from("menus").upsert(data as unknown as Record<string, unknown>, { onConflict: "id" });
-  } catch { /* best-effort */ }
+    const { error } = await supabase.from("menus").upsert(data as unknown as Record<string, unknown>, { onConflict: "id" });
+    if (error) throw error;
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("No se pudo guardar el menú en Supabase.");
+  }
   invalidateMenuCache();
 }
 
@@ -198,8 +201,11 @@ async function upsertMenuItem(menuId: string, item: MenuItem): Promise<void> {
   try {
     const supabase = createAdminClient();
     const record: Record<string, unknown> = { ...item as unknown as Record<string, unknown>, menu_id: menuId };
-    await supabase.from("menu_items").upsert(record, { onConflict: "id" });
-  } catch { /* best-effort */ }
+    const { error } = await supabase.from("menu_items").upsert(record, { onConflict: "id" });
+    if (error) throw error;
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("No se pudo guardar el item del menú en Supabase.");
+  }
   invalidateMenuCache();
 }
 
@@ -208,8 +214,11 @@ async function upsertMenuItems(menuId: string, items: MenuItem[]): Promise<void>
   try {
     const supabase = createAdminClient();
     const records = items.map((item) => ({ ...item as unknown as Record<string, unknown>, menu_id: menuId }));
-    await supabase.from("menu_items").upsert(records, { onConflict: "id" });
-  } catch { /* best-effort */ }
+    const { error } = await supabase.from("menu_items").upsert(records, { onConflict: "id" });
+    if (error) throw error;
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("No se pudieron guardar los items del menú en Supabase.");
+  }
   invalidateMenuCache();
 }
 
@@ -217,8 +226,11 @@ async function deleteChildrenFromDb(parentIds: string[]): Promise<void> {
   if (!parentIds.length) return;
   try {
     const supabase = createAdminClient();
-    await supabase.from("menu_items").delete().in("parent_id", parentIds);
-  } catch { /* best-effort */ }
+    const { error } = await supabase.from("menu_items").delete().in("parent_id", parentIds);
+    if (error) throw error;
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("No se pudieron actualizar los subelementos del menú en Supabase.");
+  }
   invalidateMenuCache();
 }
 

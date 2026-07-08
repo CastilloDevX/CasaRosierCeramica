@@ -9,6 +9,30 @@ const TABLE = "history_logs";
 const FILE_NAME = "history-logs.json";
 
 type LogInput = Omit<HistoryLog, "id" | "created_at"> & { id?: string };
+export type DateSort = "newest" | "oldest";
+export type PaginatedHistoryLogs = {
+  items: HistoryLog[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  sort: DateSort;
+};
+
+export type HistoryLogPageOptions = {
+  page?: number;
+  pageSize?: number;
+  sort?: DateSort;
+  action?: string;
+  entityType?: string;
+  date?: string;
+};
+
+function normalizePagination(page = 1, pageSize = 30) {
+  const safePageSize = Math.min(Math.max(Number(pageSize) || 30, 1), 100);
+  const safePage = Math.max(Number(page) || 1, 1);
+  return { page: safePage, pageSize: safePageSize };
+}
 
 // ── Mapping helpers ──
 
@@ -72,6 +96,61 @@ export async function getHistoryLogs() {
   const fromSupabase = await readAllFromSupabase();
   if (fromSupabase) return fromSupabase;
   return readJsonFile<HistoryLog[]>(FILE_NAME, []);
+}
+
+export async function getHistoryLogsPage(options: HistoryLogPageOptions = {}): Promise<PaginatedHistoryLogs> {
+  const { page, pageSize } = normalizePagination(options.page, options.pageSize);
+  const sort: DateSort = options.sort === "oldest" ? "oldest" : "newest";
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  try {
+    const supabase = createAdminClient();
+    let query = supabase
+      .from(TABLE)
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: sort === "oldest" })
+      .range(from, to);
+
+    if (options.action) query = query.eq("action", options.action);
+    if (options.entityType) query = query.eq("entity_type", options.entityType);
+    if (options.date) {
+      query = query.gte("created_at", `${options.date}T00:00:00.000Z`).lt("created_at", `${options.date}T23:59:59.999Z`);
+    }
+
+    const { data, error, count } = await query;
+    if (error) throw error;
+    const total = count ?? 0;
+    return {
+      items: (data ?? []).map(rowToHistoryLog),
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(Math.ceil(total / pageSize), 1),
+      sort,
+    };
+  } catch {
+    let items = await readJsonFile<HistoryLog[]>(FILE_NAME, []);
+    if (options.action) items = items.filter((item) => item.action === options.action);
+    if (options.entityType) items = items.filter((item) => item.entity_type === options.entityType);
+    if (options.date) {
+      const selectedDate = options.date;
+      items = items.filter((item) => item.created_at.startsWith(selectedDate));
+    }
+    items = items.sort((a, b) => {
+      const diff = Date.parse(a.created_at) - Date.parse(b.created_at);
+      return sort === "oldest" ? diff : -diff;
+    });
+    const total = items.length;
+    return {
+      items: items.slice(from, from + pageSize),
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(Math.ceil(total / pageSize), 1),
+      sort,
+    };
+  }
 }
 
 export async function getRecentHistoryLogs(limit = 5) {

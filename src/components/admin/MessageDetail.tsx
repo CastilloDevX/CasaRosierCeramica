@@ -1,25 +1,75 @@
 "use client";
 
+import AdminActionModal from "./AdminActionModal";
 import Link from "@/components/admin/AdminLink";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormSubmission } from "@/lib/cms/types";
 
 const stLabels: Record<string, string> = { new: "Nuevo", read: "Leído", replied: "Respondido", archived: "Archivado", spam: "Spam", deleted: "Eliminado" };
+type ModalState = {
+  type: "success" | "error" | "confirm";
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  onConfirm?: () => void;
+} | null;
 
 export default function MessageDetail({ item }: { item: FormSubmission }) {
   const router = useRouter();
-  const [notes, setNotes] = useState(item.internal_notes);
+  const [modal, setModal] = useState<ModalState>(null);
+  const [pending, setPending] = useState(false);
+  const [localStatus, setLocalStatus] = useState(item.status);
+
   async function run(action: string, extra?: Record<string, string>) {
-    const r = await fetch(`/api/admin/mensajes/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra }) });
-    if (r.ok) router.push("/admin/mensajes"); router.refresh();
-  }
-  async function saveNotes() {
-    await fetch(`/api/admin/mensajes/${item.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ internal_notes: notes }) });
+    const previousStatus = localStatus;
+    if (action === "status" && extra?.status) {
+      setLocalStatus(extra.status as FormSubmission["status"]);
+    }
+    setPending(true);
+    const response = await fetch(`/api/admin/mensajes/${item.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra }) });
+    const data = await response.json().catch(() => ({})) as { error?: string };
+    setPending(false);
+    if (!response.ok) {
+      setLocalStatus(previousStatus);
+      setModal({ type: "error", title: "No se pudo actualizar", message: data.error || "No se pudo actualizar el mensaje." });
+      return;
+    }
+    if (action !== "status" || extra?.status !== "read") {
+      setModal({ type: "success", title: "Acción completada", message: action === "trash" ? "Mensaje enviado a la papelera correctamente." : "Mensaje actualizado correctamente." });
+    }
+    if (action === "trash") {
+      setTimeout(() => {
+        router.push("/admin/mensajes");
+        router.refresh();
+      }, 350);
+      return;
+    }
     router.refresh();
   }
+
+  function requestTrash() {
+    setModal({
+      type: "confirm",
+      title: "Enviar a papelera",
+      message: `Se moverá el mensaje de ${item.name || item.email || "este contacto"} a la papelera.`,
+      confirmLabel: "Papelera",
+      onConfirm: () => void run("trash"),
+    });
+  }
+
   return (
     <div className="page-card">
+      <AdminActionModal
+        open={Boolean(modal)}
+        type={modal?.type ?? "info"}
+        title={modal?.title ?? ""}
+        message={modal?.message}
+        confirmLabel={modal?.confirmLabel ?? "Entendido"}
+        cancelLabel="Cancelar"
+        onConfirm={modal?.onConfirm}
+        onClose={() => setModal(null)}
+      />
       <div className="page-header"><h2>{item.subject || "Mensaje sin asunto"}</h2><Link className="secondary-btn" href="/admin/mensajes">Volver</Link></div>
       <div className="header-form-layout">
         <div className="menu-form-main">
@@ -42,14 +92,12 @@ export default function MessageDetail({ item }: { item: FormSubmission }) {
             <div className="form-block"><h3>Datos adicionales</h3><table className="admin-table"><tbody>{Object.entries(item.data).filter(([k]) => !["name","email","phone","subject","message","source_page"].includes(k)).map(([k, v]) => (<tr key={k}><td style={{ fontWeight: 500, width: "30%" }}>{k}</td><td>{String(v)}</td></tr>))}</tbody></table></div>
           ) : null}
 
-          <div className="form-block"><h3>Notas internas</h3><textarea rows={4} style={{ width: "100%" }} value={notes} onChange={(e) => setNotes(e.target.value)} /><div style={{ marginTop: "0.5rem" }}><button className="primary-btn" onClick={saveNotes}>Guardar notas</button></div></div>
-
           <div style={{ display: "flex", gap: "0.5rem", marginTop: "1.5rem" }}>
-            <button className="secondary-btn" onClick={() => run("status", { status: "read" })}>Marcar como leído</button>
-            <button className="secondary-btn" onClick={() => run("status", { status: "replied" })}>Marcar como respondido</button>
-            <button className="secondary-btn" onClick={() => run("status", { status: "archived" })}>Archivar</button>
-            <button className="secondary-btn" onClick={() => run("status", { status: "spam" })}>Spam</button>
-            <button className="danger-btn" onClick={() => run("trash")}>Papelera</button>
+            {localStatus !== "read" ? (
+              <button className="secondary-btn" disabled={pending} onClick={() => run("status", { status: "read" })}>Marcar como leído</button>
+            ) : null}
+            {item.phone ? <a className="secondary-btn message-call-btn" href={`tel:${item.phone}`}>Llamar</a> : null}
+            <button className="danger-btn" disabled={pending} onClick={requestTrash}>{pending ? "Enviando..." : "Papelera"}</button>
           </div>
         </div>
       </div>

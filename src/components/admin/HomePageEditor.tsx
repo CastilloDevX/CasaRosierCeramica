@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import Link from "@/components/admin/AdminLink";
+import { useMemo, useState } from "react";
 import { FeaturedSection } from "@/components/home/FeaturedSection";
 import { IntroSlider } from "@/components/home/IntroSlider";
+import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
 import { HomeGiftCardSection } from "@/features/home/HomeGiftCardSection";
-import type { ExperienceItem, GiftCardItem } from "@/data/types";
+import type { ExperienceItem, GiftCardItem, NavigationItem } from "@/data/types";
 import type { HomeIntroSlide, HomePageSettings } from "@/lib/cms/types";
 import { assetPath } from "@/lib/assets";
 import AdminActionModal from "./AdminActionModal";
@@ -18,21 +18,38 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "carousel", label: "Carousel destacado" },
   { key: "classes", label: "Clases" },
   { key: "workshops", label: "Workshops" },
-  { key: "gifts", label: "Experiencias" },
+  { key: "gifts", label: "Gift Cards" },
   { key: "preview", label: "Vista previa" },
 ];
 
 function sortBySelected<T extends { id: string }>(items: readonly T[], selectedIds: string[]) {
-  if (!selectedIds.length) return [...items];
   const selected = new Set(selectedIds);
   return [...items]
     .filter((item) => selected.has(item.id))
     .sort((a, b) => selectedIds.indexOf(a.id) - selectedIds.indexOf(b.id));
 }
 
-function selectedOrAll<T extends { id: string }>(items: readonly T[], selectedIds: string[]) {
-  const selected = sortBySelected(items, selectedIds);
-  return selected.length ? selected : [...items];
+function selectedOnly<T extends { id: string }>(items: readonly T[], selectedIds: string[]) {
+  return sortBySelected(items, selectedIds);
+}
+
+function serializeEditorState(input: {
+  status: string;
+  introSlides: HomeIntroSlide[];
+  classesTitle: string;
+  classesSubtitle: string;
+  classesFeaturedIds: string[];
+  workshopsTitle: string;
+  workshopsSubtitle: string;
+  workshopsFeaturedIds: string[];
+  giftTitle: string;
+  giftSubtitle: string;
+  giftFeaturedIds: string[];
+}) {
+  return JSON.stringify({
+    ...input,
+    introSlides: input.introSlides.map((slide, sortOrder) => ({ ...slide, sortOrder })),
+  });
 }
 
 export default function HomePageEditor({
@@ -40,11 +57,22 @@ export default function HomePageEditor({
   classes,
   workshops,
   giftCards,
+  navigationItems,
+  previewMenu,
 }: {
   page: HomePageSettings;
   classes: ExperienceItem[];
   workshops: ExperienceItem[];
   giftCards: GiftCardItem[];
+  navigationItems: NavigationItem[];
+  previewMenu: {
+    headerLogoUrl: string;
+    scrollMenuBackgroundColor: string;
+    scrollMenuTextColor: string;
+    scrollMenuIconColor: string;
+    scrollMenuLogoTintEnabled: boolean;
+    scrollMenuLogoTintColor: string;
+  };
 }) {
   const [tab, setTab] = useState<TabKey>("carousel");
   const [status, setStatus] = useState(page.status);
@@ -60,6 +88,21 @@ export default function HomePageEditor({
   const [giftFeaturedIds, setGiftFeaturedIds] = useState(page.giftFeaturedIds);
   const [isLoading, setIsLoading] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
+  const currentSnapshot = useMemo(() => serializeEditorState({
+    status,
+    introSlides,
+    classesTitle,
+    classesSubtitle,
+    classesFeaturedIds,
+    workshopsTitle,
+    workshopsSubtitle,
+    workshopsFeaturedIds,
+    giftTitle,
+    giftSubtitle,
+    giftFeaturedIds,
+  }), [status, introSlides, classesTitle, classesSubtitle, classesFeaturedIds, workshopsTitle, workshopsSubtitle, workshopsFeaturedIds, giftTitle, giftSubtitle, giftFeaturedIds]);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => currentSnapshot);
+  const isDirty = currentSnapshot !== savedSnapshot;
 
   function updateSlide(index: number, next: Partial<HomeIntroSlide>) {
     setIntroSlides((current) => current.map((slide, slideIndex) => slideIndex === index ? { ...slide, ...next } : slide));
@@ -67,7 +110,6 @@ export default function HomePageEditor({
 
   function addSlide() {
     setIntroSlides((current) => [
-      ...current,
       {
         id: `intro-${Date.now()}`,
         text: "",
@@ -76,9 +118,10 @@ export default function HomePageEditor({
         image: "/img/hero-bg.jpg",
         imageAlt: "Imagen de Casa Rosier",
         isVisible: true,
-        sortOrder: current.length,
+        sortOrder: 0,
       },
-    ]);
+      ...current,
+    ].map((slide, sortOrder) => ({ ...slide, sortOrder })));
   }
 
   function removeSlide(index: number) {
@@ -118,13 +161,26 @@ export default function HomePageEditor({
     }
 
     setStatus(nextStatus);
+    setSavedSnapshot(serializeEditorState({
+      status: nextStatus,
+      introSlides,
+      classesTitle,
+      classesSubtitle,
+      classesFeaturedIds,
+      workshopsTitle,
+      workshopsSubtitle,
+      workshopsFeaturedIds,
+      giftTitle,
+      giftSubtitle,
+      giftFeaturedIds,
+    }));
     setModal({ type: "success", title: nextStatus === "published" ? "Home publicada" : "Borrador guardado", message: "La configuracion de Home quedo lista." });
     setIsLoading(false);
   }
 
-  const selectedClasses = selectedOrAll(classes, classesFeaturedIds);
-  const selectedWorkshops = selectedOrAll(workshops, workshopsFeaturedIds);
-  const selectedGiftCards = selectedOrAll(giftCards, giftFeaturedIds);
+  const selectedClasses = selectedOnly(classes, classesFeaturedIds);
+  const selectedWorkshops = selectedOnly(workshops, workshopsFeaturedIds);
+  const selectedGiftCards = selectedOnly(giftCards, giftFeaturedIds);
 
   return (
     <div className="cms-editor-shell">
@@ -137,13 +193,11 @@ export default function HomePageEditor({
           <div className="cms-page-editor-meta">
             <span className={`status-pill status-pill--${status}`}>{status}</span>
             <span>{introSlides.filter((slide) => slide.isVisible).length} slides visibles</span>
-            <span>{classesFeaturedIds.length || classes.length} clases en home</span>
-            <span>{giftFeaturedIds.length || giftCards.length} experiencias</span>
+            <span>{classesFeaturedIds.length} clases en home</span>
+            <span>{giftFeaturedIds.length} gift cards</span>
           </div>
         </div>
         <div className="cms-page-editor-actions">
-          <Link className="secondary-btn" href="/admin/dashboard">Volver</Link>
-          <button type="button" className="secondary-btn cms-outline-accent" onClick={() => save("draft")} disabled={isLoading}>{isLoading ? "Guardando..." : "Borrador"}</button>
           <button type="button" className="primary-btn" onClick={() => save("published")} disabled={isLoading}>{isLoading ? "Publicando..." : "Publicar"}</button>
         </div>
       </header>
@@ -220,12 +274,15 @@ export default function HomePageEditor({
         {tab === "preview" ? (
           <div className="cms-preview-frame">
             <div className="cms-public-preview__toolbar">Vista previa de escritorio</div>
-            <div className="cms-public-preview">
+            <div className="cms-public-preview home-page">
               <div className="cms-public-preview__scale">
-                <IntroSlider slides={introSlides.filter((slide) => slide.isVisible)} />
-                <FeaturedSection id="clases-destacadas" title={classesTitle} subtitle={classesSubtitle} items={selectedClasses} variant="classes" />
-                <FeaturedSection id="workshops-destacados" title={workshopsTitle} subtitle={workshopsSubtitle} items={selectedWorkshops} variant="workshops" />
-                <HomeGiftCardSection title={giftTitle} subtitle={giftSubtitle} items={selectedGiftCards} />
+                <HomePreviewHeader navigationItems={navigationItems} previewMenu={previewMenu} />
+                <main>
+                  <IntroSlider slides={introSlides.filter((slide) => slide.isVisible)} />
+                  {selectedClasses.length ? <FeaturedSection id="clases-destacadas" title={classesTitle} subtitle={classesSubtitle} items={selectedClasses} variant="classes" /> : null}
+                  {selectedWorkshops.length ? <FeaturedSection id="workshops-destacados" title={workshopsTitle} subtitle={workshopsSubtitle} items={selectedWorkshops} variant="workshops" /> : null}
+                  {selectedGiftCards.length ? <HomeGiftCardSection title={giftTitle} subtitle={giftSubtitle} items={selectedGiftCards} /> : null}
+                </main>
               </div>
             </div>
           </div>
@@ -233,12 +290,65 @@ export default function HomePageEditor({
       </div>
 
       <div className="admin-sticky-actionbar">
-        <span className="admin-sticky-actionbar__meta">{introSlides.length} slides · {selectedClasses.length} clases · {selectedGiftCards.length} experiencias</span>
+        <span className="admin-sticky-actionbar__meta">{isDirty ? "Cambios sin guardar" : "Cambios al dia"}</span>
         <button type="button" className="secondary-btn" onClick={() => setTab("preview")}>Vista previa</button>
-        <button type="button" className="secondary-btn" onClick={() => save("draft")} disabled={isLoading}>{isLoading ? "Guardando..." : "Borrador"}</button>
         <button type="button" className="primary-btn" onClick={() => save("published")} disabled={isLoading}>{isLoading ? "Publicando..." : "Publicar"}</button>
       </div>
     </div>
+  );
+}
+
+function HomePreviewHeader({
+  navigationItems,
+  previewMenu,
+}: {
+  navigationItems: NavigationItem[];
+  previewMenu: {
+    headerLogoUrl: string;
+    scrollMenuBackgroundColor: string;
+    scrollMenuTextColor: string;
+    scrollMenuIconColor: string;
+    scrollMenuLogoTintEnabled: boolean;
+    scrollMenuLogoTintColor: string;
+  };
+}) {
+  return (
+    <header
+      id="hero"
+      className="hero header-home header-home--ready"
+      data-header-component="HeaderHome"
+    >
+      <div className="hero__bg" />
+      <NavbarGlobal
+        home
+        navigationItems={navigationItems}
+        logoUrl={previewMenu.headerLogoUrl}
+        scrollMenuBackgroundColor={previewMenu.scrollMenuBackgroundColor}
+        scrollMenuTextColor={previewMenu.scrollMenuTextColor}
+        scrollMenuIconColor={previewMenu.scrollMenuIconColor}
+        scrollMenuLogoTintEnabled={previewMenu.scrollMenuLogoTintEnabled}
+        scrollMenuLogoTintColor={previewMenu.scrollMenuLogoTintColor}
+      />
+      <h1 className="hero__title">Casa Rosier</h1>
+      <div className="hero__overlays" aria-hidden="true">
+        <img
+          className="hero__overlay hero__overlay--1"
+          src="/img/hero-overlay-1.png"
+          alt=""
+          width={578}
+          height={224}
+          decoding="async"
+        />
+        <img
+          className="hero__overlay hero__overlay--2"
+          src="/img/hero-overlay-2.png"
+          alt=""
+          width={501}
+          height={235}
+          decoding="async"
+        />
+      </div>
+    </header>
   );
 }
 

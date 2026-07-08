@@ -12,6 +12,34 @@ interface GiftCarouselProps {
 
 export function GiftCarousel({ items }: GiftCarouselProps) {
   if (items.length === 0) return null;
+  const singleItem = items[0];
+
+  if (items.length === 1 && singleItem) {
+    return (
+      <article className="gift-carousel gift-carousel--single">
+        <Link
+          className="gift-carousel__media"
+          href={experienceHref(singleItem.kind, singleItem.slug)}
+        >
+          <img
+            src={assetPath(singleItem.coverImage)}
+            alt={singleItem.title}
+            loading="lazy"
+            decoding="async"
+          />
+        </Link>
+        <div className="gift-carousel__body">
+          <p className="gift-carousel__text">{singleItem.excerpt}</p>
+          <Link
+            className="gift-carousel__cta"
+            href={experienceHref(singleItem.kind, singleItem.slug)}
+          >
+            ver mas
+          </Link>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <Carousel

@@ -6,12 +6,13 @@ import Link from "@/components/admin/AdminLink";
 import { SocialGallery } from "@/components/home/SocialGallery";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import type { NavigationItem } from "@/data/types";
+import { getIdeaPromptContent } from "@/features/shared/contextual-sections/ideaPromptContent";
 import Switch from "@/components/ui/Switch";
 import { StudioProfileBlock } from "@/features/studio/StudioProfileBlock";
 import { assetPath } from "@/lib/assets";
 import { normalizeHeroSettings } from "@/lib/cms/hero-settings";
 import type { SiteSettings } from "@/lib/cms/settings";
-import type { StudioPageSettings, Teacher } from "@/lib/cms/types";
+import type { SocialGallery as CmsSocialGallery, StudioPageSettings, Teacher } from "@/lib/cms/types";
 import AdminActionModal from "./AdminActionModal";
 import CmsPublicHeroPreview from "./CmsPublicHeroPreview";
 import RichTextField from "./RichTextField";
@@ -33,11 +34,13 @@ export default function StudioPageEditor({
   teachers,
   navigationItems,
   menuSettings,
+  socialGallery,
 }: {
   page: StudioPageSettings;
   teachers: Teacher[];
   navigationItems: NavigationItem[];
   menuSettings: SiteSettings["menu"];
+  socialGallery: CmsSocialGallery | null;
 }) {
   const [tab, setTab] = useState<TabKey>("hero");
   const [status, setStatus] = useState(page.status);
@@ -57,6 +60,7 @@ export default function StudioPageEditor({
     .filter((teacher) => teacher.status !== "deleted")
     .sort((a, b) => a.sort_order - b.sort_order);
   const publishedTeachers = visibleTeachers.filter((teacher) => teacher.status === "published");
+  const socialGalleryProps = getStudioSocialGalleryProps(socialGallery);
 
   async function save(nextStatus = status) {
     setIsLoading(true);
@@ -150,7 +154,7 @@ export default function StudioPageEditor({
               </div>
               <Link className="primary-btn" href="/admin/estudio/new">Crear especialista</Link>
             </div>
-            {visibleTeachers.length ? <TeachersTable items={visibleTeachers} basePath="/admin/estudio" /> : (
+            {visibleTeachers.length ? <TeachersTable items={visibleTeachers} basePath="/admin/estudio" showDuplicate={false} showArchive={false} /> : (
               <div className="empty-inline">
                 <strong>Aún no hay especialistas.</strong>
                 <span>Crea perfiles para mostrarlos en la página pública.</span>
@@ -195,7 +199,7 @@ export default function StudioPageEditor({
               </div>
               <div className="cms-studio-additions__preview" aria-label="Vista previa de la galería social">
                 {showIdeaPromptSection ? (
-                  <SocialGallery />
+                  <SocialGallery {...socialGalleryProps} />
                 ) : (
                   <div className="empty-inline">
                     <strong>Galería desactivada.</strong>
@@ -215,6 +219,7 @@ export default function StudioPageEditor({
             showIdeaPromptSection={showIdeaPromptSection}
             navigationItems={navigationItems}
             menuSettings={menuSettings}
+            socialGallery={socialGallery}
           />
         ) : null}
       </div>
@@ -236,6 +241,7 @@ function StudioPreview({
   showIdeaPromptSection,
   navigationItems,
   menuSettings,
+  socialGallery,
 }: {
   hero: StudioPageSettings["hero"];
   introContent: string;
@@ -243,7 +249,10 @@ function StudioPreview({
   showIdeaPromptSection: boolean;
   navigationItems: NavigationItem[];
   menuSettings: SiteSettings["menu"];
+  socialGallery: CmsSocialGallery | null;
 }) {
+  const socialGalleryProps = getStudioSocialGalleryProps(socialGallery);
+
   return (
     <div className="cms-preview-frame">
       <div className="cms-public-preview__toolbar">
@@ -296,9 +305,31 @@ function StudioPreview({
               ))}
             </div>
           </section>
-          {showIdeaPromptSection ? <SocialGallery /> : null}
+          {showIdeaPromptSection ? <SocialGallery {...socialGalleryProps} /> : null}
         </div>
       </div>
     </div>
   );
+}
+
+function getStudioSocialGalleryProps(gallery: CmsSocialGallery | null) {
+  const fallback = getIdeaPromptContent("studio");
+  const posts = gallery?.items
+    .filter((item) => item.is_visible !== false && item.image_url)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((item) => ({
+      image: item.image_url,
+      title: item.title,
+      body: item.description,
+      instagramUrl: item.instagram_url,
+    }));
+
+  return {
+    id: fallback.id,
+    title: gallery?.title || fallback.title,
+    subtitle: gallery?.description || fallback.subtitle,
+    posts: posts?.length ? posts : fallback.posts,
+    ariaLabel: fallback.ariaLabel,
+    sourceHref: gallery?.cta_url || fallback.sourceHref,
+  };
 }

@@ -2,6 +2,8 @@
 
 import type { CSSProperties } from "react";
 import { useState } from "react";
+import type { NavigationItem } from "@/data/types";
+import AdminActionModal from "./AdminActionModal";
 import ColorPickerField from "./ColorPickerField";
 import MediaSelectField from "./MediaSelectField";
 import type { SiteSettings } from "@/lib/cms/settings";
@@ -26,7 +28,10 @@ type EditableMenuChild = Omit<EditableMenuItem, "children" | "locked"> & {
   parent_id?: string | null;
 };
 
-type BulkMenuItemsResponse = { items?: MenuItem[]; error?: string };
+type PublishMenuResponse = { items?: MenuItem[]; error?: string };
+type ActionModalState = { type: "success" | "error"; title: string; message: string } | null;
+
+const DYNAMIC_MENU_KEYS = new Set(["clases", "workshops", "experiencias", "giftcards"]);
 
 const DEFAULT_POINTS: EditableMenuItem[] = [
   menuPoint("inicio", "Inicio", "/#hero", 0, { locked: true }),
@@ -100,6 +105,45 @@ function keyForItem(item: Pick<MenuItem, "label" | "url">) {
   return `item-${item.url || label}`;
 }
 
+function keyForNavigationItem(item: NavigationItem) {
+  return keyForItem({ label: item.label, url: item.href });
+}
+
+function cloneChildren(children: EditableMenuChild[]) {
+  return children.map((child) => ({ ...child }));
+}
+
+function editableChildFromNavigation(item: NavigationItem, sortOrder: number): EditableMenuChild {
+  return {
+    key: `available-${item.href}-${sortOrder}`,
+    label: item.label,
+    url: item.href,
+    sort_order: sortOrder,
+    type: "internal",
+    linked_entity_type: "none",
+    linked_entity_id: "",
+    is_visible: item.visible,
+    open_in_new_tab: item.target === "_blank",
+  };
+}
+
+function availableChildrenByRoot(navigationItems: NavigationItem[]) {
+  const childrenByRoot = new Map<string, EditableMenuChild[]>();
+
+  navigationItems.forEach((item) => {
+    const key = keyForNavigationItem(item);
+    if (!DYNAMIC_MENU_KEYS.has(key)) return;
+
+    const children = (item.children ?? [])
+      .filter((child) => child.visible)
+      .sort((a, b) => a.order - b.order)
+      .map((child, index) => editableChildFromNavigation(child, index));
+    childrenByRoot.set(key, children);
+  });
+
+  return childrenByRoot;
+}
+
 function itemToEditable(item: MenuItem, children: MenuItem[]): EditableMenuItem {
   const key = keyForItem(item);
   const defaultPoint = DEFAULT_POINTS.find((point) => point.key === key);
@@ -137,12 +181,20 @@ function itemToEditable(item: MenuItem, children: MenuItem[]): EditableMenuItem 
     is_visible: key === "inicio" ? true : item.is_visible,
     open_in_new_tab: item.open_in_new_tab,
     locked: key === "inicio",
-    children: normalizedChildren.length ? normalizedChildren : (defaultPoint?.children ?? []),
+    children: normalizedChildren.length ? normalizedChildren : cloneChildren(defaultPoint?.children ?? []),
   };
 }
 
-function buildEditableMenu(menu: Menu | null): EditableMenuItem[] {
-  if (!menu?.items.length) return DEFAULT_POINTS;
+function buildEditableMenu(menu: Menu | null, availableNavigationItems: NavigationItem[]): EditableMenuItem[] {
+  const availableChildren = availableChildrenByRoot(availableNavigationItems);
+  const defaults = DEFAULT_POINTS.map((point) => ({
+    ...point,
+    children: DYNAMIC_MENU_KEYS.has(point.key)
+      ? cloneChildren(availableChildren.get(point.key) ?? [])
+      : cloneChildren(point.children),
+  }));
+
+  if (!menu?.items.length) return defaults;
 
   const childrenByParent = new Map<string, MenuItem[]>();
   for (const item of menu.items) {
@@ -158,13 +210,20 @@ function buildEditableMenu(menu: Menu | null): EditableMenuItem[] {
     .map((item) => itemToEditable(item, childrenByParent.get(item.id) ?? []));
 
   const byKey = new Map(roots.map((item) => [item.key, item]));
-  const merged = DEFAULT_POINTS.map((defaultPoint) => ({
-    ...defaultPoint,
-    ...(byKey.get(defaultPoint.key) ?? {}),
-    children: byKey.get(defaultPoint.key)?.children?.length ? byKey.get(defaultPoint.key)!.children : defaultPoint.children,
-  }));
+  const merged = defaults.map((defaultPoint) => {
+    const savedPoint = byKey.get(defaultPoint.key);
+    return {
+      ...defaultPoint,
+      ...(savedPoint ?? {}),
+      children: DYNAMIC_MENU_KEYS.has(defaultPoint.key)
+        ? cloneChildren(availableChildren.get(defaultPoint.key) ?? [])
+        : savedPoint?.children?.length
+          ? savedPoint.children
+          : defaultPoint.children,
+    };
+  });
 
-  const extras = roots.filter((item) => !DEFAULT_POINTS.some((point) => point.key === item.key));
+  const extras = roots.filter((item) => !defaults.some((point) => point.key === item.key));
   return [...merged, ...extras].sort((a, b) => a.sort_order - b.sort_order);
 }
 
@@ -234,22 +293,24 @@ function InteractiveMenuPreview({
 export default function PublicMenuEditor({
   initialMenu,
   initialSettings,
+  availableNavigationItems,
 }: {
   initialMenu: Menu | null;
   initialSettings: SiteSettings;
+  availableNavigationItems: NavigationItem[];
 }) {
-  const [items, setItems] = useState(() => buildEditableMenu(initialMenu));
+  const [items, setItems] = useState(() => buildEditableMenu(initialMenu, availableNavigationItems));
   const [logoUrl, setLogoUrl] = useState(initialSettings.menu.header_logo_url);
   const [scrollBackgroundColor, setScrollBackgroundColor] = useState(initialSettings.menu.scroll_menu_background_color);
   const [scrollTextColor, setScrollTextColor] = useState(initialSettings.menu.scroll_menu_text_color);
   const [scrollLogoTintEnabled, setScrollLogoTintEnabled] = useState(initialSettings.menu.scroll_menu_logo_tint_enabled);
   const [scrollLogoTintColor, setScrollLogoTintColor] = useState(initialSettings.menu.scroll_menu_logo_tint_color);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionModal, setActionModal] = useState<ActionModalState>(null);
 
   const canSave = Boolean(initialMenu?.id) && !isSaving;
-  const saveLabel = isSaving ? "Guardando..." : "Guardar menú";
+  const saveLabel = isSaving ? "Publicando..." : "Publicar";
 
   function updateItem(key: string, patch: Partial<EditableMenuItem>) {
     setItems((current) => current.map((item) => item.key === key ? { ...item, ...patch } : item));
@@ -273,52 +334,44 @@ export default function PublicMenuEditor({
 
     setIsSaving(true);
     setError(null);
-    setMessage(null);
 
     try {
-      const settingsRequest = fetch("/api/admin/settings", {
+      const response = await fetch("/api/admin/menu/publish", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          menu: {
-            header_logo_url: logoUrl,
-            scroll_menu_background_color: scrollBackgroundColor,
-            scroll_menu_text_color: scrollTextColor,
-            scroll_menu_icon_color: scrollTextColor,
-            scroll_menu_logo_tint_enabled: scrollLogoTintEnabled,
-            scroll_menu_logo_tint_color: scrollLogoTintColor,
+          menuId: initialMenu.id,
+          settings: {
+            menu: {
+              header_logo_url: logoUrl,
+              scroll_menu_background_color: scrollBackgroundColor,
+              scroll_menu_text_color: scrollTextColor,
+              scroll_menu_icon_color: scrollTextColor,
+              scroll_menu_logo_tint_enabled: scrollLogoTintEnabled,
+              scroll_menu_logo_tint_color: scrollLogoTintColor,
+            },
           },
-        }),
-      });
-
-      const menuRequest = fetch(`/api/admin/menus/${initialMenu.id}/items/bulk`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
           items: items.map((item, index) => ({
             id: item.id,
             ...payloadFor({ ...item, sort_order: index }, null),
-            children: item.children.map((child, childIndex) => ({
-              id: child.id,
-              ...payloadFor({ ...child, sort_order: childIndex }, item.id ?? null),
-            })),
+            children: DYNAMIC_MENU_KEYS.has(item.key)
+              ? []
+              : item.children.map((child, childIndex) => ({
+                id: child.id,
+                ...payloadFor({ ...child, sort_order: childIndex }, item.id ?? null),
+              })),
           })),
         }),
       });
 
-      const [settingsResponse, menuResponse] = await Promise.all([settingsRequest, menuRequest]);
-      const [settingsData, menuData] = await Promise.all([
-        settingsResponse.json().catch(() => ({})) as Promise<{ error?: string }>,
-        menuResponse.json().catch(() => ({})) as Promise<BulkMenuItemsResponse>,
-      ]);
-      if (!settingsResponse.ok) throw new Error(settingsData.error || "No se pudo guardar el logo.");
-      if (!menuResponse.ok || !menuData.items) throw new Error(menuData.error || "No se pudo guardar el menú.");
+      const data = await response.json().catch(() => ({})) as PublishMenuResponse;
+      if (!response.ok || !data.items) throw new Error(data.error || "No se pudo publicar el menú.");
 
-      const savedRoots = menuData.items
+      const savedRoots = data.items
         .filter((item) => !item.parent_id)
         .sort((a, b) => a.sort_order - b.sort_order);
       const savedChildrenByParent = new Map<string, MenuItem[]>();
-      for (const item of menuData.items.filter((savedItem) => savedItem.parent_id)) {
+      for (const item of data.items.filter((savedItem) => savedItem.parent_id)) {
         const list = savedChildrenByParent.get(item.parent_id ?? "") ?? [];
         list.push(item);
         savedChildrenByParent.set(item.parent_id ?? "", list);
@@ -342,9 +395,19 @@ export default function PublicMenuEditor({
         };
       });
       setItems(savedItems);
-      setMessage("Menú guardado correctamente.");
+      setActionModal({
+        type: "success",
+        title: "Menú publicado",
+        message: "La configuración del menú se guardó correctamente.",
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar el menú.");
+      const message = err instanceof Error ? err.message : "No se pudo publicar el menú.";
+      setError(message);
+      setActionModal({
+        type: "error",
+        title: "No se pudo publicar",
+        message,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -352,6 +415,15 @@ export default function PublicMenuEditor({
 
   return (
     <div className="public-menu-editor">
+      <AdminActionModal
+        open={Boolean(actionModal)}
+        type={actionModal?.type ?? "info"}
+        title={actionModal?.title ?? ""}
+        message={actionModal?.message}
+        confirmLabel="Entendido"
+        onClose={() => setActionModal(null)}
+      />
+
       <div className="section-head public-menu-editor__head">
         <div>
           <p className="auth-kicker">CMS</p>
@@ -362,7 +434,6 @@ export default function PublicMenuEditor({
         </button>
       </div>
 
-      {message ? <p className="success-message">{message}</p> : null}
       {error ? <p className="form-error">{error}</p> : null}
 
       <div className="public-menu-editor__panel">
@@ -380,7 +451,6 @@ export default function PublicMenuEditor({
                       <span>{item.locked ? "Elemento fijo" : "Nombre visible"}</span>
                       <input
                         value={item.label}
-                        readOnly={item.locked}
                         aria-label={`Nombre visible de ${item.label || "elemento del menú"}`}
                         onChange={(event) => updateItem(item.key, { label: event.target.value })}
                       />

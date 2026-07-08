@@ -1305,19 +1305,80 @@ export interface MarketingSeoAudit {
 export const COOKIE_CATEGORIES = ["necessary", "analytics", "marketing", "functional"] as const;
 export type CookieCategory = (typeof COOKIE_CATEGORIES)[number];
 
-export const DEFAULT_PRIVACY_POLICY_MARKDOWN = `En Casa Rosier tratamos tu información con cuidado y transparencia. Esta página explica cómo protegemos tus datos y cómo puedes ejercer tus derechos.
+export const DEFAULT_PRIVACY_POLICY_MARKDOWN = `En **Casa Rosier** tratamos tus datos personales con cuidado, responsabilidad y <u>transparencia</u>. Esta política explica qué información podemos recopilar cuando navegas por la web, escribes desde un formulario, reservas una experiencia o realizas una compra, para qué la usamos y cómo puedes ejercer tus derechos.
 
-## Datos que recopilamos
-Recopilamos los datos de contacto que nos compartes al escribirnos o reservar una experiencia, como nombre, correo electrónico, teléfono y el mensaje enviado. También podemos guardar preferencias de cookies para recordar tu elección.
+## 1. Responsable del tratamiento
 
-## Finalidad
-Usamos esta información para responder consultas, gestionar reservas, mejorar la experiencia del sitio y mantener comunicaciones relacionadas con Casa Rosier.
+El responsable del tratamiento es **Casa Rosier**, proyecto vinculado a experiencias, clases, contenidos y piezas de cerámica en Barcelona.
 
-## Conservación y seguridad
-Conservamos los datos durante el tiempo necesario para cumplir su finalidad y aplicamos medidas razonables para protegerlos frente a accesos no autorizados.
+Para cualquier consulta relacionada con privacidad puedes escribirnos a través de los formularios de contacto disponibles en esta web o por los canales publicados en el sitio.
 
-## Tus derechos
-Puedes solicitar el acceso, rectificación o eliminación de tus datos escribiéndonos desde la sección de contacto del sitio.`;
+## 2. Datos personales que podemos tratar
+
+Podemos tratar los datos que nos facilitas directamente y los datos técnicos necesarios para que la web funcione correctamente:
+
+- **Datos identificativos y de contacto:** nombre, correo electrónico, teléfono y cualquier información incluida en el mensaje enviado.
+- **Datos de reservas, compras o solicitudes:** actividad seleccionada, fecha, número de personas, preferencias, observaciones y datos necesarios para gestionar la relación contigo.
+- **Datos de navegación y uso:** páginas visitadas, preferencias de cookies, idioma, dispositivo, navegador y datos técnicos asociados al funcionamiento del sitio.
+- **Comunicaciones:** mensajes recibidos, respuestas enviadas y seguimiento necesario para atender tu solicitud.
+
+## 3. Finalidades del tratamiento
+
+Usamos tus datos para las siguientes finalidades:
+
+- **Responder consultas** enviadas desde formularios, correo o canales de contacto.
+- **Gestionar reservas, compras, gift cards, clases, workshops y experiencias** solicitadas por la persona usuaria.
+- **Prestar atención al cliente** y enviar comunicaciones necesarias sobre una solicitud, reserva o compra.
+- **Mantener la seguridad y el correcto funcionamiento** de la web, prevenir abusos y resolver incidencias técnicas.
+- **Mejorar la experiencia del sitio** mediante analítica, siempre que corresponda y exista una base legal válida.
+- **Enviar comunicaciones comerciales o de marketing** solo cuando exista consentimiento o una base legítima aplicable.
+
+## 4. Base legal
+
+El tratamiento de tus datos puede apoyarse en una o varias de estas bases:
+
+- **Consentimiento**, cuando aceptas cookies no necesarias, envías voluntariamente un formulario o autorizas comunicaciones.
+- **Ejecución de una relación contractual o precontractual**, cuando solicitas información, reservas una actividad o realizas una compra.
+- **Interés legítimo**, para mantener la seguridad del sitio, responder comunicaciones ya iniciadas y mejorar nuestros servicios de forma proporcionada.
+- **Obligación legal**, cuando debamos conservar información por motivos fiscales, contables, administrativos o de cumplimiento normativo.
+
+## 5. Conservación de los datos
+
+Conservaremos tus datos durante el tiempo necesario para cumplir la finalidad para la que fueron recogidos y, posteriormente, durante los plazos exigidos por la normativa aplicable.
+
+Los datos vinculados a consultas se conservarán mientras sea necesario para atender la comunicación. Los datos de compras, reservas o facturación se conservarán durante los plazos legales correspondientes. Las preferencias de cookies se mantendrán durante el periodo definido en la configuración del sitio.
+
+## 6. Destinatarios y encargados de tratamiento
+
+No vendemos tus datos personales. Podremos compartirlos únicamente cuando sea necesario para prestar el servicio o cumplir obligaciones legales.
+
+Esto puede incluir proveedores tecnológicos, alojamiento web, herramientas de gestión, servicios de comunicación, pasarelas de pago, asesoría administrativa o autoridades competentes cuando exista obligación legal.
+
+Cuando trabajamos con proveedores, procuramos que actúen como encargados de tratamiento y apliquen medidas adecuadas de seguridad y confidencialidad.
+
+## 7. Cookies y tecnologías similares
+
+La web puede utilizar cookies técnicas necesarias para su funcionamiento y, si las aceptas, cookies analíticas, funcionales o de marketing.
+
+Puedes aceptar, rechazar o configurar tus preferencias desde el banner de cookies o desde las opciones disponibles en el sitio. El uso de cookies no necesarias se realiza conforme a tu elección.
+
+## 8. Derechos de las personas usuarias
+
+Puedes ejercer tus derechos de <u>acceso, rectificación, supresión, oposición, limitación del tratamiento y portabilidad</u>, así como retirar tu consentimiento cuando el tratamiento se base en él.
+
+Para ejercerlos, contacta con **Casa Rosier** indicando el derecho que deseas ejercer y la información necesaria para identificar tu solicitud. Si consideras que el tratamiento no se ajusta a la normativa, también puedes presentar una reclamación ante la autoridad de control competente.
+
+## 9. Seguridad
+
+Aplicamos medidas técnicas y organizativas razonables para proteger los datos personales frente a accesos no autorizados, pérdida, alteración o uso indebido.
+
+Aunque trabajamos para mantener un entorno seguro, ningún sistema es completamente infalible. Por eso recomendamos no enviar información sensible que no sea necesaria para gestionar tu solicitud.
+
+## 10. Cambios en esta política
+
+Podremos actualizar esta política para reflejar cambios legales, técnicos o de funcionamiento del sitio. La versión publicada en esta página será la vigente en cada momento.
+
+Si los cambios son relevantes, procuraremos comunicarlos de forma visible en la web.`;
 
 export interface LegalSettings {
   cookies_banner_enabled: boolean;

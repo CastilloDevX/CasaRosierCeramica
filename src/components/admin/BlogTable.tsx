@@ -2,10 +2,23 @@
 
 import Link from "@/components/admin/AdminLink";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { BlogPost } from "@/lib/cms/types";
+import AdminActionModal from "./AdminActionModal";
 
-type Toast = { type: "success" | "error"; message: string };
+type Notice = {
+  type: "success" | "error" | "info";
+  title: string;
+  message: string;
+};
+
+type ConfirmAction = {
+  id: string;
+  action: string;
+  title: string;
+  message: string;
+  confirmLabel: string;
+};
 
 function statusLabel(status: BlogPost["status"]) {
   if (status === "published") return "Publicado";
@@ -16,26 +29,29 @@ function statusLabel(status: BlogPost["status"]) {
 
 function actionMessage(action: string) {
   if (action === "edit") return "Abriendo edición de la bitácora.";
-  if (action === "duplicate") return "Bitácora duplicada correctamente.";
-  if (action === "publish") return "Bitácora publicada correctamente.";
-  if (action === "draft") return "Bitácora pasada a borrador correctamente.";
-  if (action === "archive") return "Bitácora archivada correctamente.";
+  if (action === "duplicate") return "Duplicado exitosamente.";
+  if (action === "publish") return "Publicado exitosamente.";
+  if (action === "draft") return "Borrador guardado correctamente.";
+  if (action === "archive") return "Archivado exitosamente.";
   if (action === "feature") return "Bitácora agregada a destacados correctamente.";
   if (action === "unfeature") return "Bitácora retirada de destacados correctamente.";
-  if (action === "trash") return "Bitácora enviada a la papelera correctamente.";
+  if (action === "trash") return "Movido a papelera exitosamente.";
   return "Acción completada correctamente.";
 }
 
-export default function BlogTable({ items }: { items: BlogPost[] }) {
+export default function BlogTable({
+  items,
+  showDuplicate = true,
+  showArchive = true,
+}: {
+  items: BlogPost[];
+  showDuplicate?: boolean;
+  showArchive?: boolean;
+}) {
   const router = useRouter();
-  const [toast, setToast] = useState<Toast | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 3000);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
 
   function actionKey(id: string, action: string) {
     return `${id}:${action}`;
@@ -43,14 +59,13 @@ export default function BlogTable({ items }: { items: BlogPost[] }) {
 
   function startEdit(id: string) {
     setPendingAction(actionKey(id, "edit"));
-    setToast({ type: "success", message: actionMessage("edit") });
+    setNotice({ type: "info", title: "Abriendo edición", message: actionMessage("edit") });
   }
 
   async function run(id: string, action: string) {
     if (pendingAction) return;
-    if (action === "trash" && !window.confirm("¿Mover esta bitácora a la papelera?")) return;
 
-    setToast(null);
+    setNotice(null);
     setPendingAction(actionKey(id, action));
 
     try {
@@ -61,15 +76,15 @@ export default function BlogTable({ items }: { items: BlogPost[] }) {
       });
 
       if (response.ok) {
-        setToast({ type: "success", message: actionMessage(action) });
+        setNotice({ type: "success", title: "Acción completada", message: actionMessage(action) });
         router.refresh();
         return;
       }
 
       const data = (await response.json().catch(() => ({}))) as { error?: string };
-      setToast({ type: "error", message: data.error || "No se pudo completar la acción." });
+      setNotice({ type: "error", title: "No se pudo completar", message: data.error || "No se pudo completar la acción." });
     } catch {
-      setToast({ type: "error", message: "No se pudo conectar con el servidor. Intenta nuevamente." });
+      setNotice({ type: "error", title: "No se pudo conectar", message: "Revisa la conexión y vuelve a intentarlo." });
     } finally {
       setPendingAction(null);
     }
@@ -81,21 +96,7 @@ export default function BlogTable({ items }: { items: BlogPost[] }) {
   }
 
   return (
-    <div className="space-y-4">
-      {toast ? (
-        <div
-          className={`rounded-xl border px-4 py-3 text-label-md ${
-            toast.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-              : "border-error bg-error-container text-on-error-container"
-          }`}
-          role={toast.type === "error" ? "alert" : "status"}
-          aria-live="polite"
-        >
-          {toast.message}
-        </div>
-      ) : null}
-
+    <>
       <div className="table-card">
         <table className="admin-table">
           <thead>
@@ -140,9 +141,11 @@ export default function BlogTable({ items }: { items: BlogPost[] }) {
                       >
                         {isPending(post.id, "edit") ? "Abriendo..." : "Editar"}
                       </Link>
-                      <button className="secondary-btn" type="button" disabled={rowPending} onClick={() => run(post.id, "duplicate")}>
-                        {isPending(post.id, "duplicate") ? "Duplicando..." : "Duplicar"}
-                      </button>
+                      {showDuplicate ? (
+                        <button className="secondary-btn" type="button" disabled={rowPending} onClick={() => run(post.id, "duplicate")}>
+                          {isPending(post.id, "duplicate") ? "Duplicando..." : "Duplicar"}
+                        </button>
+                      ) : null}
                       {post.status === "published" ? (
                         <button className="secondary-btn" type="button" disabled={rowPending} onClick={() => run(post.id, "draft")}>
                           {isPending(post.id, "draft") ? "Guardando..." : "Borrador"}
@@ -152,7 +155,7 @@ export default function BlogTable({ items }: { items: BlogPost[] }) {
                           {isPending(post.id, "publish") ? "Publicando..." : "Publicar"}
                         </button>
                       ) : null}
-                      {post.status !== "archived" ? (
+                      {showArchive && post.status !== "archived" ? (
                         <button className="secondary-btn" type="button" disabled={rowPending} onClick={() => run(post.id, "archive")}>
                           {isPending(post.id, "archive") ? "Archivando..." : "Archivar"}
                         </button>
@@ -160,7 +163,18 @@ export default function BlogTable({ items }: { items: BlogPost[] }) {
                       <button className="secondary-btn" type="button" disabled={rowPending} onClick={() => run(post.id, post.is_featured ? "unfeature" : "feature")}>
                         {isPending(post.id, post.is_featured ? "unfeature" : "feature") ? "Guardando..." : post.is_featured ? "Quitar destacado" : "Destacar"}
                       </button>
-                      <button className="danger-btn" type="button" disabled={rowPending} onClick={() => run(post.id, "trash")}>
+                      <button
+                        className="danger-btn"
+                        type="button"
+                        disabled={rowPending}
+                        onClick={() => setConfirm({
+                          id: post.id,
+                          action: "trash",
+                          title: "Mover a papelera",
+                          message: `Se moverá "${post.title}" a la papelera. Puedes restaurarlo después desde Papelera.`,
+                          confirmLabel: "Papelera",
+                        })}
+                      >
                         {isPending(post.id, "trash") ? "Enviando..." : "Papelera"}
                       </button>
                     </div>
@@ -171,6 +185,25 @@ export default function BlogTable({ items }: { items: BlogPost[] }) {
           </tbody>
         </table>
       </div>
-    </div>
+      <AdminActionModal
+        open={Boolean(notice)}
+        type={notice?.type}
+        title={notice?.title ?? ""}
+        message={notice?.message}
+        confirmLabel="Entendido"
+        onClose={() => setNotice(null)}
+      />
+      <AdminActionModal
+        open={Boolean(confirm)}
+        type="confirm"
+        title={confirm?.title ?? ""}
+        message={confirm?.message}
+        confirmLabel={confirm?.confirmLabel}
+        onConfirm={() => {
+          if (confirm) void run(confirm.id, confirm.action);
+        }}
+        onClose={() => setConfirm(null)}
+      />
+    </>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import AdminPagination from "./AdminPagination";
 import type { TrashItem } from "@/lib/cms/types";
 
 const apiMap: Record<string, { restore: string; del: string; method?: string; body?: (id: string, action: string) => string }> = {
@@ -30,6 +31,18 @@ const apiMap: Record<string, { restore: string; del: string; method?: string; bo
 };
 
 type DateSort = "newest" | "oldest";
+type TrashResponse = {
+  items: TrashItem[];
+  entityOptions: string[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  sort: DateSort;
+  entityType: string;
+  query: string;
+  error?: string;
+};
 type DeleteModalState = {
   item: TrashItem;
   status: "confirm" | "loading" | "success" | "error";
@@ -41,42 +54,100 @@ function deletedTime(item: TrashItem) {
   return Number.isFinite(time) ? time : 0;
 }
 
-function normalized(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-export default function TrashTable({ items }: { items: TrashItem[] }) {
+export default function TrashTable({
+  initialItems,
+  initialEntityOptions,
+  initialTotal,
+  initialPage,
+  initialPageSize,
+  initialTotalPages,
+  initialSort,
+}: {
+  initialItems: TrashItem[];
+  initialEntityOptions: string[];
+  initialTotal: number;
+  initialPage: number;
+  initialPageSize: number;
+  initialTotalPages: number;
+  initialSort: DateSort;
+}) {
   const router = useRouter();
+  const [items, setItems] = useState(initialItems);
   const [query, setQuery] = useState("");
-  const [dateSort, setDateSort] = useState<DateSort>("newest");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [dateSort, setDateSort] = useState<DateSort>(initialSort);
   const [entityFilter, setEntityFilter] = useState("all");
+  const [entityOptions, setEntityOptions] = useState(initialEntityOptions);
+  const [page, setPage] = useState(initialPage);
+  const [pageSize] = useState(initialPageSize);
+  const [total, setTotal] = useState(initialTotal);
+  const [totalPages, setTotalPages] = useState(initialTotalPages);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [deleteModal, setDeleteModal] = useState<DeleteModalState>(null);
 
-  const entityOptions = useMemo(() => Array.from(new Set(items.map((item) => item.entity_type))).sort(), [items]);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedQuery(query.trim());
+      setPage(1);
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [query]);
 
-  const visibleItems = useMemo(() => {
-    const search = normalized(query.trim());
-    return [...items]
-      .filter((item) => {
-        if (entityFilter !== "all" && item.entity_type !== entityFilter) return false;
-        if (!search) return true;
-        const deletedAt = new Date(item.deleted_at);
-        const haystack = normalized([
-          item.title,
-          item.entity_type,
-          item.deleted_by,
-          Number.isFinite(deletedAt.getTime()) ? deletedAt.toLocaleString() : item.deleted_at,
-        ].join(" "));
-        return haystack.includes(search);
-      })
-      .sort((a, b) => {
-        const direction = dateSort === "newest" ? -1 : 1;
-        return (deletedTime(a) - deletedTime(b)) * direction;
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPage() {
+      setIsLoading(true);
+      setError("");
+      const params = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+        sort: dateSort,
+        entity_type: entityFilter,
       });
-  }, [dateSort, entityFilter, items, query]);
+      if (debouncedQuery) params.set("q", debouncedQuery);
+      const response = await fetch(`/api/admin/trash?${params.toString()}`, { cache: "no-store" });
+      const data = await response.json().catch(() => ({})) as TrashResponse;
+      if (cancelled) return;
+      if (!response.ok) {
+        setError(data.error || "No se pudo cargar la papelera.");
+      } else {
+        setItems(data.items);
+        setEntityOptions(data.entityOptions);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
+        if (page > data.totalPages) setPage(data.totalPages);
+      }
+      setIsLoading(false);
+    }
+    void loadPage();
+    return () => {
+      cancelled = true;
+    };
+  }, [dateSort, debouncedQuery, entityFilter, page, pageSize]);
+
+  const visibleItems = useMemo(() => [...items].sort((a, b) => {
+    const direction = dateSort === "newest" ? -1 : 1;
+    return (deletedTime(a) - deletedTime(b)) * direction;
+  }), [dateSort, items]);
+
+  async function reloadCurrentPage() {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(pageSize),
+      sort: dateSort,
+      entity_type: entityFilter,
+    });
+    if (debouncedQuery) params.set("q", debouncedQuery);
+    const response = await fetch(`/api/admin/trash?${params.toString()}`, { cache: "no-store" });
+    const data = await response.json().catch(() => ({})) as TrashResponse;
+    if (!response.ok) return;
+    setItems(data.items);
+    setEntityOptions(data.entityOptions);
+    setTotal(data.total);
+    setTotalPages(data.totalPages);
+    if (!data.items.length && page > 1) setPage(page - 1);
+  }
 
   async function action(item: TrashItem, type: "restore" | "del") {
     const cfg = apiMap[item.entity_type];
@@ -95,6 +166,7 @@ export default function TrashTable({ items }: { items: TrashItem[] }) {
       const data = await res.json().catch(() => ({})) as { error?: string };
       throw new Error(data.error || "No se pudo completar la acción.");
     }
+    await reloadCurrentPage();
     router.refresh();
   }
 
@@ -127,7 +199,7 @@ export default function TrashTable({ items }: { items: TrashItem[] }) {
         <div className="trash-table-head__controls" aria-label="Controles de papelera">
           <label className="trash-table-head__field">
             <span>Entidad</span>
-            <select value={entityFilter} onChange={(event) => setEntityFilter(event.target.value)}>
+            <select value={entityFilter} onChange={(event) => { setEntityFilter(event.target.value); setPage(1); }}>
               <option value="all">Todas las entidades</option>
               {entityOptions.map((entity) => (
                 <option key={entity} value={entity}>{entity}</option>
@@ -136,7 +208,7 @@ export default function TrashTable({ items }: { items: TrashItem[] }) {
           </label>
           <label className="trash-table-head__field">
             <span>Fecha</span>
-            <select value={dateSort} onChange={(event) => setDateSort(event.target.value as DateSort)}>
+            <select value={dateSort} onChange={(event) => { setDateSort(event.target.value as DateSort); setPage(1); }}>
               <option value="newest">Más recientes primero</option>
               <option value="oldest">Más antiguos primero</option>
             </select>
@@ -152,6 +224,12 @@ export default function TrashTable({ items }: { items: TrashItem[] }) {
           </label>
         </div>
         </div>
+        <div className="paginated-table-meta">
+          <p className="paginated-table-summary">{total} elementos en papelera</p>
+          {isLoading ? <span className="paginated-table-loading">Cargando...</span> : null}
+        </div>
+        {error ? <p className="form-error">{error}</p> : null}
+        <div className={isLoading ? "paginated-table is-loading" : "paginated-table"}>
         <table className="admin-table">
           <thead>
             <tr>
@@ -184,6 +262,8 @@ export default function TrashTable({ items }: { items: TrashItem[] }) {
             ) : null}
           </tbody>
         </table>
+        </div>
+        <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} disabled={isLoading} />
       </div>
 
       {deleteModal ? (

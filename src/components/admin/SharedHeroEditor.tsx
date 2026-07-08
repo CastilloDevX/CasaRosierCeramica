@@ -150,32 +150,51 @@ export default function SharedHeroEditor({
         <div className="mt-5 grid gap-5 md:grid-cols-2">
           <TextField label="Título del hero" value={details.heroTitle} placeholder={titleFallback} onChange={(event) => onChange({ heroTitle: event.target.value })} />
           <TextField label="Subtítulo del hero" value={details.heroSubtitle} placeholder={subtitleFallback} onChange={(event) => onChange({ heroSubtitle: event.target.value })} />
-          {details.heroVariant !== "text" ? (
+          {details.heroVariant === "presentation" ? (
             <div className="md:col-span-2">
               <MediaSelectField label="Imagen de fondo" value={details.heroImage} onChange={(heroImage) => onChange({ heroImage })} previewClassName="cms-shared-hero-media-preview" />
             </div>
           ) : null}
           {details.heroVariant === "image" ? (
-            <>
-              <MediaSelectField label="Imagen/título principal" value={details.titleImage} onChange={(titleImage) => onChange({ titleImage })} />
-              <MediaSelectField label="Imagen/título secundario" value={details.titleImageSecondary} onChange={(titleImageSecondary) => onChange({ titleImageSecondary })} />
-            </>
+            <div className="cms-shared-hero-image-fields md:col-span-2">
+              <MediaSelectField
+                label="Imagen de fondo"
+                value={details.heroImage}
+                onChange={(heroImage) => onChange({ heroImage })}
+                className="cms-shared-hero-image-fields__background"
+                previewClassName="cms-shared-hero-media-preview"
+              />
+              <div className="cms-shared-hero-image-fields__titles">
+                <MediaSelectField
+                  label="Imagen cursiva 1"
+                  value={details.titleImage}
+                  onChange={(titleImage) => onChange({ titleImage })}
+                  previewClassName="cms-shared-hero-title-preview"
+                />
+                <MediaSelectField
+                  label="Imagen cursiva 2"
+                  value={details.titleImageSecondary}
+                  onChange={(titleImageSecondary) => onChange({ titleImageSecondary })}
+                  previewClassName="cms-shared-hero-title-preview"
+                />
+              </div>
+            </div>
           ) : null}
           {details.heroVariant === "presentation" ? (
-            <>
-              <div className="md:col-span-2">
+            <div className="cms-shared-hero-presentation-layout md:col-span-2">
+              <div className="cms-shared-hero-presentation-layout__main">
                 <RichTextField label="Texto de presentación" value={details.heroPresentationText} onChange={(heroPresentationText) => onChange({ heroPresentationText })} minHeight="220px" />
-              </div>
-              <div className="cms-shared-hero-presentation-fields md:col-span-2">
                 <ColorPickerField label="Color del texto" value={details.heroPresentationTextColor || "#FFFFFF"} onChange={(heroPresentationTextColor) => onChange({ heroPresentationTextColor })} />
+              </div>
+              <aside className="cms-shared-hero-presentation-layout__side">
                 <MediaSelectField
                   label="Imagen lateral"
                   value={details.heroPresentationImage}
                   onChange={(heroPresentationImage) => onChange({ heroPresentationImage })}
                   previewClassName="cms-shared-hero-side-preview"
                 />
-              </div>
-            </>
+              </aside>
+            </div>
           ) : null}
         </div>
       </section>
@@ -250,8 +269,14 @@ export default function SharedHeroEditor({
             {device === "desktop" ? (
               <>
                 <span
-                  className="absolute z-20 h-12 -translate-x-1/2"
-                  style={{ ...logoMask, left: heroText(details, keys.logoX), top: heroText(details, keys.logoY), width: heroText(details, keys.logoWidth) }}
+                  className="absolute z-20 -translate-x-1/2"
+                  style={{
+                    ...logoMask,
+                    left: heroText(details, keys.logoX) || "50%",
+                    top: heroText(details, keys.logoY) || "46px",
+                    width: heroText(details, keys.logoWidth) || "118px",
+                    aspectRatio: "2.2 / 1",
+                  }}
                 />
                 <nav className="absolute left-1/2 z-20 flex whitespace-nowrap text-[12px] font-bold" style={menuStyle} aria-label="Vista previa menú">
                   <ul className="flex list-none items-center gap-4 p-0">
@@ -260,9 +285,21 @@ export default function SharedHeroEditor({
                 </nav>
               </>
             ) : (
-              <div className="absolute inset-x-4 top-4 z-20 flex items-center justify-between" style={{ color: navColor }}>
-                <span className="block h-12 w-[104px]" style={logoMask} />
-                <span className="grid h-11 w-11 place-items-center rounded-full border border-current/30">
+              <div className="absolute inset-0 z-20" style={{ color: navColor }}>
+                <span
+                  className="absolute block -translate-x-1/2"
+                  style={{
+                    ...logoMask,
+                    left: heroText(details, keys.logoX) || "50%",
+                    top: heroText(details, keys.logoY) || (device === "tablet" ? "42px" : "34px"),
+                    width: heroText(details, keys.logoWidth) || (device === "tablet" ? "106px" : "92px"),
+                    aspectRatio: "2.2 / 1",
+                  }}
+                />
+                <span
+                  className="absolute right-6 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-current/30"
+                  style={{ top: heroText(details, keys.menuY) || (device === "tablet" ? "118px" : "96px") }}
+                >
                   <span className="material-symbols-outlined text-[22px]">menu</span>
                 </span>
               </div>

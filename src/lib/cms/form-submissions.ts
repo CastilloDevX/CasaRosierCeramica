@@ -75,11 +75,15 @@ async function readFromSupabase(query: (s: ReturnType<typeof createAdminClient>)
   return null;
 }
 
-async function upsertSubmission(s: FormSubmission): Promise<void> {
+async function upsertSubmission(s: FormSubmission, strict = false): Promise<void> {
   try {
     const supabase = createAdminClient();
-    await supabase.from(TABLE).upsert(formSubmissionToRow(s), { onConflict: "id" });
-  } catch { /* best-effort */ }
+    const { error } = await supabase.from(TABLE).upsert(formSubmissionToRow(s), { onConflict: "id" });
+    if (error) throw error;
+  } catch (error) {
+    if (!strict) return;
+    throw error instanceof Error ? error : new Error("No se pudo guardar el mensaje en Supabase.");
+  }
 }
 
 async function seedSupabase(items: FormSubmission[]): Promise<void> {
@@ -129,12 +133,16 @@ export async function createFormSubmission(data: SubmissionInput) {
 export async function updateFormSubmission(id: string, data: SubmissionInput) {
   const items = await readJsonFile<FormSubmission[]>(FILE_NAME, []);
   const index = items.findIndex((s) => s.id === id);
-  if (index === -1) return null;
-  const old = items[index];
+  const old = index === -1 ? await getFormSubmissionById(id) : items[index];
+  if (!old) return null;
   const next = normalizeSubmission(data, old);
-  items[index] = next;
-  await writeJsonFile(FILE_NAME, items);
-  await upsertSubmission(next);
+  if (index === -1) {
+    await writeJsonFile(FILE_NAME, [next, ...items]);
+  } else {
+    items[index] = next;
+    await writeJsonFile(FILE_NAME, items);
+  }
+  await upsertSubmission(next, true);
   await logAction({ action: "update", entity_type: "form_submission", entity_id: next.id, entity_title: `${next.name} — ${next.subject || next.form_name}`, old_data: old, new_data: next });
   return next;
 }
@@ -143,13 +151,17 @@ export async function moveFormSubmissionToTrash(id: string, deletedBy?: string) 
   const dBy = deletedBy ?? await getCurrentUserEmail();
   const items = await readJsonFile<FormSubmission[]>(FILE_NAME, []);
   const index = items.findIndex((s) => s.id === id);
-  if (index === -1) return null;
-  const current = items[index];
+  const current = index === -1 ? await getFormSubmissionById(id) : items[index];
+  if (!current) return null;
   const deletedAt = new Date().toISOString();
   const trashed: FormSubmission = { ...current, status: "deleted", deleted_at: deletedAt, updated_at: deletedAt };
-  items[index] = trashed;
-  await writeJsonFile(FILE_NAME, items);
-  await upsertSubmission(trashed);
+  if (index === -1) {
+    await writeJsonFile(FILE_NAME, [trashed, ...items]);
+  } else {
+    items[index] = trashed;
+    await writeJsonFile(FILE_NAME, items);
+  }
+  await upsertSubmission(trashed, true);
   await addTrashItem({ id: randomUUID(), entity_type: "form_submission", entity_id: current.id, title: `${current.name} — ${current.subject || current.form_name}`, deleted_by: dBy, deleted_at: deletedAt, restore_data: current });
   await logAction({ action: "trash", entity_type: "form_submission", entity_id: current.id, entity_title: `${current.name} — ${current.subject || current.form_name}`, old_data: current, user_email: dBy });
   return trashed;

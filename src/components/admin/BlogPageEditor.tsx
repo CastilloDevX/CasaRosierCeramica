@@ -9,9 +9,10 @@ import { SocialGallery } from "@/components/home/SocialGallery";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import Switch from "@/components/ui/Switch";
 import type { BlogPost as PublicBlogPost, NavigationItem } from "@/data/types";
+import { getIdeaPromptContent } from "@/features/shared/contextual-sections/ideaPromptContent";
 import { normalizeHeroSettings } from "@/lib/cms/hero-settings";
 import type { SiteSettings } from "@/lib/cms/settings";
-import type { BlogPageSettings, BlogPost, CmsHeroSettings } from "@/lib/cms/types";
+import type { BlogPageSettings, BlogPost, CmsHeroSettings, SocialGallery as CmsSocialGallery } from "@/lib/cms/types";
 import AdminActionModal from "./AdminActionModal";
 import BlogTable from "./BlogTable";
 import CmsPublicHeroPreview from "./CmsPublicHeroPreview";
@@ -98,11 +99,13 @@ export default function BlogPageEditor({
   posts,
   navigationItems,
   menuSettings,
+  socialGallery,
 }: {
   page: BlogPageSettings;
   posts: BlogPost[];
   navigationItems: NavigationItem[];
   menuSettings: SiteSettings["menu"];
+  socialGallery: CmsSocialGallery | null;
 }) {
   const [tab, setTab] = useState<TabKey>("hero");
   const [status, setStatus] = useState(page.status);
@@ -122,6 +125,7 @@ export default function BlogPageEditor({
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || +new Date(b.updated_at) - +new Date(a.updated_at));
   const publishedPosts = visiblePosts.filter((post) => post.status === "published");
   const featuredPosts = publishedPosts.filter((post) => post.is_featured);
+  const socialGalleryProps = getBlogSocialGalleryProps(socialGallery);
 
   async function save(nextStatus = status) {
     setIsLoading(true);
@@ -216,7 +220,7 @@ export default function BlogPageEditor({
               </div>
               <Link className="primary-btn" href="/admin/bitacora/new">Crear bitácora</Link>
             </div>
-            {visiblePosts.length ? <BlogTable items={visiblePosts} /> : (
+            {visiblePosts.length ? <BlogTable items={visiblePosts} showDuplicate={false} showArchive={false} /> : (
               <div className="empty-inline">
                 <strong>Aún no hay artículos.</strong>
                 <span>Crea la primera entrada de la bitácora.</span>
@@ -249,7 +253,7 @@ export default function BlogPageEditor({
               </div>
               <div className="cms-studio-additions__preview" aria-label="Vista previa de la galería social">
                 {showIdeaPromptSection ? (
-                  <SocialGallery />
+                  <SocialGallery {...socialGalleryProps} />
                 ) : (
                   <div className="empty-inline">
                     <strong>Galería desactivada.</strong>
@@ -268,6 +272,7 @@ export default function BlogPageEditor({
             showIdeaPromptSection={showIdeaPromptSection}
             navigationItems={navigationItems}
             menuSettings={menuSettings}
+            socialGallery={socialGallery}
           />
         ) : null}
       </div>
@@ -288,12 +293,14 @@ function BlogPagePreview({
   showIdeaPromptSection,
   navigationItems,
   menuSettings,
+  socialGallery,
 }: {
   hero: CmsHeroSettings;
   posts: BlogPost[];
   showIdeaPromptSection: boolean;
   navigationItems: NavigationItem[];
   menuSettings: SiteSettings["menu"];
+  socialGallery: CmsSocialGallery | null;
 }) {
   const publicPosts = posts.map(cmsPostToPublic).sort((a, b) => +new Date(b.publishedAt) - +new Date(a.publishedAt) || a.manualOrder - b.manualOrder);
   const visiblePosts = publicPosts.filter((post) => post.visibleInListing !== false);
@@ -301,6 +308,7 @@ function BlogPagePreview({
     .filter((post) => post.isFeatured)
     .sort((a, b) => (a.featuredOrder ?? 999) - (b.featuredOrder ?? 999) || +new Date(b.publishedAt) - +new Date(a.publishedAt));
   const categories = Array.from(new Set(visiblePosts.map((post) => post.category)));
+  const socialGalleryProps = getBlogSocialGalleryProps(socialGallery);
 
   return (
     <div className="cms-preview-frame">
@@ -337,9 +345,31 @@ function BlogPagePreview({
               <BlogGrid posts={visiblePosts} categories={categories} />
             </div>
           </section>
-          {showIdeaPromptSection ? <SocialGallery /> : null}
+          {showIdeaPromptSection ? <SocialGallery {...socialGalleryProps} /> : null}
         </div>
       </div>
     </div>
   );
+}
+
+function getBlogSocialGalleryProps(gallery: CmsSocialGallery | null) {
+  const fallback = getIdeaPromptContent("blog");
+  const posts = gallery?.items
+    .filter((item) => item.is_visible !== false && item.image_url)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((item) => ({
+      image: item.image_url,
+      title: item.title,
+      body: item.description,
+      instagramUrl: item.instagram_url,
+    }));
+
+  return {
+    id: fallback.id,
+    title: gallery?.title || fallback.title,
+    subtitle: gallery?.description || fallback.subtitle,
+    posts: posts?.length ? posts : fallback.posts,
+    ariaLabel: fallback.ariaLabel,
+    sourceHref: gallery?.cta_url || fallback.sourceHref,
+  };
 }

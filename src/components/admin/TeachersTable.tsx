@@ -2,10 +2,23 @@
 
 import Link from "@/components/admin/AdminLink";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Teacher } from "@/lib/cms/types";
+import AdminActionModal from "./AdminActionModal";
 
-type Toast = { type: "success" | "error"; message: string };
+type Notice = {
+  type: "success" | "error" | "info";
+  title: string;
+  message: string;
+};
+
+type ConfirmAction = {
+  id: string;
+  action: string;
+  title: string;
+  message: string;
+  confirmLabel: string;
+};
 
 function statusLabel(status: Teacher["status"]) {
   if (status === "published") return "Publicado";
@@ -16,30 +29,29 @@ function statusLabel(status: Teacher["status"]) {
 
 function actionMessage(action: string) {
   if (action === "edit") return "Abriendo edición del especialista.";
-  if (action === "duplicate") return "Especialista duplicado correctamente.";
-  if (action === "publish") return "Especialista publicado correctamente.";
-  if (action === "draft") return "Especialista pasado a borrador correctamente.";
-  if (action === "archive") return "Especialista archivado correctamente.";
-  if (action === "trash") return "Especialista enviado a la papelera correctamente.";
+  if (action === "duplicate") return "Duplicado exitosamente.";
+  if (action === "publish") return "Publicado exitosamente.";
+  if (action === "draft") return "Borrador guardado correctamente.";
+  if (action === "archive") return "Archivado exitosamente.";
+  if (action === "trash") return "Movido a papelera exitosamente.";
   return "Acción completada correctamente.";
 }
 
 export default function TeachersTable({
   items,
   basePath = "/admin/components/teachers",
+  showDuplicate = true,
+  showArchive = true,
 }: {
   items: Teacher[];
   basePath?: string;
+  showDuplicate?: boolean;
+  showArchive?: boolean;
 }) {
   const router = useRouter();
-  const [toast, setToast] = useState<Toast | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 3000);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
 
   function actionKey(id: string, action: string) {
     return `${id}:${action}`;
@@ -47,14 +59,13 @@ export default function TeachersTable({
 
   function startEdit(id: string) {
     setPendingAction(actionKey(id, "edit"));
-    setToast({ type: "success", message: actionMessage("edit") });
+    setNotice({ type: "info", title: "Abriendo edición", message: actionMessage("edit") });
   }
 
   async function run(id: string, action: string) {
     if (pendingAction) return;
-    if (action === "trash" && !window.confirm("¿Mover este especialista a la papelera?")) return;
 
-    setToast(null);
+    setNotice(null);
     setPendingAction(actionKey(id, action));
 
     try {
@@ -65,15 +76,15 @@ export default function TeachersTable({
       });
 
       if (response.ok) {
-        setToast({ type: "success", message: actionMessage(action) });
+        setNotice({ type: "success", title: "Acción completada", message: actionMessage(action) });
         router.refresh();
         return;
       }
 
       const data = (await response.json().catch(() => ({}))) as { error?: string };
-      setToast({ type: "error", message: data.error || "No se pudo completar la acción." });
+      setNotice({ type: "error", title: "No se pudo completar", message: data.error || "No se pudo completar la acción." });
     } catch {
-      setToast({ type: "error", message: "No se pudo conectar con el servidor. Intenta nuevamente." });
+      setNotice({ type: "error", title: "No se pudo conectar", message: "Revisa la conexión y vuelve a intentarlo." });
     } finally {
       setPendingAction(null);
     }
@@ -85,21 +96,7 @@ export default function TeachersTable({
   }
 
   return (
-    <div className="space-y-4">
-      {toast ? (
-        <div
-          className={`rounded-xl border px-4 py-3 text-label-md ${
-            toast.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-              : "border-error bg-error-container text-on-error-container"
-          }`}
-          role={toast.type === "error" ? "alert" : "status"}
-          aria-live="polite"
-        >
-          {toast.message}
-        </div>
-      ) : null}
-
+    <>
       <div className="table-card">
         <table className="admin-table">
           <thead>
@@ -139,9 +136,11 @@ export default function TeachersTable({
                       >
                         {isPending(item.id, "edit") ? "Abriendo..." : "Editar"}
                       </Link>
-                      <button className="secondary-btn" type="button" disabled={rowPending} onClick={() => run(item.id, "duplicate")}>
-                        {isPending(item.id, "duplicate") ? "Duplicando..." : "Duplicar"}
-                      </button>
+                      {showDuplicate ? (
+                        <button className="secondary-btn" type="button" disabled={rowPending} onClick={() => run(item.id, "duplicate")}>
+                          {isPending(item.id, "duplicate") ? "Duplicando..." : "Duplicar"}
+                        </button>
+                      ) : null}
                       {item.status === "published" ? (
                         <button className="secondary-btn" type="button" disabled={rowPending} onClick={() => run(item.id, "draft")}>
                           {isPending(item.id, "draft") ? "Guardando..." : "Borrador"}
@@ -151,12 +150,23 @@ export default function TeachersTable({
                           {isPending(item.id, "publish") ? "Publicando..." : "Publicar"}
                         </button>
                       ) : null}
-                      {item.status !== "archived" ? (
+                      {showArchive && item.status !== "archived" ? (
                         <button className="secondary-btn" type="button" disabled={rowPending} onClick={() => run(item.id, "archive")}>
                           {isPending(item.id, "archive") ? "Archivando..." : "Archivar"}
                         </button>
                       ) : null}
-                      <button className="danger-btn" type="button" disabled={rowPending} onClick={() => run(item.id, "trash")}>
+                      <button
+                        className="danger-btn"
+                        type="button"
+                        disabled={rowPending}
+                        onClick={() => setConfirm({
+                          id: item.id,
+                          action: "trash",
+                          title: "Mover a papelera",
+                          message: `Se moverá "${item.name}" a la papelera. Puedes restaurarlo después desde Papelera.`,
+                          confirmLabel: "Papelera",
+                        })}
+                      >
                         {isPending(item.id, "trash") ? "Enviando..." : "Papelera"}
                       </button>
                     </div>
@@ -167,6 +177,25 @@ export default function TeachersTable({
           </tbody>
         </table>
       </div>
-    </div>
+      <AdminActionModal
+        open={Boolean(notice)}
+        type={notice?.type}
+        title={notice?.title ?? ""}
+        message={notice?.message}
+        confirmLabel="Entendido"
+        onClose={() => setNotice(null)}
+      />
+      <AdminActionModal
+        open={Boolean(confirm)}
+        type="confirm"
+        title={confirm?.title ?? ""}
+        message={confirm?.message}
+        confirmLabel={confirm?.confirmLabel}
+        onConfirm={() => {
+          if (confirm) void run(confirm.id, confirm.action);
+        }}
+        onClose={() => setConfirm(null)}
+      />
+    </>
   );
 }

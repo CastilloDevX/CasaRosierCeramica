@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import AdminActionModal from "./AdminActionModal";
 import type { FormSubmission, FormSubmissionStatus } from "@/lib/cms/types";
 
 const statusLabels: Record<FormSubmissionStatus, string> = {
@@ -12,13 +13,18 @@ const statusLabels: Record<FormSubmissionStatus, string> = {
   deleted: "Eliminado",
 };
 
-type InboxFilter = "all" | "new" | "replied" | "archived";
+type InboxFilter = "all" | "new";
+type ActionModalState = {
+  type: "success" | "error" | "confirm";
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  onConfirm?: () => void;
+} | null;
 
 const inboxTabs: Array<{ value: InboxFilter; label: string }> = [
   { value: "all", label: "Todos" },
   { value: "new", label: "No leídos" },
-  { value: "replied", label: "Respondidos" },
-  { value: "archived", label: "Archivados" },
 ];
 
 function formatDate(value: string) {
@@ -48,22 +54,26 @@ function extraData(item: FormSubmission) {
   return Object.entries(item.data).filter(([key]) => !hiddenKeys.has(key));
 }
 
+function sourceLabel(item: FormSubmission) {
+  return item.source_page?.trim() || item.form_name?.trim() || "formulario";
+}
+
+function originTitle(item: FormSubmission) {
+  return `Mensaje desde ${sourceLabel(item)}`;
+}
+
 export default function MessagesTable({ items }: { items: FormSubmission[] }) {
   const [messages, setMessages] = useState(items);
   const [selectedId, setSelectedId] = useState(items[0]?.id ?? "");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
-  const [notesById, setNotesById] = useState<Record<string, string>>(() => (
-    Object.fromEntries(items.map((item) => [item.id, item.internal_notes]))
-  ));
-  const [notice, setNotice] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [actionModal, setActionModal] = useState<ActionModalState>(null);
 
   const counts = useMemo(() => ({
     all: messages.length,
     new: messages.filter((item) => item.status === "new").length,
-    replied: messages.filter((item) => item.status === "replied").length,
-    archived: messages.filter((item) => item.status === "archived").length,
   }), [messages]);
 
   const filteredItems = useMemo(() => {
@@ -89,10 +99,20 @@ export default function MessagesTable({ items }: { items: FormSubmission[] }) {
   }, [messages, query, filter, sort]);
 
   const selected = messages.find((item) => item.id === selectedId) ?? filteredItems[0] ?? null;
-  const selectedNotes = selected ? notesById[selected.id] ?? selected.internal_notes : "";
   const replySubject = selected ? encodeURIComponent(`Re: ${selected.subject || "Tu mensaje a Casa Rosier"}`) : "";
 
+  function showResult(type: "success" | "error", title: string, message: string) {
+    setActionModal({ type, title, message });
+  }
+
   async function updateStatus(id: string, nextStatus: FormSubmissionStatus) {
+    const previousMessages = messages;
+    const now = new Date().toISOString();
+    setMessages((current) => current.map((item) => (
+      item.id === id ? { ...item, status: nextStatus, updated_at: now } : item
+    )));
+    setSelectedId(id);
+    setPendingAction(`${id}:status:${nextStatus}`);
     const response = await fetch(`/api/admin/mensajes/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -100,15 +120,21 @@ export default function MessagesTable({ items }: { items: FormSubmission[] }) {
     });
     const data = await response.json().catch(() => ({})) as { submission?: FormSubmission; error?: string };
     if (!response.ok || !data.submission) {
-      setNotice(data.error || "No se pudo actualizar el mensaje.");
+      setMessages(previousMessages);
+      showResult("error", "No se pudo actualizar", data.error || "No se pudo actualizar el mensaje.");
+      setPendingAction(null);
       return;
     }
     setMessages((current) => current.map((item) => item.id === id ? data.submission! : item));
     setSelectedId(id);
-    setNotice("Mensaje actualizado.");
+    if (nextStatus !== "read") {
+      showResult("success", "Acción completada", "Mensaje actualizado correctamente.");
+    }
+    setPendingAction(null);
   }
 
   async function moveToTrash(id: string) {
+    setPendingAction(`${id}:trash`);
     const response = await fetch(`/api/admin/mensajes/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -116,29 +142,27 @@ export default function MessagesTable({ items }: { items: FormSubmission[] }) {
     });
     const data = await response.json().catch(() => ({})) as { error?: string };
     if (!response.ok) {
-      setNotice(data.error || "No se pudo mover el mensaje a papelera.");
+      showResult("error", "No se pudo enviar", data.error || "No se pudo mover el mensaje a papelera.");
+      setPendingAction(null);
       return;
     }
-    setMessages((current) => current.filter((item) => item.id !== id));
-    setSelectedId(filteredItems.find((item) => item.id !== id)?.id ?? "");
-    setNotice("Mensaje enviado a papelera.");
+    setMessages((current) => {
+      const next = current.filter((item) => item.id !== id);
+      setSelectedId(next[0]?.id ?? "");
+      return next;
+    });
+    showResult("success", "Acción completada", "Mensaje enviado a la papelera correctamente.");
+    setPendingAction(null);
   }
 
-  async function saveNotes() {
-    if (!selected) return;
-    const response = await fetch(`/api/admin/mensajes/${selected.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ internal_notes: selectedNotes }),
+  function requestTrash(item: FormSubmission) {
+    setActionModal({
+      type: "confirm",
+      title: "Enviar a papelera",
+      message: `Se moverá el mensaje de ${item.name || item.email || "este contacto"} a la papelera.`,
+      confirmLabel: "Papelera",
+      onConfirm: () => void moveToTrash(item.id),
     });
-    const data = await response.json().catch(() => ({})) as { submission?: FormSubmission; error?: string };
-    if (!response.ok || !data.submission) {
-      setNotice(data.error || "No se pudieron guardar las notas.");
-      return;
-    }
-    setMessages((current) => current.map((item) => item.id === selected.id ? data.submission! : item));
-    setNotesById((current) => ({ ...current, [selected.id]: data.submission!.internal_notes }));
-    setNotice("Notas guardadas.");
   }
 
   function selectMessage(item: FormSubmission) {
@@ -148,6 +172,17 @@ export default function MessagesTable({ items }: { items: FormSubmission[] }) {
 
   return (
     <div className="messages-inbox messages-inbox--split">
+      <AdminActionModal
+        open={Boolean(actionModal)}
+        type={actionModal?.type ?? "info"}
+        title={actionModal?.title ?? ""}
+        message={actionModal?.message}
+        confirmLabel={actionModal?.confirmLabel ?? "Entendido"}
+        cancelLabel="Cancelar"
+        onConfirm={actionModal?.onConfirm}
+        onClose={() => setActionModal(null)}
+      />
+
       <div className="messages-sidebar">
         <div className="messages-tabs" aria-label="Filtrar mensajes">
           {inboxTabs.map((tab) => (
@@ -200,7 +235,7 @@ export default function MessagesTable({ items }: { items: FormSubmission[] }) {
                 <strong>{item.name || "Sin nombre"}</strong>
                 <small>{shortDate(item.created_at)}</small>
               </span>
-              <span className="message-list-item__subject">{item.subject || "Sin asunto"}</span>
+              <span className="message-list-item__subject">{originTitle(item)}</span>
               <span className="message-list-item__preview">{previewText(item)}</span>
               <span className={`message-status-pill message-status-pill--${item.status}`}>{statusLabels[item.status]}</span>
             </button>
@@ -216,12 +251,18 @@ export default function MessagesTable({ items }: { items: FormSubmission[] }) {
           <>
             <div className="message-detail-panel__head">
               <div>
-                <p className="auth-kicker">{selected.form_name || "Formulario"}</p>
+                <p className="auth-kicker">{originTitle(selected)}</p>
                 <h3>{selected.subject || "Sin asunto"}</h3>
               </div>
               <div className="message-detail-panel__tools">
-                <button type="button" className="secondary-btn" onClick={() => updateStatus(selected.id, "archived")}>Archivar</button>
-                <button type="button" className="danger-btn" onClick={() => moveToTrash(selected.id)}>Papelera</button>
+                <button
+                  type="button"
+                  className="danger-btn"
+                  disabled={pendingAction === `${selected.id}:trash`}
+                  onClick={() => requestTrash(selected)}
+                >
+                  {pendingAction === `${selected.id}:trash` ? "Enviando..." : "Papelera"}
+                </button>
               </div>
             </div>
 
@@ -250,20 +291,6 @@ export default function MessagesTable({ items }: { items: FormSubmission[] }) {
               </div>
             ) : null}
 
-            <div className="message-notes">
-              <label className="field">
-                <span>Notas internas</span>
-                <textarea
-                  rows={4}
-                  value={selectedNotes}
-                  onChange={(event) => setNotesById((current) => ({ ...current, [selected.id]: event.target.value }))}
-                />
-              </label>
-              <button type="button" className="secondary-btn" onClick={() => void saveNotes()}>Guardar notas</button>
-            </div>
-
-            {notice ? <p className="message-notice">{notice}</p> : null}
-
             <div className="message-actions-bar">
               <a className="primary-btn" href={`mailto:${selected.email}?subject=${replySubject}`}>
                 Responder por Email
@@ -272,8 +299,6 @@ export default function MessagesTable({ items }: { items: FormSubmission[] }) {
               {selected.status !== "read" ? (
                 <button type="button" className="secondary-btn" onClick={() => updateStatus(selected.id, "read")}>Marcar leído</button>
               ) : null}
-              <button type="button" className="secondary-btn" onClick={() => updateStatus(selected.id, "replied")}>Respondido</button>
-              <button type="button" className="secondary-btn" onClick={() => updateStatus(selected.id, "spam")}>Spam</button>
             </div>
           </>
         ) : (
