@@ -1,43 +1,132 @@
 # Casa Rosier Ceramica
 
-Sitio web y CMS privado de Casa Rosier Ceramica, desarrollado con Next.js App
-Router, React, TypeScript, Tailwind CSS y Supabase.
+Sitio web publico y CMS privado para Casa Rosier Ceramica. El proyecto permite
+mostrar la experiencia comercial de la marca y administrar contenido, tienda,
+marketing, multimedia, formularios, reservas, menus y configuracion general
+desde un panel privado.
 
 Deploy publico: [https://casa-rosier-ceramica.vercel.app](https://casa-rosier-ceramica.vercel.app)
 
+Version del proyecto: `V1.113.53`
+
 ## Vision general
 
-El proyecto contiene dos superficies:
+El sistema esta dividido en dos superficies principales:
 
-- Sitio publico: experiencia editorial y comercial para clases, workshops,
-  reservas privadas, gift cards, blog, tienda y pagina de estudio.
+- Sitio publico: home, clases, workshops, experiencias, gift cards, reservas
+  privadas, bitacora, tienda, carrito, estudio y paginas legales.
 - CMS privado: panel administrativo bajo `/admin/*` para gestionar contenido,
-  clases, formularios, mensajes, tienda, multimedia, menus, ajustes, marketing,
-  legal, auditoria, papelera y paginas editoriales personalizables.
+  catalogo, formularios, mensajes, marketing, usuarios, ajustes, historial y
+  papelera.
 
-El acceso administrativo inicia en `/auth`. El enlace publico "Administración"
-esta en el footer y envia al login. La credencial inicial local es:
-
-```text
-name@admin.com
-admin123
-```
+El acceso administrativo inicia en `/auth`. La ruta `/admin` redirige a
+`/admin/dashboard` y `/admin/login` redirige a `/auth`.
 
 ## Stack tecnico
 
 - Next.js 16 con App Router.
-- React 19.
-- TypeScript en modo estricto.
-- Tailwind CSS v4.
-- Supabase Auth, PostgreSQL y Storage.
-- `@supabase/ssr` y `@supabase/supabase-js`.
-- Persistencia local JSON como fallback funcional del CMS.
-- CSS legacy conservado para fidelidad visual del sitio publico.
+- React 19 y React DOM 19.
+- TypeScript 6 en modo estricto.
+- Tailwind CSS 4.
+- PostCSS con `@tailwindcss/postcss`.
+- Supabase Auth para autenticacion.
+- Supabase PostgreSQL para base de datos.
+- Supabase Storage para archivos y multimedia.
+- `@supabase/ssr` para sesiones en entorno server.
+- `@supabase/supabase-js` para acceso cliente/servidor.
+- Persistencia local en archivos JSON como fallback de desarrollo.
+- Next Middleware para redirecciones administrativas.
+- ESLint 9 con `eslint-config-next`.
+- Sharp para procesamiento/optimizacion de imagenes.
+- Playwright Core para verificaciones automatizadas cuando se requiere.
+- Node.js y scripts `.mjs` para tareas de datos.
+- CSS legacy conservado para respetar el diseno publico original.
+- Fuentes locales Cormorant Garamond y Nunito.
+- Material Symbols en el CMS.
+- Deploy compatible con Vercel.
 
-## Arquitectura
+## Instalacion
 
-La app conserva una arquitectura screaming: las carpetas expresan primero el
-negocio y luego la tecnologia.
+Requisitos recomendados:
+
+- Node.js compatible con Next.js 16.
+- npm.
+- Proyecto Supabase configurado si se desea usar base de datos remota.
+
+Instalar dependencias:
+
+```bash
+npm install
+```
+
+Crear variables locales desde el ejemplo:
+
+```bash
+cp .env.example .env
+```
+
+Levantar entorno de desarrollo:
+
+```bash
+npm run dev
+```
+
+Servidor local por defecto:
+
+```text
+http://localhost:3000
+```
+
+## Variables de entorno
+
+El archivo `.env.example` define:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+LOCAL_ADMIN_EMAIL=name@admin.com
+LOCAL_ADMIN_PASSWORD_HASH=sha256-hash-generated-from-your-temporary-bootstrap-password
+LOCAL_AUTH_SECRET=replace-with-a-long-random-secret
+```
+
+Notas:
+
+- `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` conectan el
+  frontend con Supabase.
+- `SUPABASE_SERVICE_ROLE_KEY` permite operaciones privilegiadas del CMS desde
+  servidor. No debe exponerse en cliente ni subirse al repositorio.
+- `LOCAL_ADMIN_EMAIL`, `LOCAL_ADMIN_PASSWORD_HASH` y `LOCAL_AUTH_SECRET`
+  habilitan el login local de arranque.
+- El codigo tambien soporta `LOCAL_ADMIN_PASSWORD` como alternativa temporal,
+  pero para produccion se recomienda usar hash.
+
+## Scripts disponibles
+
+```bash
+npm run dev
+npm run dev:turbo
+npm run build
+npm run start
+npm run lint
+npm run typecheck
+npm run supabase:push
+npm run supabase:seed
+```
+
+Descripcion:
+
+- `npm run dev`: inicia Next.js con webpack.
+- `npm run dev:turbo`: inicia Next.js con configuracion por defecto.
+- `npm run build`: genera build de produccion.
+- `npm run start`: sirve build de produccion.
+- `npm run lint`: ejecuta ESLint.
+- `npm run typecheck`: ejecuta TypeScript sin emitir archivos.
+- `npm run supabase:push`: aplica migraciones al proyecto Supabase enlazado.
+- `npm run supabase:seed`: ejecuta seed de datos hacia Supabase.
+
+## Arquitectura del proyecto
 
 ```text
 src/
@@ -45,103 +134,124 @@ src/
     admin/                  Rutas privadas del CMS.
     api/admin/              Endpoints privados del CMS.
     api/auth/               Login/logout administrativo.
+    api/forms/              Recepcion publica de formularios.
+    api/marketing/          Tracking de eventos publicos.
     auth/                   Pantalla de autenticacion.
-    (public routes)         Sitio publico Casa Rosier.
+    blog/                   Bitacora publica.
+    carrito/                Carrito publico.
+    clases/                 Paginas publicas de clases.
+    el-estudio/             Pagina publica del estudio.
+    experiencias/           Paginas publicas de experiencias.
+    gift-card(s)/           Paginas publicas de gift cards.
+    home/                   Home publica.
+    shop/                   Tienda publica.
+    workshops/              Paginas publicas de workshops.
   components/
-    admin/                  Formularios, tablas y widgets del CMS.
-    layout/                 Layout publico y layout admin.
-    ui/                     UI compartida del CMS.
-  data/                     Datos publicos estaticos actuales.
-  features/                 Dominios del sitio publico.
+    admin/                  Componentes del panel administrativo.
+    collections/            Grids, cards y detalle de colecciones.
+    hero/                   Componentes de hero publico.
+    layout/                 Layout publico y administrativo.
+    marketing/              Tracking y enlaces medibles.
+    shop/                   Tienda y carrito.
+    studio/                 Galeria del estudio.
+    ui/                     UI compartida.
+  data/                     Datos estaticos usados por la app.
   lib/
-    admin/                  Navegacion del panel.
-    auth/                   Sesion local y autorizacion admin.
-    cms/                    Acceso a datos del CMS.
+    admin/                  Navegacion y usuarios admin.
+    auth/                   Autenticacion local y Supabase.
+    cms/                    Capa de datos del CMS.
+    marketing/              Tracking de eventos.
     supabase/               Clientes y tipos Supabase.
 data/                       Fallback JSON editable por el CMS.
-supabase/migrations/        Migraciones SQL idempotentes.
+public/                     Imagenes, iconos y fuentes.
+scripts/                    Seeds, auditorias y utilidades.
+supabase/migrations/        Migraciones SQL.
 ```
+
+## Sitio publico
+
+Rutas principales:
+
+- `/` y `/home`: pagina principal.
+- `/clases` y `/clases/[slug]`: clases publicas.
+- `/workshops` y `/workshops/[slug]`: workshops.
+- `/experiencias` y `/experiencias/[slug]`: experiencias.
+- `/gift-card`, `/gift-card/[slug]`, `/gift-cards`, `/gift-cards/[slug]`.
+- `/reservas-privadas` y `/reservas-privadas/[slug]`.
+- `/blog` y `/blog/[slug]`: bitacora.
+- `/shop` y `/shop/[slug]`: tienda.
+- `/carrito`: carrito de compra.
+- `/el-estudio`: pagina editorial del estudio.
+- `/politica-privacidad`: pagina legal.
+
+El contenido publico se alimenta desde Supabase cuando esta configurado. Si no
+hay conexion disponible, la aplicacion puede leer datos desde `data/*.json`.
 
 ## CMS privado
 
-Todas las rutas del CMS usan el prefijo `/admin`:
+Rutas principales del panel:
 
-- `/admin/dashboard`
-- `/admin/clases`, `/admin/workshops`, `/admin/experiencias`, `/admin/gift-cards`
-- `/admin/bitacora`, `/admin/estudio`, `/admin/el-estudio`, `/admin/pages`,
-  `/admin/landing-pages`
-- `/admin/formularios`, `/admin/mensajes`, `/admin/reservas`
-- `/admin/components/*`
-- `/admin/menu`, `/admin/media`
-- `/admin/shop/*`
-- `/admin/users`, `/admin/settings`, `/admin/marketing`, `/admin/legal-cookies`
-- `/admin/history-logs`, `/admin/trash`
+- `/admin/dashboard`: resumen general.
+- `/admin/home`: editor del home.
+- `/admin/clases`, `/admin/workshops`, `/admin/experiencias`,
+  `/admin/gift-cards`: gestion de ofertas y paginas comerciales.
+- `/admin/estudio` y `/admin/el-estudio`: contenido del estudio.
+- `/admin/bitacora`: posts y configuracion de bitacora.
+- `/admin/shop`: modulo de tienda.
+- `/admin/shop/products`: productos.
+- `/admin/shop/categories`: categorias.
+- `/admin/shop/orders`: pedidos.
+- `/admin/shop/coupons`: cupones.
+- `/admin/shop/shipping`: metodos de envio.
+- `/admin/formularios`: formularios.
+- `/admin/mensajes`: mensajes recibidos.
+- `/admin/reservas`: reservas.
+- `/admin/components/*`: headers, footers, banners, galerias sociales,
+  testimonios, FAQs y especialistas.
+- `/admin/menu`: estructura de navegacion publica.
+- `/admin/media`: multimedia.
+- `/admin/redirecciones`: redirecciones.
+- `/admin/marketing/*`: analytics, Search Console, paginas, eventos,
+  campanas UTM, conversiones, SEO, reportes y ajustes.
+- `/admin/users`: usuarios.
+- `/admin/settings`: ajustes generales.
+- `/admin/legal-cookies`: privacidad y cookies.
+- `/admin/history-logs`: historial de actividad.
+- `/admin/trash`: papelera.
 
-El diseno del CMS replica el panel fuente basado en Google Stitch/Material
-Design 3: sidebar fijo, paleta purpura-naranja, tipografia Manrope/Inter,
-Material Symbols, metric cards, tablas, acciones rapidas y botones con estados
-consistentes.
+## Autenticacion y seguridad
 
-### Editores de paginas publicas
-
-El CMS incluye editores completos para paginas publicas con hero personalizable,
-vista previa real y barra anclada de acciones:
-
-- Clases, Workshops, Experiencias y Gift Cards: hero con imagen, hero
-  tipografico y hero con presentacion; posiciones responsive de logo/menu;
-  adiciones opcionales y vista previa final.
-- El Estudio: pestañas de Hero, Especialistas, Texto libre, Adiciones y Vista
-  previa. El contenido se guarda en `studio_page_settings` y en `teachers`.
-- Bitacora: pestañas de Hero, Bitacoras, Adiciones y Vista previa. El contenido
-  se guarda en `blog_page_settings`, `blog_posts` y `blog_post_blocks`.
-- Papelera: filtros por entidad, fecha y buscador, con modal de confirmacion
-  para eliminacion definitiva.
-
-## Autenticacion
-
-`/admin/*` esta protegido desde `src/app/admin/layout.tsx` mediante
+`/admin/*` esta protegido desde el layout administrativo usando
 `requireAdminProfile()`.
 
 Flujos soportados:
 
-- Sesion local firmada para el admin inicial `name@admin.com / admin123`.
-- Supabase Auth cuando se configuran `NEXT_PUBLIC_SUPABASE_URL`,
-  `NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY`.
-- Autorizacion por perfil con rol `admin` o `editor`.
+- Login local firmado con cookie `casa_rosier_admin_session`.
+- Validacion local por password plano temporal o hash SHA-256.
+- Supabase Auth cuando las credenciales de Supabase estan configuradas.
+- Autorizacion por perfiles con rol `admin` o `editor`.
 
-Variables:
+La sesion local expira despues de 7 dias. `LOCAL_AUTH_SECRET` firma el token con
+HMAC SHA-256.
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-LOCAL_ADMIN_EMAIL=name@admin.com
-LOCAL_ADMIN_PASSWORD=admin123
-LOCAL_AUTH_SECRET=cambiar_este_secreto_en_produccion
-```
+## Datos y persistencia
 
-## Datos y publicacion
+La capa de datos vive principalmente en `src/lib/cms/*`.
 
-La capa `src/lib/cms/*` intenta leer y escribir en Supabase con cliente
-privilegiado. Si Supabase no esta disponible, usa los archivos JSON en `data/`
-para mantener el panel funcional durante desarrollo.
+Comportamiento esperado:
 
-Las migraciones SQL viven en `supabase/migrations/` e incluyen tablas de
-contenido, tienda, formularios, auditoria, perfiles, RLS y triggers.
+- Intenta leer/escribir en Supabase con cliente privilegiado.
+- Si Supabase no esta disponible, usa archivos JSON en `data/`.
+- Mantiene el CMS funcional durante desarrollo aunque no exista base remota.
+- Centraliza entidades como productos, categorias, pedidos, cupones, menus,
+  paginas, formularios, bitacora, estudio, marketing, legal, media y papelera.
 
-Cambios recientes de base de datos para los editores nuevos:
+## Supabase
 
-- `022_rich_text_markdown_support.sql`: amplia campos editoriales a `text`.
-- `023_offering_cms_section_controls.sql`: convierte `offerings.details` a
-  `jsonb` para guardar controles de secciones y CTA.
-- `024_studio_page_settings.sql`: crea `studio_page_settings`.
-- `025_blog_post_hero_settings.sql`: agrega `blog_posts.hero` y migra hero
-  embebido en contenido antiguo cuando exista.
-- `026_blog_page_settings.sql`: crea `blog_page_settings`.
-- `027_page_settings_defaults.sql`: inserta defaults iniciales para Estudio y
-  Blog sin sobrescribir contenido ya guardado.
+Las migraciones SQL viven en `supabase/migrations/`. Incluyen tablas,
+relaciones, valores iniciales, RLS, triggers y cambios incrementales para el CMS.
 
-Para aplicar migraciones al proyecto Supabase enlazado:
+Aplicar migraciones al proyecto enlazado:
 
 ```powershell
 $env:SUPABASE_ACCESS_TOKEN="tu_token_de_supabase"
@@ -149,7 +259,7 @@ $env:SUPABASE_TELEMETRY_DISABLED="1"
 npx supabase db push --linked --yes
 ```
 
-Para revisar que local y remoto esten sincronizados:
+Revisar estado de migraciones:
 
 ```powershell
 $env:SUPABASE_ACCESS_TOKEN="tu_token_de_supabase"
@@ -157,25 +267,90 @@ $env:SUPABASE_TELEMETRY_DISABLED="1"
 npx supabase migration list --linked
 ```
 
-No guardes tokens de Supabase en el repositorio. Usalos solo como variables de
-entorno locales o secretos del proveedor de deploy.
-
-## Scripts
+Ejecutar seed:
 
 ```bash
-npm run dev
+npm run supabase:seed
+```
+
+No guardar tokens, service role keys ni secretos reales en el repositorio.
+
+## Modulos del CMS
+
+- Contenido editorial: paginas, landing pages, home, estudio y bitacora.
+- Ofertas: clases, workshops, experiencias, gift cards y reservas privadas.
+- Componentes reutilizables: headers, footers, banners, galerias sociales,
+  testimonios, FAQs y especialistas.
+- Tienda: productos, categorias, pedidos, cupones, metodos de envio y pagina de
+  shop.
+- Marketing: analytics, eventos, paginas, campanas, conversiones, SEO,
+  Search Console, reportes y configuracion.
+- Operacion: formularios, mensajes, reservas, usuarios, multimedia, menus,
+  redirecciones, ajustes, privacidad, historial y papelera.
+
+## Multimedia e imagenes
+
+Los recursos publicos se encuentran en `public/`:
+
+- `public/img/`: imagenes del sitio, logos, iconos y assets editoriales.
+- `public/fonts/`: fuentes locales Cormorant Garamond y Nunito.
+
+Next.js esta configurado con imagenes sin optimizacion remota en
+`next.config.ts`:
+
+```ts
+images: {
+  unoptimized: true
+}
+```
+
+## Estilos y UI
+
+- Tailwind CSS 4 para estilos modernos del proyecto.
+- Archivos legacy en `src/app/legacy/*.css` para conservar fidelidad visual del
+  sitio publico.
+- Componentes UI propios en `src/components/ui`.
+- Panel CMS con sidebar, metric cards, tablas, formularios, modales, badges,
+  paginacion, switches, selects y estados de carga.
+
+## Calidad y verificacion
+
+Comandos recomendados antes de publicar:
+
+```bash
 npm run typecheck
 npm run lint
 npm run build
 ```
 
-## Verificacion realizada
+Validaciones funcionales sugeridas:
 
-- `npm run typecheck`
-- `npm run lint`
-- `npm run build`
-- HTTP `/auth` devuelve 200.
-- `/admin/dashboard` sin sesion redirige a `/auth`.
-- Login inicial devuelve 200 y crea cookie de sesion.
-- `/admin/dashboard` con sesion devuelve 200.
-- Login con password incorrecto devuelve 401.
+- `/auth` debe responder correctamente.
+- `/admin/dashboard` sin sesion debe exigir autenticacion.
+- Login valido debe crear cookie de sesion.
+- Login incorrecto debe devolver error.
+- Rutas publicas principales deben renderizar sin errores.
+- CMS debe poder leer/escribir en Supabase o fallback JSON.
+
+## Deploy
+
+El proyecto es compatible con Vercel. Para produccion:
+
+- Configurar variables de entorno en el proveedor de deploy.
+- Usar credenciales reales de Supabase.
+- Definir `LOCAL_AUTH_SECRET` con un valor largo y privado.
+- Usar `LOCAL_ADMIN_PASSWORD_HASH` si se mantiene bootstrap local.
+- Ejecutar migraciones antes de usar el CMS contra base remota.
+- Verificar `npm run build` antes de publicar.
+
+## Creador del proyecto
+
+Creador del proyecto: Jose Manuel Castillo Queh (Desarrollador Full Stack:
+NextJS, Supabase).
+
+Tecnologias del proyecto: Next.js 16, App Router, React 19, React DOM 19,
+TypeScript 6, Tailwind CSS 4, PostCSS, Supabase Auth, Supabase PostgreSQL,
+Supabase Storage, `@supabase/ssr`, `@supabase/supabase-js`, Next Middleware,
+Node.js, npm, ESLint 9, `eslint-config-next`, Sharp, Playwright Core, JSON
+local fallback, SQL migrations, Vercel, CSS legacy, Material Symbols, Cormorant
+Garamond y Nunito.
