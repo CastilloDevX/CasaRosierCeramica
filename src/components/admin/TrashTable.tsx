@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AdminPagination from "./AdminPagination";
+import { getTrashEntityLabel, type TrashEntityOption } from "@/lib/cms/trash-entity-labels";
 import type { TrashItem } from "@/lib/cms/types";
 
 const apiMap: Record<string, { restore: string; del: string; method?: string; body?: (id: string, action: string) => string }> = {
@@ -33,7 +34,7 @@ const apiMap: Record<string, { restore: string; del: string; method?: string; bo
 type DateSort = "newest" | "oldest";
 type TrashResponse = {
   items: TrashItem[];
-  entityOptions: string[];
+  entityOptions: TrashEntityOption[];
   total: number;
   page: number;
   pageSize: number;
@@ -64,7 +65,7 @@ export default function TrashTable({
   initialSort,
 }: {
   initialItems: TrashItem[];
-  initialEntityOptions: string[];
+  initialEntityOptions: TrashEntityOption[];
   initialTotal: number;
   initialPage: number;
   initialPageSize: number;
@@ -202,7 +203,7 @@ export default function TrashTable({
             <select value={entityFilter} onChange={(event) => { setEntityFilter(event.target.value); setPage(1); }}>
               <option value="all">Todas las entidades</option>
               {entityOptions.map((entity) => (
-                <option key={entity} value={entity}>{entity}</option>
+                <option key={entity.value} value={entity.value}>{entity.label}</option>
               ))}
             </select>
           </label>
@@ -242,7 +243,7 @@ export default function TrashTable({
           <tbody>
             {visibleItems.map((item) => (
               <tr key={item.id}>
-                <td><span className="entity-badge">{item.entity_type}</span></td>
+                <td><span className="entity-badge">{getTrashEntityLabel(item)}</span></td>
                 <td>{item.title}</td>
                 <td>{new Date(item.deleted_at).toLocaleString()}</td>
                 <td>

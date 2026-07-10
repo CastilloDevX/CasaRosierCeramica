@@ -1,6 +1,7 @@
 import { createAdminClient } from "../supabase/admin";
 import { createClient } from "../supabase/server";
 import { readJsonFile, writeJsonFile } from "./local-storage";
+import { buildTrashEntityOptions, getTrashEntityFilterValue, getTrashEntityLabel, type TrashEntityOption } from "./trash-entity-labels";
 import type { TrashItem } from "./types";
 
 const TABLE = "trash_items";
@@ -8,7 +9,7 @@ const FILE_NAME = "trash.json";
 export type TrashDateSort = "newest" | "oldest";
 export type PaginatedTrashItems = {
   items: TrashItem[];
-  entityOptions: string[];
+  entityOptions: TrashEntityOption[];
   total: number;
   page: number;
   pageSize: number;
@@ -98,30 +99,32 @@ export async function getTrashItemsPage(options: TrashPageOptions = {}): Promise
   const entityType = options.entityType && options.entityType !== "all" ? options.entityType : "all";
   const queryText = String(options.query ?? "").trim();
   const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
 
   try {
     const supabase = createAdminClient();
-    const { data: entityRows } = await supabase.from(TABLE).select("entity_type");
-    const entityOptions = Array.from(new Set((entityRows ?? []).map((row) => String(row.entity_type)).filter(Boolean))).sort();
-
-    let query = supabase
-      .from(TABLE)
-      .select("*", { count: "exact" })
-      .order("deleted_at", { ascending: sort === "oldest" })
-      .range(from, to);
-
-    if (entityType !== "all") query = query.eq("entity_type", entityType);
-    if (queryText) {
-      const escaped = queryText.replace(/[%_,]/g, "\\$&");
-      query = query.or(`title.ilike.%${escaped}%,entity_type.ilike.%${escaped}%,deleted_by.ilike.%${escaped}%`);
-    }
-
-    const { data, error, count } = await query;
+    const { data, error } = await supabase.from(TABLE).select("*");
     if (error) throw error;
-    const total = count ?? 0;
+    let items = (data ?? []).map(rowToTrashItem);
+    const entityOptions = buildTrashEntityOptions(items);
+
+    if (entityType !== "all") items = items.filter((item) => getTrashEntityFilterValue(item) === entityType);
+    if (queryText) {
+      const search = queryText.toLowerCase();
+      items = items.filter((item) => [
+        item.title,
+        item.entity_type,
+        getTrashEntityLabel(item),
+        item.deleted_by,
+        item.deleted_at,
+      ].join(" ").toLowerCase().includes(search));
+    }
+    items = items.sort((a, b) => {
+      const diff = Date.parse(a.deleted_at) - Date.parse(b.deleted_at);
+      return sort === "oldest" ? diff : -diff;
+    });
+    const total = items.length;
     return {
-      items: (data ?? []).map(rowToTrashItem),
+      items: items.slice(from, from + pageSize),
       entityOptions,
       total,
       page,
@@ -133,11 +136,11 @@ export async function getTrashItemsPage(options: TrashPageOptions = {}): Promise
     };
   } catch {
     let items = await readJsonFile<TrashItem[]>(FILE_NAME, []);
-    const entityOptions = Array.from(new Set(items.map((item) => item.entity_type))).sort();
-    if (entityType !== "all") items = items.filter((item) => item.entity_type === entityType);
+    const entityOptions = buildTrashEntityOptions(items);
+    if (entityType !== "all") items = items.filter((item) => getTrashEntityFilterValue(item) === entityType);
     if (queryText) {
       const search = queryText.toLowerCase();
-      items = items.filter((item) => [item.title, item.entity_type, item.deleted_by, item.deleted_at].join(" ").toLowerCase().includes(search));
+      items = items.filter((item) => [item.title, item.entity_type, getTrashEntityLabel(item), item.deleted_by, item.deleted_at].join(" ").toLowerCase().includes(search));
     }
     items = items.sort((a, b) => {
       const diff = Date.parse(a.deleted_at) - Date.parse(b.deleted_at);
