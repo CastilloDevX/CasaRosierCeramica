@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import type { BlogPost } from "@/data/types";
 import { assetPath } from "@/lib/assets";
 import { formatDate } from "@/lib/utils";
@@ -52,9 +53,7 @@ export function FeaturedCarousel({ posts }: { posts: readonly BlogPost[] }) {
             <h3>
               <Link href={`/blog/${post.slug}`}>{post.title}</Link>
             </h3>
-            <p className="featured-slide__excerpt">
-              {post.featuredExcerpt ?? post.excerpt}
-            </p>
+            <MarkdownContent className="featured-slide__excerpt" source={post.featuredExcerpt ?? post.excerpt} />
             <div className="featured-slide__meta">
               <span className="featured-slide__author-initial">
                 {post.authorInitial || post.author.charAt(0)}

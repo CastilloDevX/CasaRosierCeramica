@@ -1,6 +1,7 @@
 "use client";
 
 import type { ShopItem } from "@/data/types";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import { assetPath } from "@/lib/assets";
 import { classNames } from "@/lib/utils";
 import { ThumbnailGallery } from "@/components/ui/Carousel";
@@ -52,7 +53,7 @@ export function ShopDetail({ item }: { item: ShopItem }) {
               <p className="shop-detail__eyebrow">{item.categoryLabel}</p>
               <h1 className="shop-detail__title">{item.name}</h1>
               <p className="shop-detail__price-main">{item.price}</p>
-              <p className="shop-detail__highlight">{item.description}</p>
+              <MarkdownContent className="shop-detail__highlight" source={item.description} />
             </header>
             <section className="shop-detail__facts">
               <div className="shop-detail__fact-block">
@@ -79,7 +80,7 @@ export function ShopDetail({ item }: { item: ShopItem }) {
             </section>
             <section className="shop-detail__text-block">
               <h2>La pieza</h2>
-              <p>{item.description}</p>
+              <MarkdownContent source={item.description} />
             </section>
             <section className="shop-detail__cta">
               <a

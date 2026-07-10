@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import type { ExperienceItem } from "@/data/types";
 import { assetPath } from "@/lib/assets";
 import { experienceHref } from "@/lib/routes";
@@ -29,7 +30,7 @@ export function GiftCarousel({ items }: GiftCarouselProps) {
           />
         </Link>
         <div className="gift-carousel__body">
-          <p className="gift-carousel__text">{singleItem.excerpt}</p>
+          <MarkdownContent className="gift-carousel__text" source={singleItem.excerpt} />
           <Link
             className="gift-carousel__cta"
             href={experienceHref(singleItem.kind, singleItem.slug)}
@@ -69,7 +70,7 @@ export function GiftCarousel({ items }: GiftCarouselProps) {
             />
           </Link>
           <div className="gift-carousel__body">
-            <p className="gift-carousel__text">{item.excerpt}</p>
+            <MarkdownContent className="gift-carousel__text" source={item.excerpt} />
             <Link
               className="gift-carousel__cta"
               href={experienceHref(item.kind, item.slug)}

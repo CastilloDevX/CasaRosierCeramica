@@ -69,7 +69,7 @@ function htmlInlineToMarkdown(value: string): string {
 
 export function renderInlineMarkdown(value: string): ReactNode[] {
   const nodes: ReactNode[] = [];
-  const pattern = /(\*\*[^*]+\*\*|_[^_]+_|~~[^~]+~~|<u>.*?<\/u>|\[[^\]]+\]\([^)]+\))/g;
+  const pattern = /(\*\*[^*]+\*\*|__[^_]+__|_[^_]+_|\*[^*]+\*|~~[^~]+~~|<u>.*?<\/u>|\[[^\]]+\]\([^)]+\))/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -78,9 +78,9 @@ export function renderInlineMarkdown(value: string): ReactNode[] {
     const token = match[0];
     const key = `${match.index}-${token}`;
 
-    if (token.startsWith("**")) {
+    if (token.startsWith("**") || token.startsWith("__")) {
       nodes.push(<strong key={key}>{renderInlineMarkdown(token.slice(2, -2))}</strong>);
-    } else if (token.startsWith("_")) {
+    } else if (token.startsWith("_") || token.startsWith("*")) {
       nodes.push(<em key={key}>{renderInlineMarkdown(token.slice(1, -1))}</em>);
     } else if (token.startsWith("~~")) {
       nodes.push(<s key={key}>{renderInlineMarkdown(token.slice(2, -2))}</s>);

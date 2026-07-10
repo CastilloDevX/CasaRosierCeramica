@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import type { ExperienceItem } from "@/data/types";
 import { assetPath } from "@/lib/assets";
 import { experienceHref } from "@/lib/routes";
@@ -21,7 +22,7 @@ export function CollectionCard({ item }: { item: ExperienceItem }) {
       <div className="content-card__body">
         <p className="content-card__meta">{item.category}</p>
         <h3 className="content-card__title card__title">{item.title}</h3>
-        <p className="content-card__excerpt body-text">{item.excerpt}</p>
+        <MarkdownContent className="content-card__excerpt body-text" source={item.excerpt} />
         <Link className="content-card__cta" href={href}>
           leer mas
         </Link>

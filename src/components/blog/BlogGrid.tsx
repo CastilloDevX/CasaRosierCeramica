@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import type { BlogPost } from "@/data/types";
 import { assetPath } from "@/lib/assets";
 import { classNames, formatDate } from "@/lib/utils";
@@ -51,7 +52,7 @@ export function BlogGrid({
               <h2 className="blog-card__title">
                 <Link href={`/blog/${post.slug}`}>{post.title}</Link>
               </h2>
-              <p className="blog-card__excerpt">{post.excerpt}</p>
+              <MarkdownContent className="blog-card__excerpt" source={post.excerpt} />
               <div className="blog-card__meta">
                 <time dateTime={post.publishedAt}>
                   {formatDate(post.publishedAt)}
