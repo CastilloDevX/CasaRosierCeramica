@@ -23,6 +23,18 @@ export function NavbarGlobal({
   mobileScrollThreshold = scrollThreshold,
   heroMenuColor,
   heroMenuScale = 1,
+  heroLogoPositionX,
+  heroLogoPositionY,
+  heroLogoWidth,
+  heroLogoTabletPositionX,
+  heroLogoTabletPositionY,
+  heroLogoTabletWidth,
+  heroLogoMobilePositionX,
+  heroLogoMobilePositionY,
+  heroLogoMobileWidth,
+  heroMenuPositionY,
+  heroMenuTabletPositionY,
+  heroMenuMobilePositionY,
 }: {
   home?: boolean;
   navigationItems: NavigationItem[];
@@ -37,6 +49,18 @@ export function NavbarGlobal({
   mobileScrollThreshold?: number;
   heroMenuColor?: string;
   heroMenuScale?: number;
+  heroLogoPositionX?: string;
+  heroLogoPositionY?: string;
+  heroLogoWidth?: string;
+  heroLogoTabletPositionX?: string;
+  heroLogoTabletPositionY?: string;
+  heroLogoTabletWidth?: string;
+  heroLogoMobilePositionX?: string;
+  heroLogoMobilePositionY?: string;
+  heroLogoMobileWidth?: string;
+  heroMenuPositionY?: string;
+  heroMenuTabletPositionY?: string;
+  heroMenuMobilePositionY?: string;
 }) {
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -69,6 +93,18 @@ export function NavbarGlobal({
     "--site-scroll-logo-tint": scrollMenuLogoTintColor,
     "--site-hero-menu-color": heroMenuColor,
     "--site-hero-menu-scale": heroMenuScale,
+    "--hero-logo-position-x": heroLogoPositionX || "50%",
+    "--hero-logo-position-y": heroLogoPositionY || "46px",
+    "--hero-logo-width": heroLogoWidth || "118px",
+    "--hero-logo-tablet-position-x": heroLogoTabletPositionX || heroLogoPositionX || "50%",
+    "--hero-logo-tablet-position-y": heroLogoTabletPositionY || heroLogoPositionY || "42px",
+    "--hero-logo-tablet-width": heroLogoTabletWidth || heroLogoWidth || "106px",
+    "--hero-logo-mobile-position-x": heroLogoMobilePositionX || heroLogoPositionX || "50%",
+    "--hero-logo-mobile-position-y": heroLogoMobilePositionY || "34px",
+    "--hero-logo-mobile-width": heroLogoMobileWidth || "92px",
+    "--hero-menu-position-y": heroMenuPositionY || "132px",
+    "--hero-menu-tablet-position-y": heroMenuTabletPositionY || heroMenuPositionY || "118px",
+    "--hero-menu-mobile-position-y": heroMenuMobilePositionY || "96px",
   } as CSSProperties;
   const scrollLogoTintStyle = {
     WebkitMaskImage: `url("${logoUrl.replace(/"/g, "%22")}")`,
@@ -312,7 +348,10 @@ export function NavbarGlobal({
             className="mobile-static-nav__logo"
             href="/#hero"
             aria-label="Casa Rosier"
-            onClick={() => setStaticMobileOpen(false)}
+            onClick={() => {
+              setStaticMobileOpen(false);
+              setMobileOpen(false);
+            }}
           >
             {heroMenuColor ? (
               <span className="mobile-static-nav__logo-tint" style={scrollLogoTintStyle} aria-hidden="true" />
@@ -327,10 +366,13 @@ export function NavbarGlobal({
           <button
             className="mobile-static-nav__toggle"
             type="button"
-            aria-expanded={staticMobileOpen}
-            aria-controls="mobile-static-menu"
-            aria-label={staticMobileOpen ? "Cerrar menu" : "Abrir menu"}
-            onClick={() => setStaticMobileOpen((open) => !open)}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-scroll-menu"
+            aria-label={mobileOpen ? "Cerrar menu" : "Abrir menu"}
+            onClick={() => {
+              setStaticMobileOpen(false);
+              setMobileOpen((open) => !open);
+            }}
           >
             <span className="mobile-scroll-nav__icon" aria-hidden="true" />
           </button>

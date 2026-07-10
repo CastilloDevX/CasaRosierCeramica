@@ -2,42 +2,58 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { ShopCategory, ShopItem } from "@/data/types";
+import type { ShopItem } from "@/data/types";
 import { assetPath } from "@/lib/assets";
-import { classNames } from "@/lib/utils";
+
+const PAGE_SIZE = 9;
+
+type PaginationItem = number | "ellipsis";
+
+function buildPages(currentPage: number, totalPages: number): PaginationItem[] {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+
+  const pages = new Set<number>([1, totalPages, currentPage, currentPage - 1, currentPage + 1]);
+  if (currentPage <= 4) {
+    pages.add(2);
+    pages.add(3);
+    pages.add(4);
+    pages.add(5);
+  }
+  if (currentPage >= totalPages - 3) {
+    pages.add(totalPages - 1);
+    pages.add(totalPages - 2);
+    pages.add(totalPages - 3);
+    pages.add(totalPages - 4);
+  }
+
+  const sorted = Array.from(pages).filter((page) => page >= 1 && page <= totalPages).sort((a, b) => a - b);
+  const result: PaginationItem[] = [];
+  sorted.forEach((page, index) => {
+    const previous = sorted[index - 1];
+    if (previous && page - previous > 1) result.push("ellipsis");
+    result.push(page);
+  });
+  return result;
+}
 
 export function ShopGrid({
   published,
-  shopCategories,
 }: {
   published: ShopItem[];
-  shopCategories: ShopCategory[];
+  shopCategories?: unknown;
 }) {
-  const [category, setCategory] = useState("all");
-  const items =
-    category === "all"
-      ? published
-      : published.filter((item) => item.category === category);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(published.length / PAGE_SIZE));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const startIndex = (safePage - 1) * PAGE_SIZE;
+  const items = published.slice(startIndex, startIndex + PAGE_SIZE);
+  const showPagination = published.length > PAGE_SIZE;
+  const pages = buildPages(safePage, totalPages);
 
   return (
     <section className="shop-listing section">
       <div className="container shop-listing__container">
-        <div className="shop-filters">
-          {shopCategories.map((filter) => (
-            <button
-              className={classNames(
-                "shop-filter",
-                category === filter.key && "is-active"
-              )}
-              type="button"
-              aria-pressed={category === filter.key}
-              onClick={() => setCategory(filter.key)}
-              key={filter.key}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
         <div className="cards-grid shop-grid">
           {items.map((item) => (
             <article
@@ -72,6 +88,45 @@ export function ShopGrid({
             </article>
           ))}
         </div>
+
+        {showPagination ? (
+          <nav className="shop-pagination" aria-label="Paginación de shop">
+            <button
+              type="button"
+              className="shop-pagination__item shop-pagination__arrow"
+              disabled={safePage <= 1}
+              onClick={() => setPage(safePage - 1)}
+              aria-label="Página anterior"
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+            </button>
+            {pages.map((item, index) => (
+              item === "ellipsis" ? (
+                <span className="shop-pagination__ellipsis" key={`ellipsis-${index}`}>...</span>
+              ) : (
+                <button
+                  type="button"
+                  key={item}
+                  className={`shop-pagination__item${item === safePage ? " is-active" : ""}`}
+                  disabled={item === safePage}
+                  onClick={() => setPage(item)}
+                  aria-current={item === safePage ? "page" : undefined}
+                >
+                  {item}
+                </button>
+              )
+            ))}
+            <button
+              type="button"
+              className="shop-pagination__item shop-pagination__arrow"
+              disabled={safePage >= totalPages}
+              onClick={() => setPage(safePage + 1)}
+              aria-label="Página siguiente"
+            >
+              <span className="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+            </button>
+          </nav>
+        ) : null}
       </div>
     </section>
   );

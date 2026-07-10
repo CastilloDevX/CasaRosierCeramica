@@ -141,23 +141,24 @@ function isLegacyBlogRootItem(item: NavigationItem) {
 
 function ensureStudioSubmenu(children: NavigationItem[] = []) {
   const byHref = new Map(children.map((child) => [child.href, child]));
-  const studioChild = byHref.get("/el-estudio") ?? {
-    label: "El Estudio",
-    href: "/el-estudio",
-    order: 0,
-    visible: true,
-  };
-  const blogChild = byHref.get("/blog") ?? {
-    label: "Bitácora",
-    href: "/blog",
-    order: 1,
-    visible: true,
-  };
-  const extras = children.filter((child) => child.href !== "/el-estudio" && child.href !== "/blog");
+  const normalized = children.map((child, index) => ({ ...child, order: child.order ?? index }));
+  const nextOrder = normalized.length ? Math.max(...normalized.map((child) => child.order)) + 1 : 0;
+  const additions: NavigationItem[] = [];
+
+  if (!byHref.has("/el-estudio")) {
+    additions.push({ label: "El Estudio", href: "/el-estudio", order: nextOrder, visible: true });
+  }
+  if (!byHref.has("/blog")) {
+    additions.push({ label: "Bitácora", href: "/blog", order: nextOrder + additions.length, visible: true });
+  }
+
   return [
-    { ...studioChild, label: "El Estudio", order: 0, visible: true },
-    { ...blogChild, label: "Bitácora", order: 1, visible: true },
-    ...extras,
+    ...normalized.map((child) => {
+      if (child.href === "/el-estudio") return { ...child, label: child.label || "El Estudio", visible: true };
+      if (child.href === "/blog") return { ...child, label: child.label || "Bitácora", visible: true };
+      return child;
+    }),
+    ...additions,
   ].sort((a, b) => a.order - b.order);
 }
 
@@ -185,6 +186,36 @@ function offeringToNavigationItem(offering: Offering, order: number): Navigation
   };
 }
 
+function mergeGeneratedChildrenWithSavedOrder(generated: NavigationItem[], saved: NavigationItem[] = []) {
+  if (!saved.length) return generated;
+
+  const generatedByHref = new Map(generated.map((child) => [child.href, child]));
+  const usedHrefs = new Set<string>();
+  const merged: NavigationItem[] = [];
+
+  saved
+    .filter((child) => child.visible)
+    .slice()
+    .sort((a, b) => a.order - b.order)
+    .forEach((child) => {
+      const generatedChild = generatedByHref.get(child.href);
+      if (generatedChild) usedHrefs.add(child.href);
+      merged.push({
+        ...(generatedChild ?? child),
+        label: child.label || generatedChild?.label || "",
+        href: child.href,
+        visible: child.visible,
+        target: child.target ?? generatedChild?.target,
+      });
+    });
+
+  generated.forEach((child) => {
+    if (!usedHrefs.has(child.href)) merged.push(child);
+  });
+
+  return merged.map((child, index) => ({ ...child, order: index }));
+}
+
 async function getDynamicChildrenByKey() {
   const offerings = await getOfferings();
   const published = offerings
@@ -210,7 +241,7 @@ function withDynamicChildren(items: NavigationItem[], dynamicChildren: Record<Dy
       ...item,
       label: labelForDynamicItem(item, key),
       href: dynamicMenuConfig[key].href,
-      children: dynamicChildren[key],
+      children: mergeGeneratedChildrenWithSavedOrder(dynamicChildren[key], item.children),
     };
   });
 

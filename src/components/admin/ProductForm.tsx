@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Product, ProductCategory } from "@/lib/cms/types";
+import AdminActionModal from "./AdminActionModal";
 import MediaSelectField from "./MediaSelectField";
 
 const statusLabels: Record<string, string> = {
@@ -10,6 +11,15 @@ const statusLabels: Record<string, string> = {
   published: "Publicado",
   archived: "Archivado",
 };
+
+type SaveIntent = "draft" | "publish";
+type ModalState = {
+  type: "success" | "error";
+  title: string;
+  message?: string;
+  details?: string[];
+  redirectOnClose?: boolean;
+} | null;
 
 function SectionIcon({ children }: { children: string }) {
   return <span className="material-symbols-outlined" aria-hidden="true">{children}</span>;
@@ -25,6 +35,21 @@ function SectionHead({ icon, title, description }: { icon: string; title: string
       </div>
     </div>
   );
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+}
+
+function skuFromName(value: string) {
+  const base = slugify(value).replace(/-/g, "").toUpperCase();
+  return base ? `CR-${base.slice(0, 18)}` : "";
 }
 
 export default function ProductForm({ mode, item }: { mode: "create" | "edit"; item?: Product }) {
@@ -50,6 +75,8 @@ export default function ProductForm({ mode, item }: { mode: "create" | "edit"; i
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [savingIntent, setSavingIntent] = useState<SaveIntent | null>(null);
+  const [modal, setModal] = useState<ModalState>(null);
 
   useEffect(() => {
     fetch("/api/admin/shop/categories")
@@ -58,27 +85,66 @@ export default function ProductForm({ mode, item }: { mode: "create" | "edit"; i
       .catch(() => {});
   }, []);
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    setIsLoading(true);
-    setError(null);
+  function handleNameChange(value: string) {
+    setName(value);
+    setSlug(slugify(value));
+    setSku(skuFromName(value));
+  }
 
-    if (!name.trim()) {
-      setError("El nombre es obligatorio.");
-      setIsLoading(false);
+  function validationDetails(intent: SaveIntent) {
+    const details: string[] = [];
+    const normalizedSlug = slugify(slug);
+    const normalizedSku = skuFromName(name);
+
+    if (!name.trim()) details.push("Nombre es obligatorio.");
+    if (!normalizedSlug) details.push("Slug no pudo generarse. Escribe un nombre con letras o números.");
+    if (slug && slug !== normalizedSlug) details.push("Slug solo puede usar minúsculas, números y guiones.");
+    if (!normalizedSku) details.push("SKU no pudo generarse. Escribe un nombre válido.");
+    if (price !== null && (!Number.isFinite(price) || price < 0)) details.push("Precio debe ser un número mayor o igual a 0.");
+    if (stock !== null && (!Number.isInteger(stock) || stock < 0)) details.push("Stock debe ser un número entero mayor o igual a 0.");
+    if (!Number.isInteger(lowStockThreshold) || lowStockThreshold < 0) details.push("Stock mínimo debe ser un número entero mayor o igual a 0.");
+
+    if (intent === "publish") {
+      if (price === null) details.push("Precio es obligatorio para publicar.");
+      if (!excerpt.trim()) details.push("Extracto es obligatorio para publicar.");
+      if (!description.trim()) details.push("Descripción es obligatoria para publicar.");
+      if (!mainImageId.trim()) details.push("Imagen principal es obligatoria para publicar.");
+    }
+
+    return details;
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const intent: SaveIntent = submitter?.value === "publish" ? "publish" : "draft";
+    const nextStatus = intent === "publish" ? "published" : "draft";
+    const details = validationDetails(intent);
+
+    if (details.length) {
+      setModal({
+        type: "error",
+        title: "No se pudo guardar",
+        message: "Revisa estos campos antes de continuar.",
+        details,
+      });
       return;
     }
+
+    setIsLoading(true);
+    setSavingIntent(intent);
+    setError(null);
 
     const response = await fetch(mode === "create" ? "/api/admin/shop/products" : `/api/admin/shop/products/${item?.id}`, {
       method: mode === "create" ? "POST" : "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name,
-        slug,
-        sku,
-        status,
-        description,
-        excerpt,
+        name: name.trim(),
+        slug: slugify(slug || name),
+        sku: skuFromName(name),
+        status: nextStatus,
+        description: description.trim(),
+        excerpt: excerpt.trim(),
         main_image_id: mainImageId,
         gallery: galleryInput.split("\n").map((value) => value.trim()).filter(Boolean),
         price,
@@ -96,17 +162,47 @@ export default function ProductForm({ mode, item }: { mode: "create" | "edit"; i
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({ error: "Error" }));
-      setError((data as { error?: string }).error || "Error");
+      const message = (data as { error?: string }).error || "Error";
+      setError(message);
+      setModal({
+        type: "error",
+        title: "No se pudo guardar",
+        message,
+      });
       setIsLoading(false);
+      setSavingIntent(null);
       return;
     }
 
-    router.push("/admin/shop?tab=items");
-    router.refresh();
+    setStatus(nextStatus);
+    setModal({
+      type: "success",
+      title: intent === "publish" ? "Producto publicado" : "Borrador guardado",
+      message: intent === "publish" ? "Los cambios del producto se guardaron correctamente." : "El producto se guardó como borrador correctamente.",
+      redirectOnClose: true,
+    });
+    setIsLoading(false);
+    setSavingIntent(null);
   }
 
   return (
     <form className="shop-product-editor" onSubmit={handleSubmit}>
+      <AdminActionModal
+        open={Boolean(modal)}
+        type={modal?.type ?? "info"}
+        title={modal?.title ?? ""}
+        message={modal?.message}
+        details={modal?.details}
+        confirmLabel="Entendido"
+        onClose={() => {
+          const shouldRedirect = modal?.redirectOnClose;
+          setModal(null);
+          if (shouldRedirect) {
+            router.push("/admin/shop?tab=items");
+            router.refresh();
+          }
+        }}
+      />
       <header className="shop-product-editor__hero">
         <div>
           <p className="auth-kicker">Producto de tienda</p>
@@ -121,10 +217,9 @@ export default function ProductForm({ mode, item }: { mode: "create" | "edit"; i
           <section className="form-block shop-product-editor__section">
             <SectionHead icon="inventory_2" title="Información general" description="Datos visibles para administrar y encontrar el producto." />
             <div className="grid-2">
-              <label className="field span-2"><span>Nombre</span><input value={name} onChange={(event) => setName(event.target.value)} /></label>
-              <label className="field"><span>Slug</span><input value={slug} onChange={(event) => setSlug(event.target.value)} /></label>
-              <label className="field"><span>SKU</span><input value={sku} onChange={(event) => setSku(event.target.value)} /></label>
-              <label className="field"><span>Estado</span><select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}><option value="draft">Borrador</option><option value="published">Publicado</option><option value="archived">Archivado</option></select></label>
+              <label className="field span-2"><span>Nombre</span><input value={name} onChange={(event) => handleNameChange(event.target.value)} /></label>
+              <label className="field"><span>Slug</span><input value={slug} readOnly /></label>
+              <label className="field"><span>SKU</span><input value={sku} readOnly /></label>
               <label className="field"><span>Categoría</span><select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}><option value="">Sin categoría</option>{categories.filter((category) => category.status !== "deleted").map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
             </div>
           </section>
@@ -179,9 +274,13 @@ export default function ProductForm({ mode, item }: { mode: "create" | "edit"; i
       {error ? <p className="form-error">{error}</p> : null}
       <div className="admin-sticky-actionbar shop-product-editor__actions">
         <span className="admin-sticky-actionbar__meta">{statusLabels[status] ?? status} · {price !== null ? `${price} €` : "Sin precio"} · {stock !== null ? `${stock} en stock` : "Stock ilimitado"}</span>
-        <button className="primary-btn" type="submit" disabled={isLoading}>
+        <button className="secondary-btn" type="submit" name="intent" value="draft" disabled={isLoading}>
           <span className="material-symbols-outlined" aria-hidden="true">save</span>
-          {isLoading ? "Guardando..." : mode === "create" ? "Crear producto" : "Guardar cambios"}
+          {isLoading && savingIntent === "draft" ? "Guardando..." : "Borrador"}
+        </button>
+        <button className="primary-btn" type="submit" name="intent" value="publish" disabled={isLoading}>
+          <span className="material-symbols-outlined" aria-hidden="true">publish</span>
+          {isLoading && savingIntent === "publish" ? "Publicando..." : "Publicar producto"}
         </button>
       </div>
     </form>

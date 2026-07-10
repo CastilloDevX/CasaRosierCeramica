@@ -21,6 +21,11 @@ function toSlug(value: string) {
   return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
 }
 
+function skuFromName(value: string) {
+  const base = toSlug(value).replace(/-/g, "").toUpperCase();
+  return base ? `CR-${base.slice(0, 18)}` : "";
+}
+
 function uniqueSlug(items: Product[], base: string, currentId?: string) {
   const taken = new Set(items.filter((p) => p.id !== currentId).map((p) => p.slug));
   if (!taken.has(base)) return base;
@@ -30,23 +35,30 @@ function uniqueSlug(items: Product[], base: string, currentId?: string) {
 function normalizeProduct(input: ProductInput, existing?: Product, allItems: Product[] = []) {
   const now = new Date().toISOString();
   const name = String(input.name ?? existing?.name ?? "").trim();
-  const slugBase = String(input.slug ?? existing?.slug ?? "").trim() || toSlug(name);
+  const slugBase = toSlug(String(input.slug ?? existing?.slug ?? "").trim()) || toSlug(name);
   const slug = uniqueSlug(allItems, slugBase || toSlug(name), existing?.id);
   const status = input.status ?? existing?.status ?? "draft";
+  const price = input.price !== undefined ? input.price : (existing?.price ?? null);
+  const stock = input.stock !== undefined ? input.stock : (existing?.stock ?? null);
+  const lowStockThreshold = input.low_stock_threshold ?? existing?.low_stock_threshold ?? 5;
+
   if (!name) throw new Error("El nombre es obligatorio.");
   if (!isProductStatus(status)) throw new Error("Estado no válido.");
+  if (price !== null && (!Number.isFinite(Number(price)) || Number(price) < 0)) throw new Error("Precio no válido.");
+  if (stock !== null && (!Number.isInteger(Number(stock)) || Number(stock) < 0)) throw new Error("Stock no válido.");
+  if (!Number.isInteger(Number(lowStockThreshold)) || Number(lowStockThreshold) < 0) throw new Error("Stock mínimo no válido.");
 
   return {
     id: existing?.id ?? input.id ?? randomUUID(), status, name, slug,
-    sku: String(input.sku ?? existing?.sku ?? "").trim(),
+    sku: String(input.sku ?? "").trim() || skuFromName(name) || (existing?.sku ?? ""),
     description: String(input.description ?? existing?.description ?? "").trim(),
     excerpt: String(input.excerpt ?? existing?.excerpt ?? "").trim(),
     main_image_id: String(input.main_image_id ?? existing?.main_image_id ?? "").trim(),
     gallery: Array.isArray(input.gallery ?? existing?.gallery) ? [...(input.gallery ?? existing?.gallery ?? [])] : [],
-    price: input.price !== undefined ? input.price : (existing?.price ?? null),
+    price,
     compare_at_price: input.compare_at_price !== undefined ? input.compare_at_price : (existing?.compare_at_price ?? null),
-    stock: input.stock !== undefined ? input.stock : (existing?.stock ?? null),
-    low_stock_threshold: input.low_stock_threshold ?? existing?.low_stock_threshold ?? 5,
+    stock,
+    low_stock_threshold: lowStockThreshold,
     category_id: String(input.category_id ?? existing?.category_id ?? "").trim(),
     characteristics: String(input.characteristics ?? existing?.characteristics ?? "").trim(),
     weight: String(input.weight ?? existing?.weight ?? "").trim(),

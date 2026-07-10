@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { createAdminClient } from "../supabase/admin";
+import { normalizeHeroSettings, defaultHeroSettings } from "./hero-settings";
 import type { HomeIntroSlide, HomePageSettings } from "./types";
 
 const TABLE = "home_page_settings";
@@ -53,6 +54,7 @@ export const defaultHomeIntroSlides: HomeIntroSlide[] = [
 export const defaultHomePageSettings: HomePageSettings = {
   id: SETTINGS_ID,
   status: "published",
+  hero: { ...defaultHeroSettings, heroTitle: "Casa Rosier", heroSubtitle: "Cerámica con las manos" },
   introSlides: defaultHomeIntroSlides,
   classesTitle: "Cursos y Talleres de Ceramica",
   classesSubtitle: "En Barcelona",
@@ -104,6 +106,7 @@ function normalizeHomePageSettings(input: Partial<HomePageSettings> | null | und
   return {
     id: SETTINGS_ID,
     status: input?.status === "draft" ? "draft" : "published",
+    hero: normalizeHeroSettings((input as Partial<HomePageSettings>)?.hero ?? (row as { hero?: unknown })?.hero, defaultHomePageSettings.hero),
     introSlides: rawSlides.map(normalizeSlide).sort((a, b) => a.sortOrder - b.sortOrder),
     classesTitle: String(input?.classesTitle ?? row?.classes_title ?? defaultHomePageSettings.classesTitle),
     classesSubtitle: String(input?.classesSubtitle ?? row?.classes_subtitle ?? defaultHomePageSettings.classesSubtitle),
@@ -122,6 +125,7 @@ function toRow(settings: HomePageSettings) {
   return {
     id: settings.id,
     status: settings.status,
+    hero: settings.hero,
     intro_slides: settings.introSlides,
     classes_title: settings.classesTitle,
     classes_subtitle: settings.classesSubtitle,

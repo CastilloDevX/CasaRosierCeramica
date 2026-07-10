@@ -21,6 +21,7 @@ export async function BlogPostPage({ post }: { post: BlogPost }) {
       header={
         <HeaderInterno
           variant={heroVariant}
+          hero={hero ?? undefined}
           image={hero?.heroImage || post.coverImage}
           height="small"
           overlayTitle
@@ -39,31 +40,50 @@ export async function BlogPostPage({ post }: { post: BlogPost }) {
           heroMenuPositionY={hero?.heroMenuPositionY}
           heroMenuTabletPositionY={hero?.heroMenuTabletPositionY}
           heroMenuMobilePositionY={hero?.heroMenuMobilePositionY}
+          heroTitleImageScale={hero?.titleImageScale}
+          heroTitleImageScaleTablet={hero?.titleImageScaleTablet}
+          heroTitleImageScaleMobile={hero?.titleImageScaleMobile}
+          heroTitleImagePositionX={hero?.titleImagePositionX}
+          heroTitleImagePositionY={hero?.titleImagePositionY}
+          heroTitleImagePositionXTablet={hero?.titleImagePositionXTablet}
+          heroTitleImagePositionYTablet={hero?.titleImagePositionYTablet}
+          heroTitleImagePositionXMobile={hero?.titleImagePositionXMobile}
+          heroTitleImagePositionYMobile={hero?.titleImagePositionYMobile}
+          heroTitleImageSecondaryScale={hero?.titleImageSecondaryScale}
+          heroTitleImageSecondaryScaleTablet={hero?.titleImageSecondaryScaleTablet}
+          heroTitleImageSecondaryScaleMobile={hero?.titleImageSecondaryScaleMobile}
+          heroTitleImageSecondaryPositionX={hero?.titleImageSecondaryPositionX}
+          heroTitleImageSecondaryPositionY={hero?.titleImageSecondaryPositionY}
+          heroTitleImageSecondaryPositionXTablet={hero?.titleImageSecondaryPositionXTablet}
+          heroTitleImageSecondaryPositionYTablet={hero?.titleImageSecondaryPositionYTablet}
+          heroTitleImageSecondaryPositionXMobile={hero?.titleImageSecondaryPositionXMobile}
+          heroTitleImageSecondaryPositionYMobile={hero?.titleImageSecondaryPositionYMobile}
+          heroTitlePositionY={hero?.heroTitlePositionY}
+          heroTitlePositionYTablet={hero?.heroTitlePositionYTablet}
+          heroTitlePositionYMobile={hero?.heroTitlePositionYMobile}
+          heroTitleScale={hero?.heroTitleScale}
+          heroTitleScaleTablet={hero?.heroTitleScaleTablet}
+          heroTitleScaleMobile={hero?.heroTitleScaleMobile}
+          presentationTextPositionX={hero?.presentationTextPositionX}
+          presentationTextPositionY={hero?.presentationTextPositionY}
+          presentationTextPositionXTablet={hero?.presentationTextPositionXTablet}
+          presentationTextPositionYTablet={hero?.presentationTextPositionYTablet}
+          presentationTextPositionXMobile={hero?.presentationTextPositionXMobile}
+          presentationTextPositionYMobile={hero?.presentationTextPositionYMobile}
+          presentationTextScale={hero?.presentationTextScale}
+          presentationTextScaleTablet={hero?.presentationTextScaleTablet}
+          presentationTextScaleMobile={hero?.presentationTextScaleMobile}
+          presentationImagePositionX={hero?.presentationImagePositionX}
+          presentationImagePositionY={hero?.presentationImagePositionY}
+          presentationImagePositionXTablet={hero?.presentationImagePositionXTablet}
+          presentationImagePositionYTablet={hero?.presentationImagePositionYTablet}
+          presentationImagePositionXMobile={hero?.presentationImagePositionXMobile}
+          presentationImagePositionYMobile={hero?.presentationImagePositionYMobile}
+          presentationImageScale={hero?.presentationImageScale}
+          presentationImageScaleTablet={hero?.presentationImageScaleTablet}
+          presentationImageScaleMobile={hero?.presentationImageScaleMobile}
           className="blog-hero"
-        >
-          {heroVariant === "presentation" ? (
-            <div className="page-hero__presentation">
-              <div className="page-hero__presentation-text" style={{ color: hero?.heroPresentationTextColor || "#FFFFFF" }}>
-                <MarkdownContent source={hero?.heroPresentationText || post.title} className="page-hero__presentation-copy" />
-              </div>
-              {hero?.heroPresentationImage ? (
-                <div className="page-hero__presentation-image">
-                  <Image src={hero.heroPresentationImage} alt={hero.heroTitle || post.title} fill sizes="420px" className="object-contain" unoptimized />
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <>
-            <p className="blog-post-hero__category">{post.category}</p>
-            <h1 className="page-hero__title blog-hero__title">
-              {hero?.heroTitle || post.title}
-            </h1>
-            <p className="blog-post-hero__meta">
-              {post.author} · {formatDate(post.publishedAt)}
-            </p>
-            </>
-          )}
-        </HeaderInterno>
+        />
       }
     >
       <BlogDetail post={post} adjacent={adjacent} relatedPosts={relatedPosts} />

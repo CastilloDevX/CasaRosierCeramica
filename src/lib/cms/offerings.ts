@@ -152,6 +152,10 @@ function heroSettingsFromDetails(offering: Offering) {
     const next = typeof value === "string" ? value.trim() : "";
     return next || fallback;
   };
+  const num = (value: unknown, fallback: number) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+  };
   const scale = Number(classDetails.heroMenuScale);
   const heroVariant = ["image", "text", "presentation"].includes(String(classDetails.heroVariant)) ? String(classDetails.heroVariant) : "text";
   const heroMenuTone = ["light", "dark"].includes(String(classDetails.heroMenuTone)) ? String(classDetails.heroMenuTone) : heroVariant === "image" || heroVariant === "presentation" ? "light" : "dark";
@@ -174,6 +178,48 @@ function heroSettingsFromDetails(offering: Offering) {
     hero_menu_position_y: text(classDetails.heroMenuPositionY, "132px"),
     hero_menu_tablet_position_y: text(classDetails.heroMenuTabletPositionY, text(classDetails.heroMenuPositionY, "118px")),
     hero_menu_mobile_position_y: text(classDetails.heroMenuMobilePositionY, "96px"),
+    title_image_scale: num(classDetails.titleImageScale, 1),
+    title_image_scale_tablet: num(classDetails.titleImageScaleTablet, num(classDetails.titleImageScale, 1)),
+    title_image_scale_mobile: num(classDetails.titleImageScaleMobile, num(classDetails.titleImageScale, 1)),
+    title_image_position_x: text(classDetails.titleImagePositionX, "50%"),
+    title_image_position_y: text(classDetails.titleImagePositionY, "50%"),
+    title_image_position_x_tablet: text(classDetails.titleImagePositionXTablet, text(classDetails.titleImagePositionX, "50%")),
+    title_image_position_y_tablet: text(classDetails.titleImagePositionYTablet, text(classDetails.titleImagePositionY, "50%")),
+    title_image_position_x_mobile: text(classDetails.titleImagePositionXMobile, text(classDetails.titleImagePositionX, "50%")),
+    title_image_position_y_mobile: text(classDetails.titleImagePositionYMobile, "50%"),
+    title_image_secondary_scale: num(classDetails.titleImageSecondaryScale, 1),
+    title_image_secondary_scale_tablet: num(classDetails.titleImageSecondaryScaleTablet, num(classDetails.titleImageSecondaryScale, 1)),
+    title_image_secondary_scale_mobile: num(classDetails.titleImageSecondaryScaleMobile, num(classDetails.titleImageSecondaryScale, 1)),
+    title_image_secondary_position_x: text(classDetails.titleImageSecondaryPositionX, "50%"),
+    title_image_secondary_position_y: text(classDetails.titleImageSecondaryPositionY, "50%"),
+    title_image_secondary_position_x_tablet: text(classDetails.titleImageSecondaryPositionXTablet, text(classDetails.titleImageSecondaryPositionX, "50%")),
+    title_image_secondary_position_y_tablet: text(classDetails.titleImageSecondaryPositionYTablet, text(classDetails.titleImageSecondaryPositionY, "50%")),
+    title_image_secondary_position_x_mobile: text(classDetails.titleImageSecondaryPositionXMobile, text(classDetails.titleImageSecondaryPositionX, "50%")),
+    title_image_secondary_position_y_mobile: text(classDetails.titleImageSecondaryPositionYMobile, "50%"),
+    hero_title_position_y: text(classDetails.heroTitlePositionY, "50%"),
+    hero_title_position_y_tablet: text(classDetails.heroTitlePositionYTablet, text(classDetails.heroTitlePositionY, "50%")),
+    hero_title_position_y_mobile: text(classDetails.heroTitlePositionYMobile, "50%"),
+    hero_title_scale: num(classDetails.heroTitleScale, 1),
+    hero_title_scale_tablet: num(classDetails.heroTitleScaleTablet, num(classDetails.heroTitleScale, 1)),
+    hero_title_scale_mobile: num(classDetails.heroTitleScaleMobile, num(classDetails.heroTitleScale, 1)),
+    presentation_text_position_x: text(classDetails.presentationTextPositionX, "8%"),
+    presentation_text_position_y: text(classDetails.presentationTextPositionY, "50%"),
+    presentation_text_position_x_tablet: text(classDetails.presentationTextPositionXTablet, text(classDetails.presentationTextPositionX, "8%")),
+    presentation_text_position_y_tablet: text(classDetails.presentationTextPositionYTablet, text(classDetails.presentationTextPositionY, "50%")),
+    presentation_text_position_x_mobile: text(classDetails.presentationTextPositionXMobile, text(classDetails.presentationTextPositionX, "8%")),
+    presentation_text_position_y_mobile: text(classDetails.presentationTextPositionYMobile, "50%"),
+    presentation_text_scale: num(classDetails.presentationTextScale, 1),
+    presentation_text_scale_tablet: num(classDetails.presentationTextScaleTablet, num(classDetails.presentationTextScale, 1)),
+    presentation_text_scale_mobile: num(classDetails.presentationTextScaleMobile, num(classDetails.presentationTextScale, 1)),
+    presentation_image_position_x: text(classDetails.presentationImagePositionX, "70%"),
+    presentation_image_position_y: text(classDetails.presentationImagePositionY, "50%"),
+    presentation_image_position_x_tablet: text(classDetails.presentationImagePositionXTablet, text(classDetails.presentationImagePositionX, "70%")),
+    presentation_image_position_y_tablet: text(classDetails.presentationImagePositionYTablet, text(classDetails.presentationImagePositionY, "50%")),
+    presentation_image_position_x_mobile: text(classDetails.presentationImagePositionXMobile, text(classDetails.presentationImagePositionX, "70%")),
+    presentation_image_position_y_mobile: text(classDetails.presentationImagePositionYMobile, "50%"),
+    presentation_image_scale: num(classDetails.presentationImageScale, 1),
+    presentation_image_scale_tablet: num(classDetails.presentationImageScaleTablet, num(classDetails.presentationImageScale, 1)),
+    presentation_image_scale_mobile: num(classDetails.presentationImageScaleMobile, num(classDetails.presentationImageScale, 1)),
     updated_at: offering.updated_at,
   };
 }
@@ -184,6 +230,11 @@ function mergeHeroSettingsIntoDetails(details: Offering["details"], settings: un
   const classDetails = details.class && typeof details.class === "object" && !Array.isArray(details.class)
     ? details.class as Record<string, unknown>
     : {};
+  const numField = (key: string, fallback: unknown): number | undefined => {
+    const v = row[key] ?? classDetails[key];
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback !== undefined ? Number(fallback) : undefined;
+  };
   const nextClass = {
     ...classDetails,
     heroVariant: row.hero_variant ?? classDetails.heroVariant,
@@ -202,6 +253,48 @@ function mergeHeroSettingsIntoDetails(details: Offering["details"], settings: un
     heroMenuPositionY: row.hero_menu_position_y ?? classDetails.heroMenuPositionY,
     heroMenuTabletPositionY: row.hero_menu_tablet_position_y ?? classDetails.heroMenuTabletPositionY,
     heroMenuMobilePositionY: row.hero_menu_mobile_position_y ?? classDetails.heroMenuMobilePositionY,
+    titleImageScale: numField("title_image_scale", classDetails.titleImageScale),
+    titleImageScaleTablet: numField("title_image_scale_tablet", classDetails.titleImageScaleTablet),
+    titleImageScaleMobile: numField("title_image_scale_mobile", classDetails.titleImageScaleMobile),
+    titleImagePositionX: row.title_image_position_x ?? classDetails.titleImagePositionX,
+    titleImagePositionY: row.title_image_position_y ?? classDetails.titleImagePositionY,
+    titleImagePositionXTablet: row.title_image_position_x_tablet ?? classDetails.titleImagePositionXTablet,
+    titleImagePositionYTablet: row.title_image_position_y_tablet ?? classDetails.titleImagePositionYTablet,
+    titleImagePositionXMobile: row.title_image_position_x_mobile ?? classDetails.titleImagePositionXMobile,
+    titleImagePositionYMobile: row.title_image_position_y_mobile ?? classDetails.titleImagePositionYMobile,
+    titleImageSecondaryScale: numField("title_image_secondary_scale", classDetails.titleImageSecondaryScale),
+    titleImageSecondaryScaleTablet: numField("title_image_secondary_scale_tablet", classDetails.titleImageSecondaryScaleTablet),
+    titleImageSecondaryScaleMobile: numField("title_image_secondary_scale_mobile", classDetails.titleImageSecondaryScaleMobile),
+    titleImageSecondaryPositionX: row.title_image_secondary_position_x ?? classDetails.titleImageSecondaryPositionX,
+    titleImageSecondaryPositionY: row.title_image_secondary_position_y ?? classDetails.titleImageSecondaryPositionY,
+    titleImageSecondaryPositionXTablet: row.title_image_secondary_position_x_tablet ?? classDetails.titleImageSecondaryPositionXTablet,
+    titleImageSecondaryPositionYTablet: row.title_image_secondary_position_y_tablet ?? classDetails.titleImageSecondaryPositionYTablet,
+    titleImageSecondaryPositionXMobile: row.title_image_secondary_position_x_mobile ?? classDetails.titleImageSecondaryPositionXMobile,
+    titleImageSecondaryPositionYMobile: row.title_image_secondary_position_y_mobile ?? classDetails.titleImageSecondaryPositionYMobile,
+    heroTitlePositionY: row.hero_title_position_y ?? classDetails.heroTitlePositionY,
+    heroTitlePositionYTablet: row.hero_title_position_y_tablet ?? classDetails.heroTitlePositionYTablet,
+    heroTitlePositionYMobile: row.hero_title_position_y_mobile ?? classDetails.heroTitlePositionYMobile,
+    heroTitleScale: numField("hero_title_scale", classDetails.heroTitleScale),
+    heroTitleScaleTablet: numField("hero_title_scale_tablet", classDetails.heroTitleScaleTablet),
+    heroTitleScaleMobile: numField("hero_title_scale_mobile", classDetails.heroTitleScaleMobile),
+    presentationTextPositionX: row.presentation_text_position_x ?? classDetails.presentationTextPositionX,
+    presentationTextPositionY: row.presentation_text_position_y ?? classDetails.presentationTextPositionY,
+    presentationTextPositionXTablet: row.presentation_text_position_x_tablet ?? classDetails.presentationTextPositionXTablet,
+    presentationTextPositionYTablet: row.presentation_text_position_y_tablet ?? classDetails.presentationTextPositionYTablet,
+    presentationTextPositionXMobile: row.presentation_text_position_x_mobile ?? classDetails.presentationTextPositionXMobile,
+    presentationTextPositionYMobile: row.presentation_text_position_y_mobile ?? classDetails.presentationTextPositionYMobile,
+    presentationTextScale: numField("presentation_text_scale", classDetails.presentationTextScale),
+    presentationTextScaleTablet: numField("presentation_text_scale_tablet", classDetails.presentationTextScaleTablet),
+    presentationTextScaleMobile: numField("presentation_text_scale_mobile", classDetails.presentationTextScaleMobile),
+    presentationImagePositionX: row.presentation_image_position_x ?? classDetails.presentationImagePositionX,
+    presentationImagePositionY: row.presentation_image_position_y ?? classDetails.presentationImagePositionY,
+    presentationImagePositionXTablet: row.presentation_image_position_x_tablet ?? classDetails.presentationImagePositionXTablet,
+    presentationImagePositionYTablet: row.presentation_image_position_y_tablet ?? classDetails.presentationImagePositionYTablet,
+    presentationImagePositionXMobile: row.presentation_image_position_x_mobile ?? classDetails.presentationImagePositionXMobile,
+    presentationImagePositionYMobile: row.presentation_image_position_y_mobile ?? classDetails.presentationImagePositionYMobile,
+    presentationImageScale: numField("presentation_image_scale", classDetails.presentationImageScale),
+    presentationImageScaleTablet: numField("presentation_image_scale_tablet", classDetails.presentationImageScaleTablet),
+    presentationImageScaleMobile: numField("presentation_image_scale_mobile", classDetails.presentationImageScaleMobile),
   } as Partial<ClassOfferingDetails>;
   return { ...details, class: nextClass };
 }

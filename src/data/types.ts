@@ -1,3 +1,5 @@
+import type { CmsHeroSettings } from "@/lib/cms/types";
+
 export type ExperienceKind =
   | "class"
   | "workshop"
@@ -52,6 +54,51 @@ export interface ExperienceItem {
   heroPresentationText?: string;
   heroPresentationTextColor?: string;
   heroPresentationImage?: string;
+  /* Hero con imagen */
+  titleImageScale?: number;
+  titleImageScaleTablet?: number;
+  titleImageScaleMobile?: number;
+  titleImagePositionX?: string;
+  titleImagePositionY?: string;
+  titleImagePositionXTablet?: string;
+  titleImagePositionYTablet?: string;
+  titleImagePositionXMobile?: string;
+  titleImagePositionYMobile?: string;
+  titleImageSecondaryScale?: number;
+  titleImageSecondaryScaleTablet?: number;
+  titleImageSecondaryScaleMobile?: number;
+  titleImageSecondaryPositionX?: string;
+  titleImageSecondaryPositionY?: string;
+  titleImageSecondaryPositionXTablet?: string;
+  titleImageSecondaryPositionYTablet?: string;
+  titleImageSecondaryPositionXMobile?: string;
+  titleImageSecondaryPositionYMobile?: string;
+  /* Hero tipográfico */
+  heroTitlePositionY?: string;
+  heroTitlePositionYTablet?: string;
+  heroTitlePositionYMobile?: string;
+  heroTitleScale?: number;
+  heroTitleScaleTablet?: number;
+  heroTitleScaleMobile?: number;
+  /* Hero con presentación */
+  presentationTextPositionX?: string;
+  presentationTextPositionY?: string;
+  presentationTextPositionXTablet?: string;
+  presentationTextPositionYTablet?: string;
+  presentationTextPositionXMobile?: string;
+  presentationTextPositionYMobile?: string;
+  presentationTextScale?: number;
+  presentationTextScaleTablet?: number;
+  presentationTextScaleMobile?: number;
+  presentationImagePositionX?: string;
+  presentationImagePositionY?: string;
+  presentationImagePositionXTablet?: string;
+  presentationImagePositionYTablet?: string;
+  presentationImagePositionXMobile?: string;
+  presentationImagePositionYMobile?: string;
+  presentationImageScale?: number;
+  presentationImageScaleTablet?: number;
+  presentationImageScaleMobile?: number;
   heroTitle: string;
   listingTitle: string;
   listingSubtitle: string;
@@ -77,6 +124,8 @@ export interface ExperienceItem {
   ctaHref: string;
   ctaConsultHref: string;
   ctaEnrollHref: string;
+  ctaConsultLabel: string;
+  ctaEnrollLabel: string;
   seoTitle: string;
   seoDescription: string;
   isPublished: boolean;
@@ -153,32 +202,7 @@ export interface BlogPost {
   publishedAt: string;
   seoTitle: string;
   seoDescription: string;
-  hero?: {
-    heroVariant: "image" | "text" | "presentation";
-    heroTitle: string;
-    heroSubtitle: string;
-    heroPresentationText: string;
-    heroPresentationTextColor: string;
-    heroPresentationImage: string;
-    heroMenuTone: "light" | "dark";
-    heroMenuColor: string;
-    heroMenuScale: number;
-    heroLogoPositionX: string;
-    heroLogoPositionY: string;
-    heroLogoWidth: string;
-    heroLogoTabletPositionX: string;
-    heroLogoTabletPositionY: string;
-    heroLogoTabletWidth: string;
-    heroLogoMobilePositionX: string;
-    heroLogoMobilePositionY: string;
-    heroLogoMobileWidth: string;
-    heroMenuPositionY: string;
-    heroMenuTabletPositionY: string;
-    heroMenuMobilePositionY: string;
-    heroImage: string;
-    titleImage: string;
-    titleImageSecondary: string;
-  };
+  hero?: CmsHeroSettings;
   contentBlocks: BlogContentBlock[];
 }
 

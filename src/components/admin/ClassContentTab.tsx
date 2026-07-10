@@ -262,7 +262,7 @@ export default function ClassContentTab({ content, onChange, onDirty }: ClassCon
                 </div>
                 <div className="space-y-3">
                   <TextField
-                    label={`Módulo ${index + 1}`}
+                    label="Título del módulo"
                     value={mod.title}
                     placeholder={`MÓDULO ${index + 1}. TÍTULO DEL MÓDULO`}
                     onChange={(event) => updateModule(index, { title: event.target.value })}

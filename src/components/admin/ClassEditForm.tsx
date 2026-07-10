@@ -4,9 +4,9 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { DetailPage } from "@/components/collections/DetailPage";
+import { PublicHeroContent } from "@/components/hero/PublicHeroContent";
 import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
 import { PublicFooterContent } from "@/components/layout/PublicFooterContent";
-import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Switch from "@/components/ui/Switch";
@@ -16,13 +16,12 @@ import type { ExperienceItem, ExperienceKind } from "@/data/types";
 import { assetPath } from "@/lib/assets";
 import type { ClassEditorPreviewChrome } from "@/lib/cms/class-editor-preview";
 import AdminActionModal from "./AdminActionModal";
-import ColorPickerField from "./ColorPickerField";
 import MediaLibraryModal from "./MediaLibraryModal";
 import RichTextField from "./RichTextField";
+import SharedHeroEditor from "./SharedHeroEditor";
 import ClassContentTab, { defaultContent } from "./ClassContentTab";
 import type {
   ClassOfferingDetails,
-  ClassHeroVariant,
   ClassScheduleDay,
   Offering,
   OfferingGalleryImage,
@@ -31,10 +30,9 @@ import type {
 
 type TabKey = "hero" | "basic" | "schedule" | "content" | "seo" | "additions" | "preview";
 type PickerTarget = "hero" | "presentation" | "title" | "titleSecondary" | "gallery" | `gallery:${number}` | "seo" | "videoPoster" | null;
-type UploadTarget = Exclude<PickerTarget, `gallery:${number}` | "gallery" | null>;
+type UploadTarget = Exclude<PickerTarget, "gallery" | null>;
 type SaveIntent = "draft" | "publish";
 type FormNotice = { type: "success" | "error"; message: string; details?: string[] };
-type HeroPreviewDevice = "phone" | "tablet" | "desktop";
 type LegacyOfferingDetails = Partial<ClassOfferingDetails> & {
   additionalInfo?: unknown;
   category?: unknown;
@@ -48,17 +46,6 @@ type LegacyOfferingDetails = Partial<ClassOfferingDetails> & {
 };
 
 const DEFAULT_HERO_IMAGE = "/img/hero-bg.jpg";
-
-const heroPreviewDevices: Array<{
-  key: HeroPreviewDevice;
-  label: string;
-  width: number;
-  height: number;
-}> = [
-  { key: "phone", label: "Teléfono", width: 390, height: 520 },
-  { key: "tablet", label: "Tablet", width: 760, height: 540 },
-  { key: "desktop", label: "Desktop", width: 1180, height: 620 },
-];
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: "hero", label: "Hero" },
@@ -95,6 +82,8 @@ const defaultClassDetails: ClassOfferingDetails = {
   ctaHref: "",
   ctaConsultHref: "",
   ctaEnrollHref: "",
+  ctaConsultLabel: "",
+  ctaEnrollLabel: "",
   showConsultCta: true,
   showEnrollCta: true,
   highlightDescription: "",
@@ -109,6 +98,48 @@ const defaultClassDetails: ClassOfferingDetails = {
   heroImage: DEFAULT_HERO_IMAGE,
   titleImage: "",
   titleImageSecondary: "",
+  titleImageScale: 1,
+  titleImageScaleTablet: 1,
+  titleImageScaleMobile: 1,
+  titleImagePositionX: "50%",
+  titleImagePositionY: "50%",
+  titleImagePositionXTablet: "50%",
+  titleImagePositionYTablet: "50%",
+  titleImagePositionXMobile: "50%",
+  titleImagePositionYMobile: "50%",
+  titleImageSecondaryScale: 1,
+  titleImageSecondaryScaleTablet: 1,
+  titleImageSecondaryScaleMobile: 1,
+  titleImageSecondaryPositionX: "50%",
+  titleImageSecondaryPositionY: "50%",
+  titleImageSecondaryPositionXTablet: "50%",
+  titleImageSecondaryPositionYTablet: "50%",
+  titleImageSecondaryPositionXMobile: "50%",
+  titleImageSecondaryPositionYMobile: "50%",
+  heroTitlePositionY: "50%",
+  heroTitlePositionYTablet: "50%",
+  heroTitlePositionYMobile: "50%",
+  heroTitleScale: 1,
+  heroTitleScaleTablet: 1,
+  heroTitleScaleMobile: 1,
+  presentationTextPositionX: "8%",
+  presentationTextPositionY: "50%",
+  presentationTextPositionXTablet: "8%",
+  presentationTextPositionYTablet: "50%",
+  presentationTextPositionXMobile: "8%",
+  presentationTextPositionYMobile: "50%",
+  presentationTextScale: 1,
+  presentationTextScaleTablet: 1,
+  presentationTextScaleMobile: 1,
+  presentationImagePositionX: "70%",
+  presentationImagePositionY: "50%",
+  presentationImagePositionXTablet: "70%",
+  presentationImagePositionYTablet: "50%",
+  presentationImagePositionXMobile: "70%",
+  presentationImagePositionYMobile: "50%",
+  presentationImageScale: 1,
+  presentationImageScaleTablet: 1,
+  presentationImageScaleMobile: 1,
   galleryImages: [],
   videoUrl: "",
   videoPoster: "",
@@ -161,6 +192,14 @@ function firstText(...values: unknown[]) {
 function defaultCtaHref(details: Pick<ClassOfferingDetails, "whatsappNumber" | "content">) {
   const whatsapp = firstText(details.whatsappNumber, details.content?.contactWhatsapp, "34633788860").replace(/\D/g, "");
   return `https://wa.me/${whatsapp || "34633788860"}`;
+}
+
+function defaultConsultLabel(type: Offering["type"]) {
+  return type === "gift_card" ? "Comprar" : "Consultar";
+}
+
+function defaultEnrollLabel(type: Offering["type"]) {
+  return type === "gift_card" ? "Anadir al carrito" : "Inscribirme";
 }
 
 function textList(value: unknown) {
@@ -282,6 +321,8 @@ function toClassDetails(offering: Offering): ClassOfferingDetails {
     ctaHref: firstText(fromDetails.ctaHref),
     ctaConsultHref: firstText(fromDetails.ctaConsultHref, fromDetails.ctaHref),
     ctaEnrollHref: firstText(fromDetails.ctaEnrollHref, fromDetails.ctaHref),
+    ctaConsultLabel: firstText(fromDetails.ctaConsultLabel),
+    ctaEnrollLabel: firstText(fromDetails.ctaEnrollLabel),
     showConsultCta: fromDetails.showConsultCta ?? true,
     showEnrollCta: fromDetails.showEnrollCta ?? true,
     heroTitle: firstText(fromDetails.heroTitle, offering.title),
@@ -397,387 +438,6 @@ function ImagePreview({ src, alt, aspect = "aspect-video" }: { src: string; alt:
     <div className={`relative overflow-hidden rounded-xl border border-outline-variant bg-surface-container-high ${aspect}`}>
       <Image src={src} alt={alt} fill sizes="720px" className="object-cover" unoptimized />
     </div>
-  );
-}
-
-function ImageActionField({
-  label,
-  value,
-  alt,
-  compact = false,
-  uploading = false,
-  onOpenLibrary,
-  onUpload,
-}: {
-  label: string;
-  value: string;
-  alt: string;
-  compact?: boolean;
-  uploading?: boolean;
-  onOpenLibrary: () => void;
-  onUpload: (file: File) => void;
-}) {
-  const inputId = `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-upload`;
-
-  return (
-    <div className={`cms-hero-image-field${compact ? " cms-hero-image-field--compact" : ""}`}>
-      <FieldLabel>{label}</FieldLabel>
-      <ImagePreview src={value} alt={alt} aspect={compact ? "aspect-[3/1]" : "aspect-[16/7]"} />
-      <div className="cms-hero-image-field__actions">
-        <label className="secondary-btn cms-hero-image-field__button" htmlFor={inputId} aria-disabled={uploading}>
-          {uploading ? "Subiendo..." : value ? "Sustituir" : "Subir imagen"}
-        </label>
-        <input
-          id={inputId}
-          type="file"
-          accept="image/*"
-          className="sr-only"
-          disabled={uploading}
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) onUpload(file);
-            event.target.value = "";
-          }}
-        />
-        <Button type="button" variant="outlined" size="sm" onClick={onOpenLibrary}>
-          {value ? "Abrir biblioteca" : "Seleccionar imagen"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function heroDeviceKeys(device: HeroPreviewDevice) {
-  if (device === "phone") {
-    return {
-      logoX: "heroLogoMobilePositionX",
-      logoY: "heroLogoMobilePositionY",
-      logoWidth: "heroLogoMobileWidth",
-      menuY: "heroMenuMobilePositionY",
-    } as const;
-  }
-
-  if (device === "tablet") {
-    return {
-      logoX: "heroLogoTabletPositionX",
-      logoY: "heroLogoTabletPositionY",
-      logoWidth: "heroLogoTabletWidth",
-      menuY: "heroMenuTabletPositionY",
-    } as const;
-  }
-
-  return {
-    logoX: "heroLogoPositionX",
-    logoY: "heroLogoPositionY",
-    logoWidth: "heroLogoWidth",
-    menuY: "heroMenuPositionY",
-  } as const;
-}
-
-function heroValue(details: ClassOfferingDetails, key: keyof ClassOfferingDetails) {
-  const value = details[key];
-  return typeof value === "string" ? value : "";
-}
-
-function HeroPositionEditor({
-  details,
-  activeDevice,
-  onDeviceChange,
-  onChange,
-}: {
-  details: ClassOfferingDetails;
-  activeDevice: HeroPreviewDevice;
-  onDeviceChange: (device: HeroPreviewDevice) => void;
-  onChange: (next: Partial<ClassOfferingDetails>) => void;
-}) {
-  const keys = heroDeviceKeys(activeDevice);
-
-  const updateField = (key: keyof ClassOfferingDetails, value: string) => {
-    onChange({ [key]: value } as Partial<ClassOfferingDetails>);
-  };
-
-  return (
-    <Card padding="lg" className="space-y-5 rounded-2xl">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h2 className="text-headline-sm text-on-surface">Posición responsive del hero</h2>
-          <p className="mt-1 text-body-md text-on-surface-variant">
-            Ajusta el logotipo y el menú inicial por dispositivo. Los valores aceptan %, px o rem.
-          </p>
-        </div>
-        <div className="inline-flex rounded-xl border border-outline-variant bg-surface-container-low p-1">
-          {heroPreviewDevices.map((device) => (
-            <button
-              type="button"
-              key={device.key}
-              onClick={() => onDeviceChange(device.key)}
-              className={`min-h-11 rounded-lg px-4 text-label-md font-bold transition-colors ${
-                activeDevice === device.key
-                  ? "bg-[#9d4300] text-white shadow-sm"
-                  : "text-on-surface-variant hover:bg-white"
-              }`}
-            >
-              {device.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <fieldset className="space-y-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-          <legend className="px-2 text-label-md font-bold uppercase tracking-wide text-on-surface-variant">
-            Propiedades del logo
-          </legend>
-          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-            <TextField
-              label="Logo X"
-              value={heroValue(details, keys.logoX)}
-              placeholder="50%"
-              onChange={(event) => updateField(keys.logoX, event.target.value)}
-            />
-            <TextField
-              label="Logo Y"
-              value={heroValue(details, keys.logoY)}
-              placeholder="46px"
-              onChange={(event) => updateField(keys.logoY, event.target.value)}
-            />
-            <TextField
-              label="Tamaño logo"
-              value={heroValue(details, keys.logoWidth)}
-              placeholder="118px"
-              onChange={(event) => updateField(keys.logoWidth, event.target.value)}
-            />
-          </div>
-        </fieldset>
-
-        <fieldset className="space-y-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
-          <legend className="px-2 text-label-md font-bold uppercase tracking-wide text-on-surface-variant">
-            Propiedades del menú
-          </legend>
-          <div className="grid gap-4 md:grid-cols-2">
-            <ColorPickerField
-              label="Color del menú y logo"
-              value={details.heroMenuColor || (details.heroMenuTone === "light" ? "#FFFFFF" : "#3F3933")}
-              help="Aplica al logo, texto, iconos y separadores del menú del hero."
-              onChange={(value) => onChange({
-                heroMenuColor: value,
-                heroMenuTone: value.toLowerCase() === "#ffffff" ? "light" : "dark",
-              })}
-            />
-            <TextField
-              label="Menú inicial Y"
-              value={heroValue(details, keys.menuY)}
-              placeholder="132px"
-              help="También define cuándo aparece la barra secundaria en este dispositivo."
-              onChange={(event) => updateField(keys.menuY, event.target.value)}
-            />
-          </div>
-          {activeDevice === "desktop" ? (
-            <div className="grid gap-3">
-              <div className="flex items-center justify-between gap-3">
-                <FieldLabel>Escala del menú en computadora</FieldLabel>
-                <span className="rounded-lg bg-surface-container-low px-3 py-1 text-label-md font-bold text-on-surface-variant">
-                  {(details.heroMenuScale ?? 1).toFixed(2)}x
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0.75"
-                max="1.4"
-                step="0.05"
-                value={details.heroMenuScale ?? 1}
-                onChange={(event) => onChange({ heroMenuScale: Number(event.target.value) })}
-                className="w-full accent-[#9d4300]"
-              />
-              <p className="text-body-sm text-on-surface-variant">
-                Esta escala solo se aplica al menú expandido de escritorio.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-outline-variant bg-surface-container-low p-4 text-body-sm text-on-surface-variant">
-              En tablet y teléfono el hero usa logo a la izquierda y menú de hamburguesa a la derecha; la escala no aplica para estos dispositivos.
-            </div>
-          )}
-        </fieldset>
-      </div>
-    </Card>
-  );
-}
-
-function HeroResponsivePreview({
-  details,
-  title,
-  subtitle,
-  device,
-}: {
-  details: ClassOfferingDetails;
-  title: string;
-  subtitle: string;
-  device: HeroPreviewDevice;
-}) {
-  const preset = heroPreviewDevices.find((item) => item.key === device) ?? heroPreviewDevices[2];
-  const keys = heroDeviceKeys(device);
-  const isImageHero = details.heroVariant === "image";
-  const isPresentationHero = details.heroVariant === "presentation";
-  const navColor = details.heroMenuColor || (details.heroMenuTone === "light" ? "rgba(255,255,255,0.95)" : "#3f3933");
-  const logoStyle = {
-    left: heroValue(details, keys.logoX) || "50%",
-    top: heroValue(details, keys.logoY) || "46px",
-    width: heroValue(details, keys.logoWidth) || "118px",
-    aspectRatio: "2.2 / 1",
-    backgroundColor: navColor,
-    WebkitMaskImage: 'url("/img/logo-header.png")',
-    maskImage: 'url("/img/logo-header.png")',
-    WebkitMaskSize: "contain",
-    maskSize: "contain",
-    WebkitMaskRepeat: "no-repeat",
-    maskRepeat: "no-repeat",
-    WebkitMaskPosition: "center",
-    maskPosition: "center",
-  } as CSSProperties;
-  const menuStyle = {
-    top: heroValue(details, keys.menuY) || "132px",
-    color: navColor,
-    transform: `translateX(-50%) scale(${device === "desktop" ? details.heroMenuScale ?? 1 : 1})`,
-    transformOrigin: "top center",
-  } as CSSProperties;
-  const heroPreviewBackground = isPresentationHero
-    ? `url("${details.heroImage || DEFAULT_HERO_IMAGE}") center / cover no-repeat`
-    : isImageHero
-      ? `linear-gradient(to bottom, rgba(58,48,37,.2), rgba(251,250,246,.94)), url("${details.heroImage || DEFAULT_HERO_IMAGE}") center / cover no-repeat`
-      : "#fbfaf6";
-  const frameStyle = {
-    width: `${preset.width}px`,
-    height: `${preset.height}px`,
-    maxWidth: "100%",
-    background: heroPreviewBackground,
-  } as CSSProperties;
-  const scriptPreviewStyle = {
-    width: device === "desktop" ? "min(82%, 700px)" : device === "tablet" ? "min(82%, 600px)" : "min(88%, 340px)",
-    aspectRatio: "3.35 / 1",
-    transform: device === "desktop" ? "translateY(28px)" : device === "tablet" ? "translateY(18px)" : "translateY(10px)",
-  } as CSSProperties;
-  const heroContentTop = isPresentationHero ? "58%" : isImageHero ? "54%" : "50%";
-
-  return (
-    <Card padding="lg" className="space-y-5 rounded-2xl">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-headline-sm text-on-surface">Renderizado del hero</h2>
-        <p className="text-body-md text-on-surface-variant">
-          Vista {preset.label.toLowerCase()} con las posiciones configuradas para ese dispositivo.
-        </p>
-      </div>
-
-      <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-low p-4">
-        <div className="relative mx-auto overflow-hidden rounded-xl border border-outline-variant bg-[#fbfaf6] shadow-sm" style={frameStyle}>
-          {device === "desktop" ? (
-            <>
-              <span className="absolute z-20 -translate-x-1/2" style={logoStyle} aria-label="Casa Rosier" />
-
-              <div
-                className="absolute left-1/2 z-20 flex items-center justify-center whitespace-nowrap text-[12px] font-bold"
-                style={menuStyle}
-              >
-                <nav aria-label="Vista previa menú hero">
-                  <ul className="flex list-none items-center gap-4 p-0">
-                    {["Inicio", "Clases", "Workshops", "Experiencias", "Gift Cards", "El Estudio", "Shop"].map((item) => (
-                      <li key={item} className="flex items-center gap-2">
-                        <span>{item}</span>
-                        {item !== "Inicio" && item !== "Shop" ? <span aria-hidden="true">+</span> : null}
-                      </li>
-                    ))}
-                  </ul>
-                </nav>
-              </div>
-            </>
-          ) : (
-            <div className="absolute inset-x-4 top-4 z-20 flex items-center justify-between gap-4" style={{ color: navColor }}>
-              <span
-                className="block h-12 w-[104px]"
-                style={{
-                  backgroundColor: navColor,
-                  WebkitMaskImage: 'url("/img/logo-header.png")',
-                  maskImage: 'url("/img/logo-header.png")',
-                  WebkitMaskSize: "contain",
-                  maskSize: "contain",
-                  WebkitMaskRepeat: "no-repeat",
-                  maskRepeat: "no-repeat",
-                  WebkitMaskPosition: "left center",
-                  maskPosition: "left center",
-                }}
-                aria-label="Casa Rosier"
-              />
-              <button
-                type="button"
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-current/30"
-                aria-label="Vista de botón de menú en tablet y teléfono"
-              >
-                <span className="material-symbols-outlined text-[22px]">menu</span>
-              </button>
-            </div>
-          )}
-
-          <div className="absolute inset-x-8 z-10 -translate-y-1/2 text-center" style={{ top: heroContentTop }}>
-            {isPresentationHero ? (
-              <div className={`cms-hero-presentation-preview cms-hero-presentation-preview--${device}`}>
-                <div className="page-hero__presentation-text" style={{ color: details.heroPresentationTextColor || "#FFFFFF" }}>
-                  <MarkdownContent
-                    source={details.heroPresentationText || "# Chagall, Master Drawings\n\nFebruary 27-May 28, 2018"}
-                    className="cms-hero-presentation-preview__copy"
-                  />
-                </div>
-                {details.heroPresentationImage ? (
-                  <div className="cms-hero-presentation-preview__image">
-                    <Image
-                      src={details.heroPresentationImage}
-                      alt="Imagen lateral del hero"
-                      fill
-                      sizes="320px"
-                      className="object-contain"
-                      unoptimized
-                    />
-                  </div>
-                ) : null}
-              </div>
-            ) : isImageHero ? (
-              <div className="relative mx-auto" style={scriptPreviewStyle}>
-                {details.titleImage ? (
-                  <Image
-                    src={details.titleImage}
-                    alt="Texto principal del hero"
-                    fill
-                    sizes="700px"
-                    className="object-contain"
-                    style={{ opacity: 0.76, transform: "translateY(-3%) scale(1.16)" }}
-                    unoptimized
-                  />
-                ) : null}
-                {details.titleImageSecondary ? (
-                  <Image
-                    src={details.titleImageSecondary}
-                    alt="Texto secundario del hero"
-                    fill
-                    sizes="700px"
-                    className="object-contain"
-                    style={{ transform: "translateY(-12%) scale(1.1)" }}
-                    unoptimized
-                  />
-                ) : null}
-              </div>
-            ) : (
-              <div>
-                <h3 className="font-serif text-[clamp(30px,4vw,54px)] uppercase leading-none tracking-normal text-[#5b554f]">
-                  {details.heroTitle || title || "Un día de cerámica"}
-                </h3>
-                <p className="mt-4 text-label-md uppercase text-[#a99b90]">
-                  {details.heroSubtitle || subtitle || "Clases - Iniciación"}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </Card>
   );
 }
 
@@ -970,6 +630,8 @@ function buildPreviewItem({
     ctaHref: consultHref,
     ctaConsultHref: consultHref,
     ctaEnrollHref: enrollHref,
+    ctaConsultLabel: details.ctaConsultLabel.trim() || defaultConsultLabel(offeringType),
+    ctaEnrollLabel: details.ctaEnrollLabel.trim() || defaultEnrollLabel(offeringType),
     seoTitle: title || "Vista previa",
     seoDescription: details.highlightDescription || renderPlainText(description),
     isPublished: false,
@@ -1049,6 +711,42 @@ function PreviewHeader({
     "--hero-menu-mobile-position-y": item.heroMenuMobilePositionY ?? "96px",
     "--hero-menu-color": item.heroMenuColor ?? (item.heroMenuTone === "light" ? "#ffffff" : "#3f3933"),
     "--hero-menu-scale": item.heroMenuScale ?? 1,
+    "--title-image-scale": details.titleImageScale ?? 1,
+    "--title-image-scale-tablet": details.titleImageScaleTablet ?? details.titleImageScale ?? 1,
+    "--title-image-scale-mobile": details.titleImageScaleMobile ?? details.titleImageScale ?? 1,
+    "--title-image-position-x": details.titleImagePositionX ?? "50%",
+    "--title-image-position-y": details.titleImagePositionY ?? "50%",
+    "--title-image-position-x-tablet": details.titleImagePositionXTablet ?? details.titleImagePositionX ?? "50%",
+    "--title-image-position-y-tablet": details.titleImagePositionYTablet ?? details.titleImagePositionY ?? "50%",
+    "--title-image-position-x-mobile": details.titleImagePositionXMobile ?? details.titleImagePositionX ?? "50%",
+    "--title-image-position-y-mobile": details.titleImagePositionYMobile ?? "50%",
+    "--title-image-secondary-scale": details.titleImageSecondaryScale ?? 1,
+    "--title-image-secondary-scale-tablet": details.titleImageSecondaryScaleTablet ?? details.titleImageSecondaryScale ?? 1,
+    "--title-image-secondary-scale-mobile": details.titleImageSecondaryScaleMobile ?? details.titleImageSecondaryScale ?? 1,
+    "--title-image-secondary-position-x": details.titleImageSecondaryPositionX ?? "50%",
+    "--title-image-secondary-position-y": details.titleImageSecondaryPositionY ?? "50%",
+    "--title-image-secondary-position-x-tablet": details.titleImageSecondaryPositionXTablet ?? details.titleImageSecondaryPositionX ?? "50%",
+    "--title-image-secondary-position-y-tablet": details.titleImageSecondaryPositionYTablet ?? details.titleImageSecondaryPositionY ?? "50%",
+    "--title-image-secondary-position-x-mobile": details.titleImageSecondaryPositionXMobile ?? details.titleImageSecondaryPositionX ?? "50%",
+    "--title-image-secondary-position-y-mobile": details.titleImageSecondaryPositionYMobile ?? "50%",
+    "--presentation-text-position-x": details.presentationTextPositionX ?? "8%",
+    "--presentation-text-position-y": details.presentationTextPositionY ?? "50%",
+    "--presentation-text-position-x-tablet": details.presentationTextPositionXTablet ?? details.presentationTextPositionX ?? "8%",
+    "--presentation-text-position-y-tablet": details.presentationTextPositionYTablet ?? details.presentationTextPositionY ?? "50%",
+    "--presentation-text-position-x-mobile": details.presentationTextPositionXMobile ?? details.presentationTextPositionX ?? "8%",
+    "--presentation-text-position-y-mobile": details.presentationTextPositionYMobile ?? "50%",
+    "--presentation-text-scale": details.presentationTextScale ?? 1,
+    "--presentation-text-scale-tablet": details.presentationTextScaleTablet ?? details.presentationTextScale ?? 1,
+    "--presentation-text-scale-mobile": details.presentationTextScaleMobile ?? 1,
+    "--presentation-image-position-x": details.presentationImagePositionX ?? "70%",
+    "--presentation-image-position-y": details.presentationImagePositionY ?? "50%",
+    "--presentation-image-position-x-tablet": details.presentationImagePositionXTablet ?? details.presentationImagePositionX ?? "70%",
+    "--presentation-image-position-y-tablet": details.presentationImagePositionYTablet ?? details.presentationImagePositionY ?? "50%",
+    "--presentation-image-position-x-mobile": details.presentationImagePositionXMobile ?? details.presentationImagePositionX ?? "70%",
+    "--presentation-image-position-y-mobile": details.presentationImagePositionYMobile ?? "50%",
+    "--presentation-image-scale": details.presentationImageScale ?? 1,
+    "--presentation-image-scale-tablet": details.presentationImageScaleTablet ?? details.presentationImageScale ?? 1,
+    "--presentation-image-scale-mobile": details.presentationImageScaleMobile ?? 1,
   } as CSSProperties;
   const scrollThreshold = Number.parseInt(item.heroMenuPositionY ?? "", 10) || 132;
   const titleContent = (
@@ -1084,32 +782,12 @@ function PreviewHeader({
           heroMenuScale={item.heroMenuScale}
         />
         {isImageLike ? (
-          <div className="header-interno__inner page-hero__inner container" aria-hidden="true">
-            {variant === "presentation" ? (
-              <div className="page-hero__presentation">
-                <div className="page-hero__presentation-text" style={{ color: details.heroPresentationTextColor || "#FFFFFF" }}>
-                  <MarkdownContent
-                    source={details.heroPresentationText || "# Chagall, Master Drawings\n\nFebruary 27-May 28, 2018"}
-                    className="page-hero__presentation-copy"
-                  />
-                </div>
-                {details.heroPresentationImage ? (
-                  <div className="page-hero__presentation-image">
-                    <Image src={details.heroPresentationImage} alt={item.heroTitle || item.title} fill sizes="420px" className="object-contain" unoptimized />
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="page-hero__script-stack">
-                {details.titleImage ? (
-                  <Image src={details.titleImage} alt={item.heroTitle || item.title} fill sizes="520px" className="page-hero__script-image page-hero__script-image--back" unoptimized />
-                ) : null}
-                {details.titleImageSecondary ? (
-                  <Image src={details.titleImageSecondary} alt={item.heroTitle || item.title} fill sizes="520px" className="page-hero__script-image page-hero__script-image--front" unoptimized />
-                ) : null}
-              </div>
-            )}
-          </div>
+          <PublicHeroContent
+            hero={{
+              ...details,
+              heroPresentationText: details.heroPresentationText || "# Chagall, Master Drawings\n\nFebruary 27-May 28, 2018",
+            }}
+          />
         ) : (
           <div className="header-interno__inner page-hero__inner container" aria-hidden="true" />
         )}
@@ -1136,7 +814,6 @@ export default function ClassEditForm({
 }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("hero");
-  const [heroPreviewDevice, setHeroPreviewDevice] = useState<HeroPreviewDevice>("desktop");
   const [title, setTitle] = useState(offering.title);
   const [slug, setSlug] = useState(offering.slug);
   const [subtitle, setSubtitle] = useState(offering.subtitle);
@@ -1168,14 +845,6 @@ export default function ClassEditForm({
   function updateDetails(next: Partial<ClassOfferingDetails>) {
     setDetails((current) => ({ ...current, ...next }));
     setIsDirty(true);
-  }
-
-  function setHeroVariant(heroVariant: ClassHeroVariant) {
-    updateDetails({
-      heroVariant,
-      heroMenuTone: heroVariant === "image" || heroVariant === "presentation" ? "light" : "dark",
-      heroImage: heroVariant === "image" || heroVariant === "presentation" ? details.heroImage || DEFAULT_HERO_IMAGE : details.heroImage,
-    });
   }
 
   function updatePricing(index: number, next: Partial<OfferingPriceOption>) {
@@ -1253,6 +922,10 @@ export default function ClassEditForm({
       if (target === "titleSecondary") updateDetails({ titleImageSecondary: url });
       if (target === "seo") updateDetails({ seoImage: url });
       if (target === "videoPoster") updateDetails({ videoPoster: url });
+      if (target.startsWith("gallery:")) {
+        const index = Number(target.split(":")[1]);
+        if (Number.isInteger(index)) updateGalleryImage(index, { image: url });
+      }
     } catch (error) {
       setToast({
         type: "error",
@@ -1401,6 +1074,8 @@ export default function ClassEditForm({
               ctaHref: details.showConsultCta ? details.ctaConsultHref.trim() || details.ctaHref.trim() : "",
               ctaConsultHref: details.showConsultCta ? details.ctaConsultHref.trim() : "",
               ctaEnrollHref: details.showEnrollCta ? details.ctaEnrollHref.trim() : "",
+              ctaConsultLabel: details.showConsultCta ? details.ctaConsultLabel.trim() || defaultConsultLabel(offering.type) : "",
+              ctaEnrollLabel: details.showEnrollCta ? details.ctaEnrollLabel.trim() || defaultEnrollLabel(offering.type) : "",
               menuPlacement: menuPlacementForType(offering.type),
               homeSections: [],
               pricing,
@@ -1512,151 +1187,12 @@ export default function ClassEditForm({
 
       <form id="class-edit-form" onSubmit={handleSubmit} className="class-edit-form space-y-6">
         {activeTab === "hero" ? (
-          <>
-            <Card padding="lg" className="space-y-5 rounded-2xl">
-              <div>
-                <h2 className="text-headline-sm text-on-surface">Tipo de hero</h2>
-                <p className="mt-1 text-body-md text-on-surface-variant">Elige el encabezado público para esta página de clases.</p>
-              </div>
-              <div className="grid gap-4 lg:grid-cols-3">
-                <button
-                  type="button"
-                  onClick={() => setHeroVariant("image")}
-                  className={`rounded-2xl border p-4 text-left transition-colors ${details.heroVariant === "image" ? "border-secondary bg-secondary-container/20" : "border-outline-variant hover:bg-surface-container-low"}`}
-                >
-                  <span className="block text-title-md font-bold text-on-surface">Hero con imagen</span>
-                  <span className="mt-1 block text-body-md text-on-surface-variant">Imagen de fondo, gradiente blanco y dos imágenes de texto cursivo.</span>
-                  <span className="mt-3 block text-label-md font-semibold text-secondary">Menú configurable sobre imagen</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHeroVariant("presentation")}
-                  className={`rounded-2xl border p-4 text-left transition-colors ${details.heroVariant === "presentation" ? "border-secondary bg-secondary-container/20" : "border-outline-variant hover:bg-surface-container-low"}`}
-                >
-                  <span className="block text-title-md font-bold text-on-surface">Hero con presentación</span>
-                  <span className="mt-1 block text-body-md text-on-surface-variant">Imagen de fondo, texto editable a la izquierda e imagen única a la derecha.</span>
-                  <span className="mt-3 block text-label-md font-semibold text-secondary">Texto enriquecido y color propio</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHeroVariant("text")}
-                  className={`rounded-2xl border p-4 text-left transition-colors ${details.heroVariant === "text" ? "border-secondary bg-secondary-container/20" : "border-outline-variant hover:bg-surface-container-low"}`}
-                >
-                  <span className="block text-title-md font-bold text-on-surface">Hero tipográfico</span>
-                  <span className="mt-1 block text-body-md text-on-surface-variant">Fondo blanco con título y subtítulo usando la tipografía definida.</span>
-                  <span className="mt-3 block text-label-md font-semibold text-secondary">Menú configurable sobre fondo claro</span>
-                </button>
-              </div>
-            </Card>
-
-            {details.heroVariant === "image" ? (
-              <Card padding="lg" className="space-y-5 rounded-2xl">
-                <div>
-                  <h2 className="text-headline-sm text-on-surface">Hero con imágenes</h2>
-                  <p className="mt-1 text-body-md text-on-surface-variant">
-                    Configura el fondo y las dos imágenes cursivas superpuestas. El hero público no mostrará texto automático.
-                  </p>
-                </div>
-                <div className="cms-hero-image-grid">
-                  <ImageActionField
-                    label="Imagen de fondo"
-                    value={details.heroImage || DEFAULT_HERO_IMAGE}
-                    alt="Fondo del hero"
-                    uploading={uploadingTarget === "hero"}
-                    onOpenLibrary={() => setPickerTarget("hero")}
-                    onUpload={(file) => uploadImage("hero", file)}
-                  />
-                  <ImageActionField
-                    label="Imagen cursiva 1"
-                    value={details.titleImage}
-                    alt="Texto cursivo 1"
-                    compact
-                    uploading={uploadingTarget === "title"}
-                    onOpenLibrary={() => setPickerTarget("title")}
-                    onUpload={(file) => uploadImage("title", file)}
-                  />
-                  <ImageActionField
-                    label="Imagen cursiva 2"
-                    value={details.titleImageSecondary}
-                    alt="Texto cursivo 2"
-                    compact
-                    uploading={uploadingTarget === "titleSecondary"}
-                    onOpenLibrary={() => setPickerTarget("titleSecondary")}
-                    onUpload={(file) => uploadImage("titleSecondary", file)}
-                  />
-                </div>
-              </Card>
-            ) : details.heroVariant === "presentation" ? (
-              <Card padding="lg" className="space-y-5 rounded-2xl">
-                <div>
-                  <h2 className="text-headline-sm text-on-surface">Hero con presentación</h2>
-                  <p className="mt-1 text-body-md text-on-surface-variant">
-                    Configura la imagen de fondo, el contenido editorial izquierdo y la imagen destacada derecha.
-                  </p>
-                </div>
-                <ImageActionField
-                  label="Imagen de fondo"
-                  value={details.heroImage || DEFAULT_HERO_IMAGE}
-                  alt="Fondo del hero"
-                  uploading={uploadingTarget === "hero"}
-                  onOpenLibrary={() => setPickerTarget("hero")}
-                  onUpload={(file) => uploadImage("hero", file)}
-                />
-                <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-                  <div className="space-y-4">
-                    <RichTextField
-                      label="Texto de presentación"
-                      value={details.heroPresentationText}
-                      onChange={(value) => updateDetails({ heroPresentationText: value })}
-                      minHeight="220px"
-                      placeholder="# Chagall, Master Drawings&#10;&#10;February 27-May 28, 2018&#10;&#10;On view at The Met Fifth Avenue..."
-                    />
-                    {errors.heroTitle ? <p className="text-label-md text-error" data-validation-key="heroTitle">{errors.heroTitle}</p> : null}
-                    <ColorPickerField
-                      label="Color del texto"
-                      value={details.heroPresentationTextColor || "#FFFFFF"}
-                      onChange={(value) => updateDetails({ heroPresentationTextColor: value })}
-                    />
-                  </div>
-                  <ImageActionField
-                    label="Imagen lateral"
-                    value={details.heroPresentationImage}
-                    alt="Imagen lateral del hero"
-                    compact
-                    uploading={uploadingTarget === "presentation"}
-                    onOpenLibrary={() => setPickerTarget("presentation")}
-                    onUpload={(file) => uploadImage("presentation", file)}
-                  />
-                </div>
-              </Card>
-            ) : (
-              <Card padding="lg" className="space-y-5 rounded-2xl">
-                <h2 className="text-headline-sm text-on-surface">Hero tipográfico</h2>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <TextField label="Título del hero" required value={details.heroTitle} error={errors.heroTitle} validationKey="heroTitle" onChange={(event) => updateDetails({ heroTitle: event.target.value })} />
-                  <TextField label="Subtítulo del hero" value={details.heroSubtitle} placeholder="Clases - Iniciación" onChange={(event) => updateDetails({ heroSubtitle: event.target.value })} />
-                </div>
-                <div className="rounded-2xl border border-outline-variant bg-white px-6 py-16 text-center">
-                  <h3 className="font-serif text-5xl uppercase leading-none tracking-normal text-[#5b554f]">{details.heroTitle || "Un día de cerámica"}</h3>
-                  <p className="mt-4 text-label-md uppercase tracking-[0.28em] text-[#a99b90]">{details.heroSubtitle || "Clases - Iniciación"}</p>
-                </div>
-              </Card>
-            )}
-
-            <HeroPositionEditor
-              details={details}
-              activeDevice={heroPreviewDevice}
-              onDeviceChange={setHeroPreviewDevice}
-              onChange={updateDetails}
-            />
-
-            <HeroResponsivePreview
-              details={details}
-              title={title}
-              subtitle={subtitle}
-              device={heroPreviewDevice}
-            />
-          </>
+          <SharedHeroEditor
+            details={details}
+            titleFallback={title || "Título del hero"}
+            subtitleFallback={subtitle || "Clases - Iniciación"}
+            onChange={(next) => updateDetails(next as Partial<ClassOfferingDetails>)}
+          />
         ) : null}
 
         {activeTab === "basic" ? (
@@ -1715,13 +1251,22 @@ export default function ClassEditForm({
                     onCheckedChange={(checked) => updateDetails({ showConsultCta: checked })}
                   />
                   {details.showConsultCta ? (
-                    <TextField
-                      label="URL de Consultar"
-                      value={details.ctaConsultHref}
-                      placeholder={defaultCtaHref(details)}
-                      help="Aparece en los botones Consultar o Comprar."
-                      onChange={(event) => updateDetails({ ctaConsultHref: event.target.value, ctaHref: event.target.value })}
-                    />
+                    <>
+                      <TextField
+                        label="Texto del botón"
+                        value={details.ctaConsultLabel}
+                        placeholder={defaultConsultLabel(offering.type)}
+                        help="Texto final visible en la página pública."
+                        onChange={(event) => updateDetails({ ctaConsultLabel: event.target.value })}
+                      />
+                      <TextField
+                        label="URL de Consultar"
+                        value={details.ctaConsultHref}
+                        placeholder={defaultCtaHref(details)}
+                        help="Destino del botón principal."
+                        onChange={(event) => updateDetails({ ctaConsultHref: event.target.value, ctaHref: event.target.value })}
+                      />
+                    </>
                   ) : null}
                 </div>
                 <div className="space-y-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
@@ -1732,13 +1277,22 @@ export default function ClassEditForm({
                     onCheckedChange={(checked) => updateDetails({ showEnrollCta: checked })}
                   />
                   {details.showEnrollCta ? (
-                    <TextField
-                      label="URL de Inscribirme"
-                      value={details.ctaEnrollHref}
-                      placeholder={defaultCtaHref(details)}
-                      help="Aparece en el CTA final de la ficha."
-                      onChange={(event) => updateDetails({ ctaEnrollHref: event.target.value })}
-                    />
+                    <>
+                      <TextField
+                        label="Texto del botón"
+                        value={details.ctaEnrollLabel}
+                        placeholder={defaultEnrollLabel(offering.type)}
+                        help="Texto final visible en la página pública."
+                        onChange={(event) => updateDetails({ ctaEnrollLabel: event.target.value })}
+                      />
+                      <TextField
+                        label="URL de Inscribirme"
+                        value={details.ctaEnrollHref}
+                        placeholder={defaultCtaHref(details)}
+                        help="Destino del CTA final."
+                        onChange={(event) => updateDetails({ ctaEnrollHref: event.target.value })}
+                      />
+                    </>
                   ) : null}
                 </div>
               </div>
@@ -1800,9 +1354,26 @@ export default function ClassEditForm({
                 <div>
                   <FieldLabel>Poster del video</FieldLabel>
                   <ImagePreview src={details.videoPoster} alt="Poster de video" />
-                  <Button type="button" variant="outlined" size="sm" className="mt-3" onClick={() => setPickerTarget("videoPoster")}>
-                    {details.videoPoster ? "Reemplazar poster" : "Seleccionar poster"}
-                  </Button>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <label className="secondary-btn cms-hero-image-field__button" htmlFor="videoPoster-upload" aria-disabled={uploadingTarget === "videoPoster"}>
+                      {uploadingTarget === "videoPoster" ? "Subiendo..." : details.videoPoster ? "Sustituir" : "Subir imagen"}
+                    </label>
+                    <input
+                      id="videoPoster-upload"
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      disabled={uploadingTarget === "videoPoster"}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) void uploadImage("videoPoster", file);
+                        event.target.value = "";
+                      }}
+                    />
+                    <Button type="button" variant="outlined" size="sm" onClick={() => setPickerTarget("videoPoster")}>
+                      {details.videoPoster ? "Abrir biblioteca" : "Seleccionar imagen"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -1845,9 +1416,26 @@ export default function ClassEditForm({
                     <div className="grid gap-3 md:grid-cols-[160px_minmax(0,1fr)] md:items-start">
                       <div className="space-y-2">
                         <ImagePreview src={item.image} alt={item.alt || `Imagen ${index + 1}`} aspect="h-24 w-full md:h-[104px]" />
-                        <Button type="button" variant="outlined" size="sm" className="w-full" onClick={() => setPickerTarget(`gallery:${index}`)}>
-                          Sustituir
-                        </Button>
+                        <div className="flex flex-col gap-2">
+                          <label className="secondary-btn cms-hero-image-field__button w-full" htmlFor={`gallery-${index}-upload`} aria-disabled={uploadingTarget === `gallery:${index}`}>
+                            {uploadingTarget === `gallery:${index}` ? "Subiendo..." : "Subir imagen"}
+                          </label>
+                          <input
+                            id={`gallery-${index}-upload`}
+                            type="file"
+                            accept="image/*"
+                            className="sr-only"
+                            disabled={uploadingTarget === `gallery:${index}`}
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              if (file) void uploadImage(`gallery:${index}`, file);
+                              event.target.value = "";
+                            }}
+                          />
+                          <Button type="button" variant="outlined" size="sm" className="w-full" onClick={() => setPickerTarget(`gallery:${index}`)}>
+                            Sustituir
+                          </Button>
+                        </div>
                       </div>
                       <TextField label="Texto alternativo (ALT)" required value={item.alt} error={errors[`gallery-${index}`]} validationKey={`gallery-${index}`} onChange={(event) => updateGalleryImage(index, { alt: event.target.value })} />
                     </div>

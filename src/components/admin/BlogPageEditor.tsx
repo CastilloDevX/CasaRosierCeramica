@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import Link from "@/components/admin/AdminLink";
 import { BlogGrid } from "@/components/blog/BlogGrid";
 import { FeaturedCarousel } from "@/components/blog/FeaturedCarousel";
+import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
+import { PublicHeroContent, PublicHeroTitle } from "@/components/hero/PublicHeroContent";
 import { SocialGallery } from "@/components/home/SocialGallery";
-import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import Switch from "@/components/ui/Switch";
 import type { BlogPost as PublicBlogPost, NavigationItem } from "@/data/types";
 import { getIdeaPromptContent } from "@/features/shared/contextual-sections/ideaPromptContent";
@@ -15,7 +15,6 @@ import type { SiteSettings } from "@/lib/cms/settings";
 import type { BlogPageSettings, BlogPost, CmsHeroSettings, SocialGallery as CmsSocialGallery } from "@/lib/cms/types";
 import AdminActionModal from "./AdminActionModal";
 import BlogTable from "./BlogTable";
-import CmsPublicHeroPreview from "./CmsPublicHeroPreview";
 import SharedHeroEditor from "./SharedHeroEditor";
 
 type TabKey = "hero" | "posts" | "additions" | "preview";
@@ -53,45 +52,6 @@ function cmsPostToPublic(post: BlogPost): PublicBlogPost {
     hero: post.hero,
     contentBlocks: [],
   };
-}
-
-function BlogHeroPreviewContent({ hero }: { hero: CmsHeroSettings }) {
-  const variant = hero.heroVariant ?? "text";
-
-  if (variant === "presentation") {
-    return (
-      <div className="page-hero__presentation">
-        <div className="page-hero__presentation-text" style={{ color: hero.heroPresentationTextColor || "#FFFFFF" }}>
-          <MarkdownContent source={hero.heroPresentationText || hero.heroTitle || "Bitacora ceramica"} className="page-hero__presentation-copy" />
-        </div>
-        {hero.heroPresentationImage ? (
-          <div className="page-hero__presentation-image">
-            <Image src={hero.heroPresentationImage} alt={hero.heroTitle || "Bitacora ceramica"} fill sizes="420px" className="object-contain" unoptimized />
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-
-  if (variant === "image") {
-    return (
-      <div className="page-hero__script-stack">
-        {hero.titleImage ? (
-          <Image src={hero.titleImage} alt={hero.heroTitle || "Bitacora ceramica"} fill sizes="520px" className="page-hero__script-image page-hero__script-image--back" unoptimized />
-        ) : null}
-        {hero.titleImageSecondary ? (
-          <Image src={hero.titleImageSecondary} alt={hero.heroTitle || "Bitacora ceramica"} fill sizes="520px" className="page-hero__script-image page-hero__script-image--front" unoptimized />
-        ) : null}
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h1 className="page-hero__title">{hero.heroTitle || "Bitacora ceramica"}</h1>
-      {hero.heroSubtitle ? <p className="page-hero__eyebrow">{hero.heroSubtitle}</p> : null}
-    </div>
-  );
 }
 
 export default function BlogPageEditor({
@@ -309,6 +269,39 @@ function BlogPagePreview({
     .sort((a, b) => (a.featuredOrder ?? 999) - (b.featuredOrder ?? 999) || +new Date(b.publishedAt) - +new Date(a.publishedAt));
   const categories = Array.from(new Set(visiblePosts.map((post) => post.category)));
   const socialGalleryProps = getBlogSocialGalleryProps(socialGallery);
+  const heroVariant = hero.heroVariant ?? "text";
+  const isImageLikeHero = heroVariant === "image" || heroVariant === "presentation";
+  const heroStyle: Record<string, string> = {
+    "--hero-logo-position-x": hero.heroLogoPositionX || "50%",
+    "--hero-logo-position-y": hero.heroLogoPositionY || "46px",
+    "--hero-logo-width": hero.heroLogoWidth || "118px",
+    "--hero-logo-tablet-position-x": hero.heroLogoTabletPositionX || hero.heroLogoPositionX || "50%",
+    "--hero-logo-tablet-position-y": hero.heroLogoTabletPositionY || hero.heroLogoPositionY || "42px",
+    "--hero-logo-tablet-width": hero.heroLogoTabletWidth || hero.heroLogoWidth || "106px",
+    "--hero-logo-mobile-position-x": hero.heroLogoMobilePositionX || hero.heroLogoPositionX || "50%",
+    "--hero-logo-mobile-position-y": hero.heroLogoMobilePositionY || "34px",
+    "--hero-logo-mobile-width": hero.heroLogoMobileWidth || "92px",
+    "--hero-menu-position-y": hero.heroMenuPositionY || "132px",
+    "--hero-menu-tablet-position-y": hero.heroMenuTabletPositionY || hero.heroMenuPositionY || "118px",
+    "--hero-menu-mobile-position-y": hero.heroMenuMobilePositionY || "96px",
+    "--hero-menu-color": hero.heroMenuColor || (hero.heroMenuTone === "light" ? "#ffffff" : "#3f3933"),
+    "--hero-menu-scale": String(hero.heroMenuScale ?? 1),
+    "--title-image-scale": String(hero.titleImageScale ?? 1),
+    "--title-image-position-x": hero.titleImagePositionX || "50%",
+    "--title-image-position-y": hero.titleImagePositionY || "50%",
+    "--title-image-secondary-scale": String(hero.titleImageSecondaryScale ?? 1),
+    "--title-image-secondary-position-x": hero.titleImageSecondaryPositionX || "50%",
+    "--title-image-secondary-position-y": hero.titleImageSecondaryPositionY || "50%",
+    "--hero-title-position-y": hero.heroTitlePositionY || "50%",
+    "--hero-title-scale": String(hero.heroTitleScale ?? 1),
+    "--presentation-text-position-x": hero.presentationTextPositionX || "8%",
+    "--presentation-text-position-y": hero.presentationTextPositionY || "50%",
+    "--presentation-text-scale": String(hero.presentationTextScale ?? 1),
+    "--presentation-image-position-x": hero.presentationImagePositionX || "70%",
+    "--presentation-image-position-y": hero.presentationImagePositionY || "50%",
+    "--presentation-image-scale": String(hero.presentationImageScale ?? 1),
+  };
+  const menuTone = hero.heroMenuTone ?? (isImageLikeHero ? "light" : "dark");
 
   return (
     <div className="cms-preview-frame">
@@ -317,18 +310,38 @@ function BlogPagePreview({
       </div>
       <div className="cms-public-preview blog-page">
         <div className="cms-public-preview__scale">
-          <CmsPublicHeroPreview
-            hero={hero}
-            navigationItems={navigationItems}
-            menuSettings={menuSettings}
-            height="large"
-            className="blog-hero"
-          >
-            <BlogHeroPreviewContent hero={hero} />
-          </CmsPublicHeroPreview>
+          <div style={heroStyle as React.CSSProperties}>
+            <header
+              className={`header-interno page-hero header-interno--ready header-interno--center header-interno--overlay-warm ${isImageLikeHero ? "header-interno--image-hero" : "header-interno--text-hero"} ${heroVariant === "presentation" ? "header-interno--presentation-hero" : ""} header-interno--menu-${menuTone} header-interno--large blog-hero`}
+            >
+              <NavbarGlobal
+                navigationItems={navigationItems}
+                logoUrl={menuSettings.header_logo_url}
+                scrollMenuBackgroundColor={menuSettings.scroll_menu_background_color}
+                scrollMenuTextColor={menuSettings.scroll_menu_text_color}
+                scrollMenuIconColor={menuSettings.scroll_menu_icon_color}
+                scrollMenuLogoTintEnabled={menuSettings.scroll_menu_logo_tint_enabled}
+                scrollMenuLogoTintColor={menuSettings.scroll_menu_logo_tint_color}
+                heroMenuColor={hero.heroMenuColor}
+                heroMenuScale={hero.heroMenuScale}
+                heroLogoPositionX={hero.heroLogoPositionX}
+                heroLogoPositionY={hero.heroLogoPositionY}
+                heroLogoWidth={hero.heroLogoWidth}
+                heroLogoTabletPositionX={hero.heroLogoTabletPositionX}
+                heroLogoTabletPositionY={hero.heroLogoTabletPositionY}
+                heroLogoTabletWidth={hero.heroLogoTabletWidth}
+                heroLogoMobilePositionX={hero.heroLogoMobilePositionX}
+                heroLogoMobilePositionY={hero.heroLogoMobilePositionY}
+                heroLogoMobileWidth={hero.heroLogoMobileWidth}
+                heroMenuPositionY={hero.heroMenuPositionY}
+                heroMenuTabletPositionY={hero.heroMenuTabletPositionY}
+                heroMenuMobilePositionY={hero.heroMenuMobilePositionY}
+              />
+              {isImageLikeHero ? <PublicHeroContent hero={hero} /> : <PublicHeroTitle hero={hero} title={hero.heroTitle || "Bitacora ceramica"} subtitle={hero.heroSubtitle} />}
+            </header>
+          </div>
           <section className="blog-intro section">
             <div className="container blog-intro__container">
-              <h2>Bitacora ceramica</h2>
               <p>
                 Un espacio para compartir procesos, tecnicas, reflexiones y pequenas historias alrededor de la ceramica contemporanea, el taller y la creacion con las manos.
               </p>

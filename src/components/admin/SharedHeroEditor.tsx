@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState, type CSSProperties, type InputHTMLAttributes } from "react";
-import { MarkdownContent } from "@/components/ui/MarkdownContent";
+import { PublicHeroContent } from "@/components/hero/PublicHeroContent";
 import type { CmsHeroSettings, ClassHeroVariant } from "@/lib/cms/types";
 import ColorPickerField from "./ColorPickerField";
 import MediaSelectField from "./MediaSelectField";
@@ -45,6 +45,20 @@ function deviceKeys(device: DeviceKey) {
       logoY: "heroLogoMobilePositionY",
       logoWidth: "heroLogoMobileWidth",
       menuY: "heroMenuMobilePositionY",
+      titleScale: "titleImageScaleMobile",
+      titlePosX: "titleImagePositionXMobile",
+      titlePosY: "titleImagePositionYMobile",
+      titleSecondaryScale: "titleImageSecondaryScaleMobile",
+      titleSecondaryPosX: "titleImageSecondaryPositionXMobile",
+      titleSecondaryPosY: "titleImageSecondaryPositionYMobile",
+      heroTitleY: "heroTitlePositionYMobile",
+      heroTitleScale: "heroTitleScaleMobile",
+      presentationTextX: "presentationTextPositionXMobile",
+      presentationTextY: "presentationTextPositionYMobile",
+      presentationTextScale: "presentationTextScaleMobile",
+      presentationImageX: "presentationImagePositionXMobile",
+      presentationImageY: "presentationImagePositionYMobile",
+      presentationImageScale: "presentationImageScaleMobile",
     } as const;
   }
   if (device === "tablet") {
@@ -53,6 +67,20 @@ function deviceKeys(device: DeviceKey) {
       logoY: "heroLogoTabletPositionY",
       logoWidth: "heroLogoTabletWidth",
       menuY: "heroMenuTabletPositionY",
+      titleScale: "titleImageScaleTablet",
+      titlePosX: "titleImagePositionXTablet",
+      titlePosY: "titleImagePositionYTablet",
+      titleSecondaryScale: "titleImageSecondaryScaleTablet",
+      titleSecondaryPosX: "titleImageSecondaryPositionXTablet",
+      titleSecondaryPosY: "titleImageSecondaryPositionYTablet",
+      heroTitleY: "heroTitlePositionYTablet",
+      heroTitleScale: "heroTitleScaleTablet",
+      presentationTextX: "presentationTextPositionXTablet",
+      presentationTextY: "presentationTextPositionYTablet",
+      presentationTextScale: "presentationTextScaleTablet",
+      presentationImageX: "presentationImagePositionXTablet",
+      presentationImageY: "presentationImagePositionYTablet",
+      presentationImageScale: "presentationImageScaleTablet",
     } as const;
   }
   return {
@@ -60,12 +88,43 @@ function deviceKeys(device: DeviceKey) {
     logoY: "heroLogoPositionY",
     logoWidth: "heroLogoWidth",
     menuY: "heroMenuPositionY",
+    titleScale: "titleImageScale",
+    titlePosX: "titleImagePositionX",
+    titlePosY: "titleImagePositionY",
+    titleSecondaryScale: "titleImageSecondaryScale",
+    titleSecondaryPosX: "titleImageSecondaryPositionX",
+    titleSecondaryPosY: "titleImageSecondaryPositionY",
+    heroTitleY: "heroTitlePositionY",
+    heroTitleScale: "heroTitleScale",
+    presentationTextX: "presentationTextPositionX",
+    presentationTextY: "presentationTextPositionY",
+    presentationTextScale: "presentationTextScale",
+    presentationImageX: "presentationImagePositionX",
+    presentationImageY: "presentationImagePositionY",
+    presentationImageScale: "presentationImageScale",
   } as const;
 }
 
 function heroText(details: CmsHeroSettings, key: keyof CmsHeroSettings) {
   const value = details[key];
   return typeof value === "string" ? value : "";
+}
+
+function heroScale(details: CmsHeroSettings, key: keyof CmsHeroSettings) {
+  const value = details[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : 1;
+}
+
+function ScaleField({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) {
+  return (
+    <div className="cms-hero-menu-scale">
+      <div className="cms-hero-menu-scale__head">
+        <FieldLabel>{label}</FieldLabel>
+        <span>{value.toFixed(2)}x</span>
+      </div>
+      <input type="range" min="0.5" max="2" step="0.05" value={value} onChange={(event) => onChange(Number(event.target.value))} />
+    </div>
+  );
 }
 
 export default function SharedHeroEditor({
@@ -89,6 +148,12 @@ export default function SharedHeroEditor({
     width: `${preset.width}px`,
     height: `${preset.height}px`,
     maxWidth: "100%",
+    "--presentation-text-position-x": heroText(details, keys.presentationTextX) || "8%",
+    "--presentation-text-position-y": heroText(details, keys.presentationTextY) || "50%",
+    "--presentation-text-scale": heroScale(details, keys.presentationTextScale),
+    "--presentation-image-position-x": heroText(details, keys.presentationImageX) || "70%",
+    "--presentation-image-position-y": heroText(details, keys.presentationImageY) || "50%",
+    "--presentation-image-scale": heroScale(details, keys.presentationImageScale),
     background: isPresentationHero
       ? `url("${details.heroImage}") center / cover no-repeat`
       : isImageHero
@@ -166,13 +231,13 @@ export default function SharedHeroEditor({
               />
               <div className="cms-shared-hero-image-fields__titles">
                 <MediaSelectField
-                  label="Imagen cursiva 1"
+                  label="Imagen superpuesta 1"
                   value={details.titleImage}
                   onChange={(titleImage) => onChange({ titleImage })}
                   previewClassName="cms-shared-hero-title-preview"
                 />
                 <MediaSelectField
-                  label="Imagen cursiva 2"
+                  label="Imagen superpuesta 2"
                   value={details.titleImageSecondary}
                   onChange={(titleImageSecondary) => onChange({ titleImageSecondary })}
                   previewClassName="cms-shared-hero-title-preview"
@@ -264,8 +329,62 @@ export default function SharedHeroEditor({
           </fieldset>
         </div>
 
+        {isImageHero ? (
+          <div className="cms-hero-position-grid">
+            <fieldset className="cms-hero-position-fieldset">
+              <legend>Imagen superpuesta 1</legend>
+              <div className="cms-hero-position-fields">
+                <TextField label="Posición X" value={heroText(details, keys.titlePosX)} onChange={(event) => onChange({ [keys.titlePosX]: event.target.value } as Partial<CmsHeroSettings>)} />
+                <TextField label="Posición Y" value={heroText(details, keys.titlePosY)} onChange={(event) => onChange({ [keys.titlePosY]: event.target.value } as Partial<CmsHeroSettings>)} />
+                <ScaleField label="Escala" value={heroScale(details, keys.titleScale)} onChange={(n) => onChange({ [keys.titleScale]: n } as Partial<CmsHeroSettings>)} />
+              </div>
+            </fieldset>
+            <fieldset className="cms-hero-position-fieldset">
+              <legend>Imagen superpuesta 2</legend>
+              <div className="cms-hero-position-fields">
+                <TextField label="Posición X" value={heroText(details, keys.titleSecondaryPosX)} onChange={(event) => onChange({ [keys.titleSecondaryPosX]: event.target.value } as Partial<CmsHeroSettings>)} />
+                <TextField label="Posición Y" value={heroText(details, keys.titleSecondaryPosY)} onChange={(event) => onChange({ [keys.titleSecondaryPosY]: event.target.value } as Partial<CmsHeroSettings>)} />
+                <ScaleField label="Escala" value={heroScale(details, keys.titleSecondaryScale)} onChange={(n) => onChange({ [keys.titleSecondaryScale]: n } as Partial<CmsHeroSettings>)} />
+              </div>
+            </fieldset>
+          </div>
+        ) : null}
+
+        {!isImageHero && !isPresentationHero ? (
+          <div className="cms-hero-position-grid">
+            <fieldset className="cms-hero-position-fieldset">
+              <legend>Título tipográfico</legend>
+              <div className="cms-hero-position-fields">
+                <TextField label="Posición Y" value={heroText(details, keys.heroTitleY)} onChange={(event) => onChange({ [keys.heroTitleY]: event.target.value } as Partial<CmsHeroSettings>)} />
+                <ScaleField label="Escala del título y subtítulo" value={heroScale(details, keys.heroTitleScale)} onChange={(n) => onChange({ [keys.heroTitleScale]: n } as Partial<CmsHeroSettings>)} />
+              </div>
+            </fieldset>
+          </div>
+        ) : null}
+
+        {isPresentationHero ? (
+          <div className="cms-hero-position-grid">
+            <fieldset className="cms-hero-position-fieldset">
+              <legend>Texto de presentación (izquierda)</legend>
+              <div className="cms-hero-position-fields">
+                <TextField label="Posición X" value={heroText(details, keys.presentationTextX)} onChange={(event) => onChange({ [keys.presentationTextX]: event.target.value } as Partial<CmsHeroSettings>)} />
+                <TextField label="Posición Y" value={heroText(details, keys.presentationTextY)} onChange={(event) => onChange({ [keys.presentationTextY]: event.target.value } as Partial<CmsHeroSettings>)} />
+                <ScaleField label="Escala" value={heroScale(details, keys.presentationTextScale)} onChange={(n) => onChange({ [keys.presentationTextScale]: n } as Partial<CmsHeroSettings>)} />
+              </div>
+            </fieldset>
+            <fieldset className="cms-hero-position-fieldset">
+              <legend>Imagen lateral (derecha)</legend>
+              <div className="cms-hero-position-fields">
+                <TextField label="Posición X" value={heroText(details, keys.presentationImageX)} onChange={(event) => onChange({ [keys.presentationImageX]: event.target.value } as Partial<CmsHeroSettings>)} />
+                <TextField label="Posición Y" value={heroText(details, keys.presentationImageY)} onChange={(event) => onChange({ [keys.presentationImageY]: event.target.value } as Partial<CmsHeroSettings>)} />
+                <ScaleField label="Escala" value={heroScale(details, keys.presentationImageScale)} onChange={(n) => onChange({ [keys.presentationImageScale]: n } as Partial<CmsHeroSettings>)} />
+              </div>
+            </fieldset>
+          </div>
+        ) : null}
+
         <div className="cms-hero-position-preview" aria-label="Vista de referencia del hero">
-          <div className="relative mx-auto overflow-hidden rounded-xl border border-outline-variant shadow-sm" style={frameStyle}>
+          <div className={`relative mx-auto overflow-hidden rounded-xl border border-outline-variant shadow-sm ${isPresentationHero ? "header-interno--presentation-hero" : ""}`} style={frameStyle}>
             {device === "desktop" ? (
               <>
                 <span
@@ -304,29 +423,53 @@ export default function SharedHeroEditor({
                 </span>
               </div>
             )}
-            <div className="absolute inset-x-8 top-1/2 z-10 -translate-y-1/2">
+            <div className="absolute inset-0 z-10">
               {details.heroVariant === "presentation" ? (
-                <div className={`cms-hero-presentation-preview cms-hero-presentation-preview--${device}`}>
-                  <div className="page-hero__presentation-text" style={{ color: details.heroPresentationTextColor || "#FFFFFF" }}>
-                    <MarkdownContent source={details.heroPresentationText || details.heroTitle || titleFallback} className="cms-hero-presentation-preview__copy" />
-                  </div>
-                  {details.heroPresentationImage ? (
-                    <div className="cms-hero-presentation-preview__image">
-                      <Image src={details.heroPresentationImage} alt={details.heroTitle || titleFallback} fill sizes="320px" className="object-contain" unoptimized />
+                <PublicHeroContent
+                  hero={{
+                    ...details,
+                    heroPresentationText: details.heroPresentationText || details.heroTitle || titleFallback,
+                  }}
+                />
+              ) : null}
+              {details.heroVariant === "image" ? (
+                <div className="absolute inset-0">
+                  {details.titleImage ? (
+                    <div className="absolute" style={{
+                      left: heroText(details, keys.titlePosX) || "50%",
+                      top: heroText(details, keys.titlePosY) || "50%",
+                      transform: `translate(-50%, -50%) scale(${heroScale(details, keys.titleScale)})`,
+                      transformOrigin: "center center",
+                      width: "50%",
+                      height: "30%",
+                    }}>
+                      <Image src={details.titleImage} alt="" fill sizes="700px" className="object-contain opacity-80" unoptimized />
+                    </div>
+                  ) : null}
+                  {details.titleImageSecondary ? (
+                    <div className="absolute" style={{
+                      left: heroText(details, keys.titleSecondaryPosX) || "50%",
+                      top: heroText(details, keys.titleSecondaryPosY) || "50%",
+                      transform: `translate(-50%, -50%) scale(${heroScale(details, keys.titleSecondaryScale)})`,
+                      transformOrigin: "center center",
+                      width: "50%",
+                      height: "30%",
+                    }}>
+                      <Image src={details.titleImageSecondary} alt="" fill sizes="700px" className="object-contain" unoptimized />
                     </div>
                   ) : null}
                 </div>
-              ) : details.heroVariant === "image" ? (
-                <div className="relative mx-auto aspect-[3.35/1] w-[min(82%,700px)]">
-                  {details.titleImage ? <Image src={details.titleImage} alt="" fill sizes="700px" className="object-contain opacity-80" unoptimized /> : null}
-                  {details.titleImageSecondary ? <Image src={details.titleImageSecondary} alt="" fill sizes="700px" className="object-contain" unoptimized /> : null}
-                </div>
-              ) : (
-                <div className="text-center">
+              ) : null}
+              {details.heroVariant === "text" ? (
+                <div className="absolute w-full text-center" style={{
+                  top: heroText(details, keys.heroTitleY) || "50%",
+                  transform: `translateY(-50%) scale(${heroScale(details, keys.heroTitleScale)})`,
+                  transformOrigin: "center center",
+                }}>
                   <h3 className="font-serif text-[clamp(30px,4vw,54px)] uppercase leading-none text-[#5b554f]">{details.heroTitle || titleFallback}</h3>
                   <p className="mt-4 text-label-md uppercase text-[#a99b90]">{details.heroSubtitle || subtitleFallback}</p>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

@@ -113,6 +113,31 @@ function cloneChildren(children: EditableMenuChild[]) {
   return children.map((child) => ({ ...child }));
 }
 
+function mergeChildrenWithSavedOrder(available: EditableMenuChild[], saved: EditableMenuChild[] = []) {
+  const availableByUrl = new Map(available.map((child) => [child.url, child]));
+  const usedUrls = new Set<string>();
+  const merged: EditableMenuChild[] = [];
+
+  saved
+    .slice()
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .forEach((child) => {
+      const availableChild = availableByUrl.get(child.url);
+      if (availableChild) usedUrls.add(child.url);
+      merged.push({
+        ...(availableChild ?? child),
+        ...child,
+        key: child.key,
+      });
+    });
+
+  available.forEach((child) => {
+    if (!usedUrls.has(child.url)) merged.push(child);
+  });
+
+  return merged.map((child, index) => ({ ...child, sort_order: index }));
+}
+
 function editableChildFromNavigation(item: NavigationItem, sortOrder: number): EditableMenuChild {
   return {
     key: `available-${item.href}-${sortOrder}`,
@@ -216,9 +241,9 @@ function buildEditableMenu(menu: Menu | null, availableNavigationItems: Navigati
       ...defaultPoint,
       ...(savedPoint ?? {}),
       children: DYNAMIC_MENU_KEYS.has(defaultPoint.key)
-        ? cloneChildren(availableChildren.get(defaultPoint.key) ?? [])
+        ? mergeChildrenWithSavedOrder(availableChildren.get(defaultPoint.key) ?? [], savedPoint?.children)
         : savedPoint?.children?.length
-          ? savedPoint.children
+          ? savedPoint.children.map((child, index) => ({ ...child, sort_order: index }))
           : defaultPoint.children,
     };
   });
@@ -326,6 +351,22 @@ export default function PublicMenuEditor({
     }));
   }
 
+  function moveChild(parentKey: string, childKey: string, direction: -1 | 1) {
+    setItems((current) => current.map((item) => {
+      if (item.key !== parentKey) return item;
+      const currentIndex = item.children.findIndex((child) => child.key === childKey);
+      const nextIndex = currentIndex + direction;
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= item.children.length) return item;
+      const children = [...item.children];
+      const [moved] = children.splice(currentIndex, 1);
+      children.splice(nextIndex, 0, moved);
+      return {
+        ...item,
+        children: children.map((child, index) => ({ ...child, sort_order: index })),
+      };
+    }));
+  }
+
   async function handleSave() {
     if (!initialMenu?.id) {
       setError("No hay un menú principal activo para guardar.");
@@ -354,9 +395,7 @@ export default function PublicMenuEditor({
           items: items.map((item, index) => ({
             id: item.id,
             ...payloadFor({ ...item, sort_order: index }, null),
-            children: DYNAMIC_MENU_KEYS.has(item.key)
-              ? []
-              : item.children.map((child, childIndex) => ({
+            children: item.children.map((child, childIndex) => ({
                 id: child.id,
                 ...payloadFor({ ...child, sort_order: childIndex }, item.id ?? null),
               })),
@@ -465,7 +504,7 @@ export default function PublicMenuEditor({
                     </label>
                   </div>
 
-                  {item.children.map((child) => (
+                  {item.children.map((child, childIndex) => (
                     <div className="public-menu-simple__row public-menu-simple__row--child" role="row" key={child.key}>
                       <label className="public-menu-simple__field public-menu-simple__field--label">
                         <span>Subelemento</span>
@@ -483,6 +522,26 @@ export default function PublicMenuEditor({
                           aria-label={`URL de ${child.label || "subelemento del menú"}`}
                         />
                       </label>
+                      <div className="public-menu-simple__child-actions" aria-label={`Orden de ${child.label || "subelemento"}`}>
+                        <button
+                          type="button"
+                          className="secondary-btn icon-btn"
+                          disabled={childIndex === 0}
+                          aria-label={`Subir ${child.label || "subelemento"}`}
+                          onClick={() => moveChild(item.key, child.key, -1)}
+                        >
+                          <span className="material-symbols-outlined" aria-hidden="true">arrow_upward</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-btn icon-btn"
+                          disabled={childIndex === item.children.length - 1}
+                          aria-label={`Bajar ${child.label || "subelemento"}`}
+                          onClick={() => moveChild(item.key, child.key, 1)}
+                        >
+                          <span className="material-symbols-outlined" aria-hidden="true">arrow_downward</span>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

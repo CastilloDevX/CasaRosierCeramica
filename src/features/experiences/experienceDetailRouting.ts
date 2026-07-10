@@ -26,6 +26,8 @@ type LegacyOfferingDetails = Partial<ClassOfferingDetails> & {
   ctaHref?: unknown;
   ctaConsultHref?: unknown;
   ctaEnrollHref?: unknown;
+  ctaConsultLabel?: unknown;
+  ctaEnrollLabel?: unknown;
   giftCardTypeLabel?: unknown;
   giftCardTypeOptions?: unknown;
 };
@@ -74,6 +76,14 @@ function ctaConsultHref(details: LegacyOfferingDetails) {
 function ctaEnrollHref(details: LegacyOfferingDetails) {
   if (details.showEnrollCta === false) return "";
   return stringValue(details.ctaEnrollHref) || stringValue(details.ctaHref) || fallbackWhatsappHref(details);
+}
+
+function ctaConsultLabel(details: LegacyOfferingDetails, type: Offering["type"]) {
+  return stringValue(details.ctaConsultLabel) || (type === "gift_card" ? "Comprar" : "Consultar");
+}
+
+function ctaEnrollLabel(details: LegacyOfferingDetails, type: Offering["type"]) {
+  return stringValue(details.ctaEnrollLabel) || (type === "gift_card" ? "Anadir al carrito" : "Inscribirme");
 }
 
 function hasDetailValue(value: unknown): boolean {
@@ -204,6 +214,48 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     heroPresentationText: hero.heroPresentationText,
     heroPresentationTextColor: hero.heroPresentationTextColor,
     heroPresentationImage: hero.heroPresentationImage,
+    titleImageScale: hero.titleImageScale,
+    titleImageScaleTablet: hero.titleImageScaleTablet,
+    titleImageScaleMobile: hero.titleImageScaleMobile,
+    titleImagePositionX: hero.titleImagePositionX,
+    titleImagePositionY: hero.titleImagePositionY,
+    titleImagePositionXTablet: hero.titleImagePositionXTablet,
+    titleImagePositionYTablet: hero.titleImagePositionYTablet,
+    titleImagePositionXMobile: hero.titleImagePositionXMobile,
+    titleImagePositionYMobile: hero.titleImagePositionYMobile,
+    titleImageSecondaryScale: hero.titleImageSecondaryScale,
+    titleImageSecondaryScaleTablet: hero.titleImageSecondaryScaleTablet,
+    titleImageSecondaryScaleMobile: hero.titleImageSecondaryScaleMobile,
+    titleImageSecondaryPositionX: hero.titleImageSecondaryPositionX,
+    titleImageSecondaryPositionY: hero.titleImageSecondaryPositionY,
+    titleImageSecondaryPositionXTablet: hero.titleImageSecondaryPositionXTablet,
+    titleImageSecondaryPositionYTablet: hero.titleImageSecondaryPositionYTablet,
+    titleImageSecondaryPositionXMobile: hero.titleImageSecondaryPositionXMobile,
+    titleImageSecondaryPositionYMobile: hero.titleImageSecondaryPositionYMobile,
+    heroTitlePositionY: hero.heroTitlePositionY,
+    heroTitlePositionYTablet: hero.heroTitlePositionYTablet,
+    heroTitlePositionYMobile: hero.heroTitlePositionYMobile,
+    heroTitleScale: hero.heroTitleScale,
+    heroTitleScaleTablet: hero.heroTitleScaleTablet,
+    heroTitleScaleMobile: hero.heroTitleScaleMobile,
+    presentationTextPositionX: hero.presentationTextPositionX,
+    presentationTextPositionY: hero.presentationTextPositionY,
+    presentationTextPositionXTablet: hero.presentationTextPositionXTablet,
+    presentationTextPositionYTablet: hero.presentationTextPositionYTablet,
+    presentationTextPositionXMobile: hero.presentationTextPositionXMobile,
+    presentationTextPositionYMobile: hero.presentationTextPositionYMobile,
+    presentationTextScale: hero.presentationTextScale,
+    presentationTextScaleTablet: hero.presentationTextScaleTablet,
+    presentationTextScaleMobile: hero.presentationTextScaleMobile,
+    presentationImagePositionX: hero.presentationImagePositionX,
+    presentationImagePositionY: hero.presentationImagePositionY,
+    presentationImagePositionXTablet: hero.presentationImagePositionXTablet,
+    presentationImagePositionYTablet: hero.presentationImagePositionYTablet,
+    presentationImagePositionXMobile: hero.presentationImagePositionXMobile,
+    presentationImagePositionYMobile: hero.presentationImagePositionYMobile,
+    presentationImageScale: hero.presentationImageScale,
+    presentationImageScaleTablet: hero.presentationImageScaleTablet,
+    presentationImageScaleMobile: hero.presentationImageScaleMobile,
     heroTitle: hero.heroTitle || offering.title,
     listingTitle: offering.title,
     listingSubtitle: details.heroSubtitle || "",
@@ -229,6 +281,8 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     ctaHref: consultHref,
     ctaConsultHref: consultHref,
     ctaEnrollHref: enrollHref,
+    ctaConsultLabel: ctaConsultLabel(details, offering.type),
+    ctaEnrollLabel: ctaEnrollLabel(details, offering.type),
     seoTitle: offering.seo_title || `${offering.title} | Casa Rosier`,
     seoDescription: offering.seo_description || offering.excerpt,
     isPublished: offering.status === "published",

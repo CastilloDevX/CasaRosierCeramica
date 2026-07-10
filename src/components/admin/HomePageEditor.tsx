@@ -6,15 +6,18 @@ import { IntroSlider } from "@/components/home/IntroSlider";
 import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
 import { HomeGiftCardSection } from "@/features/home/HomeGiftCardSection";
 import type { ExperienceItem, GiftCardItem, NavigationItem } from "@/data/types";
-import type { HomeIntroSlide, HomePageSettings } from "@/lib/cms/types";
+import type { CmsHeroSettings, HomeIntroSlide, HomePageSettings } from "@/lib/cms/types";
+import { normalizeHeroSettings } from "@/lib/cms/hero-settings";
 import { assetPath } from "@/lib/assets";
 import AdminActionModal from "./AdminActionModal";
 import MediaSelectField from "./MediaSelectField";
+import SharedHeroEditor from "./SharedHeroEditor";
 
-type TabKey = "carousel" | "classes" | "workshops" | "gifts" | "preview";
+type TabKey = "hero" | "carousel" | "classes" | "workshops" | "gifts" | "preview";
 type ModalState = { type: "success" | "error"; title: string; message?: string } | null;
 
 const tabs: Array<{ key: TabKey; label: string }> = [
+  { key: "hero", label: "Hero" },
   { key: "carousel", label: "Carousel destacado" },
   { key: "classes", label: "Clases" },
   { key: "workshops", label: "Workshops" },
@@ -35,6 +38,7 @@ function selectedOnly<T extends { id: string }>(items: readonly T[], selectedIds
 
 function serializeEditorState(input: {
   status: string;
+  hero: CmsHeroSettings;
   introSlides: HomeIntroSlide[];
   classesTitle: string;
   classesSubtitle: string;
@@ -48,6 +52,7 @@ function serializeEditorState(input: {
 }) {
   return JSON.stringify({
     ...input,
+    hero: input.hero,
     introSlides: input.introSlides.map((slide, sortOrder) => ({ ...slide, sortOrder })),
   });
 }
@@ -74,8 +79,12 @@ export default function HomePageEditor({
     scrollMenuLogoTintColor: string;
   };
 }) {
-  const [tab, setTab] = useState<TabKey>("carousel");
+  const [tab, setTab] = useState<TabKey>("hero");
   const [status, setStatus] = useState(page.status);
+  const [hero, setHero] = useState<CmsHeroSettings>(() => normalizeHeroSettings(page.hero, {
+    heroTitle: "Casa Rosier",
+    heroSubtitle: "Cerámica con las manos",
+  }));
   const [introSlides, setIntroSlides] = useState(page.introSlides);
   const [classesTitle, setClassesTitle] = useState(page.classesTitle);
   const [classesSubtitle, setClassesSubtitle] = useState(page.classesSubtitle);
@@ -90,6 +99,7 @@ export default function HomePageEditor({
   const [modal, setModal] = useState<ModalState>(null);
   const currentSnapshot = useMemo(() => serializeEditorState({
     status,
+    hero,
     introSlides,
     classesTitle,
     classesSubtitle,
@@ -100,7 +110,7 @@ export default function HomePageEditor({
     giftTitle,
     giftSubtitle,
     giftFeaturedIds,
-  }), [status, introSlides, classesTitle, classesSubtitle, classesFeaturedIds, workshopsTitle, workshopsSubtitle, workshopsFeaturedIds, giftTitle, giftSubtitle, giftFeaturedIds]);
+  }), [status, hero, introSlides, classesTitle, classesSubtitle, classesFeaturedIds, workshopsTitle, workshopsSubtitle, workshopsFeaturedIds, giftTitle, giftSubtitle, giftFeaturedIds]);
   const [savedSnapshot, setSavedSnapshot] = useState(() => currentSnapshot);
   const isDirty = currentSnapshot !== savedSnapshot;
 
@@ -140,6 +150,7 @@ export default function HomePageEditor({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         status: nextStatus,
+        hero,
         introSlides: introSlides.map((slide, sortOrder) => ({ ...slide, sortOrder })),
         classesTitle,
         classesSubtitle,
@@ -163,6 +174,7 @@ export default function HomePageEditor({
     setStatus(nextStatus);
     setSavedSnapshot(serializeEditorState({
       status: nextStatus,
+      hero,
       introSlides,
       classesTitle,
       classesSubtitle,
@@ -211,6 +223,15 @@ export default function HomePageEditor({
       </nav>
 
       <div className="cms-editor-main">
+        {tab === "hero" ? (
+          <SharedHeroEditor
+            details={hero}
+            titleFallback="Casa Rosier"
+            subtitleFallback="Cerámica con las manos"
+            onChange={(next) => setHero((current) => ({ ...current, ...next }))}
+          />
+        ) : null}
+
         {tab === "carousel" ? (
           <section className="form-block cms-editor-card cms-home-editor-card">
             <div className="cms-editor-card__head">

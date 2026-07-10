@@ -1,16 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import Link from "@/components/admin/AdminLink";
 import { ShopGrid } from "@/components/shop/ShopGrid";
-import { MarkdownContent } from "@/components/ui/MarkdownContent";
+import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
+import { PublicHeroContent, PublicHeroTitle } from "@/components/hero/PublicHeroContent";
 import type { NavigationItem, ShopCategory, ShopItem } from "@/data/types";
 import { normalizeHeroSettings } from "@/lib/cms/hero-settings";
 import type { Product, ProductCategory, ShopPageSettings, CmsHeroSettings } from "@/lib/cms/types";
 import type { SiteSettings } from "@/lib/cms/settings";
 import AdminActionModal from "./AdminActionModal";
-import CmsPublicHeroPreview from "./CmsPublicHeroPreview";
 import ProductsTable from "./ProductsTable";
 import SharedHeroEditor from "./SharedHeroEditor";
 
@@ -22,6 +22,41 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "items", label: "Articulos" },
   { key: "preview", label: "Vista previa" },
 ];
+
+function buildHeroStyle(hero: CmsHeroSettings): Record<string, string> {
+  const isImageLike = hero.heroVariant === "image" || hero.heroVariant === "presentation";
+  return {
+    "--page-hero-image": `url("${hero.heroImage || "/img/social-2.jpg"}")`,
+    "--hero-logo-position-x": hero.heroLogoPositionX || "50%",
+    "--hero-logo-position-y": hero.heroLogoPositionY || "46px",
+    "--hero-logo-width": hero.heroLogoWidth || "118px",
+    "--hero-logo-tablet-position-x": hero.heroLogoTabletPositionX || hero.heroLogoPositionX || "50%",
+    "--hero-logo-tablet-position-y": hero.heroLogoTabletPositionY || hero.heroLogoPositionY || "42px",
+    "--hero-logo-tablet-width": hero.heroLogoTabletWidth || hero.heroLogoWidth || "106px",
+    "--hero-logo-mobile-position-x": hero.heroLogoMobilePositionX || hero.heroLogoPositionX || "50%",
+    "--hero-logo-mobile-position-y": hero.heroLogoMobilePositionY || "34px",
+    "--hero-logo-mobile-width": hero.heroLogoMobileWidth || "92px",
+    "--hero-menu-position-y": hero.heroMenuPositionY || "132px",
+    "--hero-menu-tablet-position-y": hero.heroMenuTabletPositionY || hero.heroMenuPositionY || "118px",
+    "--hero-menu-mobile-position-y": hero.heroMenuMobilePositionY || "96px",
+    "--hero-menu-color": hero.heroMenuColor || (isImageLike ? "#ffffff" : "#3f3933"),
+    "--hero-menu-scale": String(hero.heroMenuScale ?? 1),
+    "--title-image-scale": String(hero.titleImageScale ?? 1),
+    "--title-image-position-x": hero.titleImagePositionX || "50%",
+    "--title-image-position-y": hero.titleImagePositionY || "50%",
+    "--title-image-secondary-scale": String(hero.titleImageSecondaryScale ?? 1),
+    "--title-image-secondary-position-x": hero.titleImageSecondaryPositionX || "50%",
+    "--title-image-secondary-position-y": hero.titleImageSecondaryPositionY || "50%",
+    "--hero-title-position-y": hero.heroTitlePositionY || "50%",
+    "--hero-title-scale": String(hero.heroTitleScale ?? 1),
+    "--presentation-text-position-x": hero.presentationTextPositionX || "8%",
+    "--presentation-text-position-y": hero.presentationTextPositionY || "50%",
+    "--presentation-text-scale": String(hero.presentationTextScale ?? 1),
+    "--presentation-image-position-x": hero.presentationImagePositionX || "70%",
+    "--presentation-image-position-y": hero.presentationImagePositionY || "50%",
+    "--presentation-image-scale": String(hero.presentationImageScale ?? 1),
+  };
+}
 
 export default function ShopPageEditor({
   page,
@@ -154,45 +189,6 @@ export default function ShopPageEditor({
   );
 }
 
-function ShopHeroPreviewContent({ hero }: { hero: CmsHeroSettings }) {
-  const variant = hero.heroVariant ?? "text";
-
-  if (variant === "presentation") {
-    return (
-      <div className="page-hero__presentation">
-        <div className="page-hero__presentation-text" style={{ color: hero.heroPresentationTextColor || "#FFFFFF" }}>
-          <MarkdownContent source={hero.heroPresentationText || hero.heroTitle || "Shop"} className="page-hero__presentation-copy" />
-        </div>
-        {hero.heroPresentationImage ? (
-          <div className="page-hero__presentation-image">
-            <Image src={hero.heroPresentationImage} alt={hero.heroTitle || "Shop"} fill sizes="420px" className="object-contain" unoptimized />
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-
-  if (variant === "image") {
-    return (
-      <div className="page-hero__script-stack">
-        {hero.titleImage ? (
-          <Image src={hero.titleImage} alt={hero.heroTitle || "Shop"} fill sizes="520px" className="page-hero__script-image page-hero__script-image--back" unoptimized />
-        ) : null}
-        {hero.titleImageSecondary ? (
-          <Image src={hero.titleImageSecondary} alt={hero.heroTitle || "Shop"} fill sizes="520px" className="page-hero__script-image page-hero__script-image--front" unoptimized />
-        ) : null}
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <p className="page-hero__eyebrow">{hero.heroSubtitle || "Casa Rosier"}</p>
-      <h1 className="page-hero__title">{hero.heroTitle || "Shop"}</h1>
-    </div>
-  );
-}
-
 function ShopPagePreview({
   hero,
   published,
@@ -207,14 +203,46 @@ function ShopPagePreview({
   menuSettings: SiteSettings["menu"];
 }) {
   const heroVariant = hero.heroVariant ?? "text";
+  const isImageLikeHero = heroVariant === "image" || heroVariant === "presentation";
+  const menuTone = hero.heroMenuTone ?? (isImageLikeHero ? "light" : "dark");
+  const heroStyle = buildHeroStyle(hero);
+  const heightClass = isImageLikeHero ? "header-interno--large" : "header-interno--medium";
+
   return (
     <div className="cms-preview-frame">
       <div className="cms-public-preview__toolbar">Vista previa de escritorio · Publicado</div>
       <div className="cms-public-preview shop-page">
         <div className="cms-public-preview__scale">
-          <CmsPublicHeroPreview hero={hero} navigationItems={navigationItems} menuSettings={menuSettings} height={heroVariant === "image" || heroVariant === "presentation" ? "large" : "medium"}>
-            <ShopHeroPreviewContent hero={hero} />
-          </CmsPublicHeroPreview>
+          <div style={heroStyle as CSSProperties}>
+            <header
+              className={`header-interno page-hero header-interno--ready header-interno--center header-interno--overlay-warm ${isImageLikeHero ? "header-interno--image-hero" : "header-interno--text-hero"} ${heroVariant === "presentation" ? "header-interno--presentation-hero" : ""} header-interno--menu-${menuTone} ${heightClass}`}
+            >
+              <NavbarGlobal
+                navigationItems={navigationItems}
+                logoUrl={menuSettings.header_logo_url}
+                scrollMenuBackgroundColor={menuSettings.scroll_menu_background_color}
+                scrollMenuTextColor={menuSettings.scroll_menu_text_color}
+                scrollMenuIconColor={menuSettings.scroll_menu_icon_color}
+                scrollMenuLogoTintEnabled={menuSettings.scroll_menu_logo_tint_enabled}
+                scrollMenuLogoTintColor={menuSettings.scroll_menu_logo_tint_color}
+                heroMenuColor={hero.heroMenuColor}
+                heroMenuScale={hero.heroMenuScale}
+                heroLogoPositionX={hero.heroLogoPositionX}
+                heroLogoPositionY={hero.heroLogoPositionY}
+                heroLogoWidth={hero.heroLogoWidth}
+                heroLogoTabletPositionX={hero.heroLogoTabletPositionX}
+                heroLogoTabletPositionY={hero.heroLogoTabletPositionY}
+                heroLogoTabletWidth={hero.heroLogoTabletWidth}
+                heroLogoMobilePositionX={hero.heroLogoMobilePositionX}
+                heroLogoMobilePositionY={hero.heroLogoMobilePositionY}
+                heroLogoMobileWidth={hero.heroLogoMobileWidth}
+                heroMenuPositionY={hero.heroMenuPositionY}
+                heroMenuTabletPositionY={hero.heroMenuTabletPositionY}
+                heroMenuMobilePositionY={hero.heroMenuMobilePositionY}
+              />
+              {isImageLikeHero ? <PublicHeroContent hero={hero} /> : <PublicHeroTitle hero={hero} title={hero.heroTitle || "Shop"} subtitle={hero.heroSubtitle} />}
+            </header>
+          </div>
           <ShopGrid published={published} shopCategories={shopCategories} />
         </div>
       </div>

@@ -8,6 +8,15 @@
   min-height: var(--header-interno-band-height);
 }
 
+.shop-page .header-interno--text-hero {
+  min-height: clamp(420px, 48vw, 560px);
+  --header-interno-band-height: clamp(420px, 48vw, 560px);
+}
+
+.shop-page:has(.header-interno--text-hero) .shop-listing {
+  padding-top: clamp(28px, 4vw, 56px);
+}
+
 .shop-page .page-hero__inner[aria-hidden="true"],
 .shop-page .header-interno__inner[aria-hidden="true"] {
   display: none;
@@ -66,6 +75,77 @@
   background: rgba(214, 152, 104, 0.08);
   border-color: #d07f45;
   color: #b86d38;
+}
+
+.shop-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 48px;
+}
+
+.shop-pagination__item,
+.shop-pagination__ellipsis {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font: 600 14px/1 var(--font-menu);
+  letter-spacing: 0.04em;
+}
+
+.shop-pagination__item {
+  border: 1px solid rgba(147, 124, 97, 0.24);
+  background: transparent;
+  color: #6a625a;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.shop-pagination__item:hover,
+.shop-pagination__item:focus-visible {
+  background: rgba(214, 152, 104, 0.08);
+  border-color: #d07f45;
+  color: #b86d38;
+  outline: none;
+}
+
+.shop-pagination__item.is-active {
+  background: #b86d38;
+  border-color: #b86d38;
+  color: #fff;
+}
+
+.shop-pagination__item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.shop-pagination__item:disabled:hover {
+  background: transparent;
+  border-color: rgba(147, 124, 97, 0.24);
+  color: #6a625a;
+}
+
+.shop-pagination__item.is-active:disabled {
+  background: #b86d38;
+  border-color: #b86d38;
+  color: #fff;
+  opacity: 1;
+}
+
+.shop-pagination__arrow .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.shop-pagination__ellipsis {
+  color: #9a928a;
+  user-select: none;
 }
 
 .shop-grid {
@@ -392,6 +472,15 @@
 }
 
 @media (max-width: 640px) {
+  .shop-page .header-interno--text-hero {
+    min-height: 340px;
+    --header-interno-band-height: 340px;
+  }
+
+  .shop-page:has(.header-interno--text-hero) .shop-listing {
+    padding-top: 24px;
+  }
+
   .shop-listing__intro {
     font-size: 16px;
   }

@@ -17,6 +17,8 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
   const isGiftCard = item.kind === "gift-card";
   const consultHref = item.ctaConsultHref || item.ctaHref;
   const enrollHref = item.ctaEnrollHref || "";
+  const consultLabel = item.ctaConsultLabel || (isGiftCard ? "Comprar" : "Consultar");
+  const enrollLabel = item.ctaEnrollLabel || (isGiftCard ? "Anadir al carrito" : "Inscribirme");
   const [added, setAdded] = useState(false);
   const defaultPrice = useMemo(
     () =>
@@ -148,7 +150,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    {isGiftCard ? "Comprar" : "Consultar"}
+                    {consultLabel}
                   </a>
                 ) : null}
               </section>
@@ -173,7 +175,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                       type="button"
                       onClick={addGiftCard}
                     >
-                      Anadir al carrito
+                      {enrollLabel}
                     </button>
                     {added && (
                       <div className="gift-card-cart-feedback">
@@ -205,7 +207,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Inscribirme
+                    {enrollLabel}
                   </a>
                 ) : null}
               </section>

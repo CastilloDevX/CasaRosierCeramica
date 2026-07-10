@@ -94,6 +94,51 @@ export interface CmsHeroSettings {
   heroImage: string;
   titleImage: string;
   titleImageSecondary: string;
+  /* Hero con imagen: escala + posición X/Y de cada imagen superpuesta */
+  titleImageScale: number;
+  titleImageScaleTablet: number;
+  titleImageScaleMobile: number;
+  titleImagePositionX: string;
+  titleImagePositionY: string;
+  titleImagePositionXTablet: string;
+  titleImagePositionYTablet: string;
+  titleImagePositionXMobile: string;
+  titleImagePositionYMobile: string;
+  titleImageSecondaryScale: number;
+  titleImageSecondaryScaleTablet: number;
+  titleImageSecondaryScaleMobile: number;
+  titleImageSecondaryPositionX: string;
+  titleImageSecondaryPositionY: string;
+  titleImageSecondaryPositionXTablet: string;
+  titleImageSecondaryPositionYTablet: string;
+  titleImageSecondaryPositionXMobile: string;
+  titleImageSecondaryPositionYMobile: string;
+  /* Hero tipográfico: posición Y + escala del título */
+  heroTitlePositionY: string;
+  heroTitlePositionYTablet: string;
+  heroTitlePositionYMobile: string;
+  heroTitleScale: number;
+  heroTitleScaleTablet: number;
+  heroTitleScaleMobile: number;
+  /* Hero con presentación: posición X/Y + escala del texto y la imagen */
+  presentationTextPositionX: string;
+  presentationTextPositionY: string;
+  presentationTextPositionXTablet: string;
+  presentationTextPositionYTablet: string;
+  presentationTextPositionXMobile: string;
+  presentationTextPositionYMobile: string;
+  presentationTextScale: number;
+  presentationTextScaleTablet: number;
+  presentationTextScaleMobile: number;
+  presentationImagePositionX: string;
+  presentationImagePositionY: string;
+  presentationImagePositionXTablet: string;
+  presentationImagePositionYTablet: string;
+  presentationImagePositionXMobile: string;
+  presentationImagePositionYMobile: string;
+  presentationImageScale: number;
+  presentationImageScaleTablet: number;
+  presentationImageScaleMobile: number;
 }
 
 export interface ClassOfferingDetails {
@@ -121,6 +166,8 @@ export interface ClassOfferingDetails {
   ctaHref: string;
   ctaConsultHref: string;
   ctaEnrollHref: string;
+  ctaConsultLabel: string;
+  ctaEnrollLabel: string;
   showConsultCta: boolean;
   showEnrollCta: boolean;
   highlightDescription: string;
@@ -135,6 +182,48 @@ export interface ClassOfferingDetails {
   heroImage: string;
   titleImage: string;
   titleImageSecondary: string;
+  titleImageScale: number;
+  titleImageScaleTablet: number;
+  titleImageScaleMobile: number;
+  titleImagePositionX: string;
+  titleImagePositionY: string;
+  titleImagePositionXTablet: string;
+  titleImagePositionYTablet: string;
+  titleImagePositionXMobile: string;
+  titleImagePositionYMobile: string;
+  titleImageSecondaryScale: number;
+  titleImageSecondaryScaleTablet: number;
+  titleImageSecondaryScaleMobile: number;
+  titleImageSecondaryPositionX: string;
+  titleImageSecondaryPositionY: string;
+  titleImageSecondaryPositionXTablet: string;
+  titleImageSecondaryPositionYTablet: string;
+  titleImageSecondaryPositionXMobile: string;
+  titleImageSecondaryPositionYMobile: string;
+  heroTitlePositionY: string;
+  heroTitlePositionYTablet: string;
+  heroTitlePositionYMobile: string;
+  heroTitleScale: number;
+  heroTitleScaleTablet: number;
+  heroTitleScaleMobile: number;
+  presentationTextPositionX: string;
+  presentationTextPositionY: string;
+  presentationTextPositionXTablet: string;
+  presentationTextPositionYTablet: string;
+  presentationTextPositionXMobile: string;
+  presentationTextPositionYMobile: string;
+  presentationTextScale: number;
+  presentationTextScaleTablet: number;
+  presentationTextScaleMobile: number;
+  presentationImagePositionX: string;
+  presentationImagePositionY: string;
+  presentationImagePositionXTablet: string;
+  presentationImagePositionYTablet: string;
+  presentationImagePositionXMobile: string;
+  presentationImagePositionYMobile: string;
+  presentationImageScale: number;
+  presentationImageScaleTablet: number;
+  presentationImageScaleMobile: number;
   galleryImages: OfferingGalleryImage[];
   videoUrl: string;
   videoPoster: string;
@@ -860,6 +949,7 @@ export interface HomeIntroSlide {
 export interface HomePageSettings {
   id: string;
   status: "draft" | "published";
+  hero: CmsHeroSettings;
   introSlides: HomeIntroSlide[];
   classesTitle: string;
   classesSubtitle: string;

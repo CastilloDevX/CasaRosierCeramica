@@ -34,6 +34,7 @@ export async function StudioPage() {
       header={
         <HeaderInterno
           variant={hero.heroVariant}
+          hero={hero}
           image={hero.heroImage}
           height="large"
           overlayTitle
@@ -52,34 +53,49 @@ export async function StudioPage() {
           heroMenuPositionY={hero.heroMenuPositionY}
           heroMenuTabletPositionY={hero.heroMenuTabletPositionY}
           heroMenuMobilePositionY={hero.heroMenuMobilePositionY}
-        >
-          {hero.heroVariant === "presentation" ? (
-            <div className="page-hero__presentation">
-              <div className="page-hero__presentation-text" style={{ color: hero.heroPresentationTextColor || "#FFFFFF" }}>
-                <MarkdownContent source={hero.heroPresentationText || hero.heroTitle || "El Estudio"} className="page-hero__presentation-copy" />
-              </div>
-              {hero.heroPresentationImage ? (
-                <div className="page-hero__presentation-image">
-                  <Image src={hero.heroPresentationImage} alt={hero.heroTitle || "El Estudio"} fill sizes="420px" className="object-contain" unoptimized />
-                </div>
-              ) : null}
-            </div>
-          ) : hero.heroVariant === "image" ? (
-            <div className="page-hero__script-stack">
-              {hero.titleImage ? (
-                <Image src={hero.titleImage} alt={hero.heroTitle || "El Estudio"} fill sizes="520px" className="page-hero__script-image page-hero__script-image--back" unoptimized />
-              ) : null}
-              {hero.titleImageSecondary ? (
-                <Image src={hero.titleImageSecondary} alt={hero.heroTitle || "El Estudio"} fill sizes="520px" className="page-hero__script-image page-hero__script-image--front" unoptimized />
-              ) : null}
-            </div>
-          ) : (
-            <div>
-              <h1 className="page-hero__title">{hero.heroTitle || "El Estudio"}</h1>
-              {hero.heroSubtitle ? <p className="page-hero__eyebrow">{hero.heroSubtitle}</p> : null}
-            </div>
-          )}
-        </HeaderInterno>
+          heroTitleImageScale={hero.titleImageScale}
+          heroTitleImageScaleTablet={hero.titleImageScaleTablet}
+          heroTitleImageScaleMobile={hero.titleImageScaleMobile}
+          heroTitleImagePositionX={hero.titleImagePositionX}
+          heroTitleImagePositionY={hero.titleImagePositionY}
+          heroTitleImagePositionXTablet={hero.titleImagePositionXTablet}
+          heroTitleImagePositionYTablet={hero.titleImagePositionYTablet}
+          heroTitleImagePositionXMobile={hero.titleImagePositionXMobile}
+          heroTitleImagePositionYMobile={hero.titleImagePositionYMobile}
+          heroTitleImageSecondaryScale={hero.titleImageSecondaryScale}
+          heroTitleImageSecondaryScaleTablet={hero.titleImageSecondaryScaleTablet}
+          heroTitleImageSecondaryScaleMobile={hero.titleImageSecondaryScaleMobile}
+          heroTitleImageSecondaryPositionX={hero.titleImageSecondaryPositionX}
+          heroTitleImageSecondaryPositionY={hero.titleImageSecondaryPositionY}
+          heroTitleImageSecondaryPositionXTablet={hero.titleImageSecondaryPositionXTablet}
+          heroTitleImageSecondaryPositionYTablet={hero.titleImageSecondaryPositionYTablet}
+          heroTitleImageSecondaryPositionXMobile={hero.titleImageSecondaryPositionXMobile}
+          heroTitleImageSecondaryPositionYMobile={hero.titleImageSecondaryPositionYMobile}
+          heroTitlePositionY={hero.heroTitlePositionY}
+          heroTitlePositionYTablet={hero.heroTitlePositionYTablet}
+          heroTitlePositionYMobile={hero.heroTitlePositionYMobile}
+          heroTitleScale={hero.heroTitleScale}
+          heroTitleScaleTablet={hero.heroTitleScaleTablet}
+          heroTitleScaleMobile={hero.heroTitleScaleMobile}
+          presentationTextPositionX={hero.presentationTextPositionX}
+          presentationTextPositionY={hero.presentationTextPositionY}
+          presentationTextPositionXTablet={hero.presentationTextPositionXTablet}
+          presentationTextPositionYTablet={hero.presentationTextPositionYTablet}
+          presentationTextPositionXMobile={hero.presentationTextPositionXMobile}
+          presentationTextPositionYMobile={hero.presentationTextPositionYMobile}
+          presentationTextScale={hero.presentationTextScale}
+          presentationTextScaleTablet={hero.presentationTextScaleTablet}
+          presentationTextScaleMobile={hero.presentationTextScaleMobile}
+          presentationImagePositionX={hero.presentationImagePositionX}
+          presentationImagePositionY={hero.presentationImagePositionY}
+          presentationImagePositionXTablet={hero.presentationImagePositionXTablet}
+          presentationImagePositionYTablet={hero.presentationImagePositionYTablet}
+          presentationImagePositionXMobile={hero.presentationImagePositionXMobile}
+          presentationImagePositionYMobile={hero.presentationImagePositionYMobile}
+          presentationImageScale={hero.presentationImageScale}
+          presentationImageScaleTablet={hero.presentationImageScaleTablet}
+          presentationImageScaleMobile={hero.presentationImageScaleMobile}
+        />
       }
     >
       <section

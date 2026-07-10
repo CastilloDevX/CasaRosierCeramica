@@ -183,7 +183,7 @@ export default function FooterForm({
         <div className="cms-editor-card__head">
           <div>
             <p className="auth-kicker">Colores</p>
-            <h3>Botones</h3>
+            <h3>Color de Botón de Formulario y Botones de Redes Sociales</h3>
           </div>
         </div>
         <div className="cms-footer-color-grid">

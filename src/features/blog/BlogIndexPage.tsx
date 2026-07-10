@@ -65,6 +65,7 @@ export async function BlogIndexPage() {
           className="blog-hero"
           image={hero.heroImage || "/img/hero-bg.jpg"}
           variant={heroVariant}
+          hero={hero}
           height="large"
           overlayTitle
           heroMenuTone={hero.heroMenuTone}
@@ -82,14 +83,53 @@ export async function BlogIndexPage() {
           heroMenuPositionY={hero.heroMenuPositionY}
           heroMenuTabletPositionY={hero.heroMenuTabletPositionY}
           heroMenuMobilePositionY={hero.heroMenuMobilePositionY}
-        >
-          <BlogHeroContent hero={hero} />
-        </HeaderInterno>
+          heroTitleImageScale={hero.titleImageScale}
+          heroTitleImageScaleTablet={hero.titleImageScaleTablet}
+          heroTitleImageScaleMobile={hero.titleImageScaleMobile}
+          heroTitleImagePositionX={hero.titleImagePositionX}
+          heroTitleImagePositionY={hero.titleImagePositionY}
+          heroTitleImagePositionXTablet={hero.titleImagePositionXTablet}
+          heroTitleImagePositionYTablet={hero.titleImagePositionYTablet}
+          heroTitleImagePositionXMobile={hero.titleImagePositionXMobile}
+          heroTitleImagePositionYMobile={hero.titleImagePositionYMobile}
+          heroTitleImageSecondaryScale={hero.titleImageSecondaryScale}
+          heroTitleImageSecondaryScaleTablet={hero.titleImageSecondaryScaleTablet}
+          heroTitleImageSecondaryScaleMobile={hero.titleImageSecondaryScaleMobile}
+          heroTitleImageSecondaryPositionX={hero.titleImageSecondaryPositionX}
+          heroTitleImageSecondaryPositionY={hero.titleImageSecondaryPositionY}
+          heroTitleImageSecondaryPositionXTablet={hero.titleImageSecondaryPositionXTablet}
+          heroTitleImageSecondaryPositionYTablet={hero.titleImageSecondaryPositionYTablet}
+          heroTitleImageSecondaryPositionXMobile={hero.titleImageSecondaryPositionXMobile}
+          heroTitleImageSecondaryPositionYMobile={hero.titleImageSecondaryPositionYMobile}
+          heroTitlePositionY={hero.heroTitlePositionY}
+          heroTitlePositionYTablet={hero.heroTitlePositionYTablet}
+          heroTitlePositionYMobile={hero.heroTitlePositionYMobile}
+          heroTitleScale={hero.heroTitleScale}
+          heroTitleScaleTablet={hero.heroTitleScaleTablet}
+          heroTitleScaleMobile={hero.heroTitleScaleMobile}
+          presentationTextPositionX={hero.presentationTextPositionX}
+          presentationTextPositionY={hero.presentationTextPositionY}
+          presentationTextPositionXTablet={hero.presentationTextPositionXTablet}
+          presentationTextPositionYTablet={hero.presentationTextPositionYTablet}
+          presentationTextPositionXMobile={hero.presentationTextPositionXMobile}
+          presentationTextPositionYMobile={hero.presentationTextPositionYMobile}
+          presentationTextScale={hero.presentationTextScale}
+          presentationTextScaleTablet={hero.presentationTextScaleTablet}
+          presentationTextScaleMobile={hero.presentationTextScaleMobile}
+          presentationImagePositionX={hero.presentationImagePositionX}
+          presentationImagePositionY={hero.presentationImagePositionY}
+          presentationImagePositionXTablet={hero.presentationImagePositionXTablet}
+          presentationImagePositionYTablet={hero.presentationImagePositionYTablet}
+          presentationImagePositionXMobile={hero.presentationImagePositionXMobile}
+          presentationImagePositionYMobile={hero.presentationImagePositionYMobile}
+          presentationImageScale={hero.presentationImageScale}
+          presentationImageScaleTablet={hero.presentationImageScaleTablet}
+          presentationImageScaleMobile={hero.presentationImageScaleMobile}
+        />
       )}
     >
       <section className="blog-intro section">
         <div className="container blog-intro__container">
-          <h2>Bitacora ceramica</h2>
           <p>
             Un espacio para compartir procesos, tecnicas, reflexiones y
             pequenas historias alrededor de la ceramica contemporanea, el taller
