@@ -1,10 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createMediaAsset } from "@/lib/cms/media";
+import { optimizeImageForUpload } from "@/lib/cms/image-optimization";
 
 import { isMediaFolder } from "@/lib/cms/types";
 import { requireAdminApi } from "@/lib/auth/supabase-auth";
 import { randomUUID } from "crypto";
+
+export const runtime = "nodejs";
 
 const STORAGE_BUCKET = "media";
 const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif", "svg", "pdf"]);
@@ -44,16 +47,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "El archivo supera el límite de 10 MB." }, { status: 400 });
   }
 
-  const safeName = `${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
-  const storagePath = `${folder}/${safeName}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
   try {
+    const optimizedFile = await optimizeImageForUpload({
+      buffer,
+      extension: ext,
+      mimeType: file.type,
+    });
+    const safeName = `${Date.now()}-${randomUUID().slice(0, 8)}.${optimizedFile.extension}`;
+    const storagePath = `${folder}/${safeName}`;
     const supabase = createAdminClient();
     const { error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
-      .upload(storagePath, buffer, {
-        contentType: file.type,
+      .upload(storagePath, optimizedFile.buffer, {
+        contentType: optimizedFile.mimeType,
         upsert: false,
       });
     if (uploadError) {
@@ -69,18 +77,27 @@ export async function POST(request: NextRequest) {
       file_name: storagePath,
       original_name: file.name,
       file_url: fileUrl,
-      file_type: ext,
-      mime_type: file.type,
-      size: file.size,
+      file_type: optimizedFile.extension,
+      mime_type: optimizedFile.mimeType,
+      size: optimizedFile.size,
       alt_text: altText,
       title: title || file.name,
       description: "",
       folder,
-      tags: [],
+      tags: optimizedFile.optimized ? ["optimized"] : [],
       status: "active",
     });
 
-    return NextResponse.json({ asset });
+    return NextResponse.json({
+      asset,
+      optimization: {
+        optimized: optimizedFile.optimized,
+        originalSize: optimizedFile.originalSize,
+        finalSize: optimizedFile.size,
+        savedBytes: optimizedFile.savedBytes,
+        reductionPercent: optimizedFile.reductionPercent,
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "No se pudo subir el archivo a Supabase Storage.";
     return NextResponse.json({ error: message }, { status: 500 });
