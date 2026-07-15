@@ -8,6 +8,9 @@ export const metadata: Metadata = {
     "Listado de clases y workshops de Casa Rosier Ceramica en Barcelona."
 };
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function ClassesPage() {
   const config = await getExperienceCollectionConfig("classes");
   return <ExperienceCollectionPage config={config} />;

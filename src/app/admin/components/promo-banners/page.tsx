@@ -10,9 +10,10 @@ const filterLabels: Record<string, string> = {
   published: "Publicado",
 };
 
-export default async function Page({ searchParams }: { searchParams?: { status?: string } }) {
+export default async function Page({ searchParams }: { searchParams?: Promise<{ status?: string }> }) {
   const items = await getPromoBanners();
-  const rawStatus = searchParams?.status;
+  const params = await searchParams;
+  const rawStatus = params?.status;
   const status = rawStatus === "draft" || rawStatus === "published" ? rawStatus : "all";
   const visibleItems = items.filter((item) => !item.deleted_at && item.status !== "deleted");
   const filtered = visibleItems.filter((item) => status === "all" || item.status === status);

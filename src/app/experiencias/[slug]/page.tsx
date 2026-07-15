@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ExperienceDetailPage } from "@/features/experiences/ExperienceDetailPage";
 import {
   generateExperienceMetadata,
+  findLegacyExperienceSlug,
   getExperienceRouteItem
 } from "@/features/experiences/experienceDetailRouting";
 
@@ -22,7 +23,12 @@ export default async function ExperienciaDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const item = await getExperienceRouteItem(params, "private-booking");
-  if (!item) notFound();
+  const resolvedParams = await params;
+  const item = await getExperienceRouteItem(Promise.resolve(resolvedParams), "private-booking");
+  if (!item) {
+    const legacySlug = await findLegacyExperienceSlug(resolvedParams.slug, "private-booking");
+    if (legacySlug) redirect(`/experiencias/${legacySlug}`);
+    notFound();
+  }
   return <ExperienceDetailPage item={item} />;
 }

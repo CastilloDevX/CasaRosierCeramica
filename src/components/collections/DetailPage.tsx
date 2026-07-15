@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Accordion } from "@/components/collections/Accordion";
 import { Gallery } from "@/components/collections/Gallery";
@@ -18,7 +17,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
   const consultHref = item.ctaConsultHref || item.ctaHref;
   const enrollHref = item.ctaEnrollHref || "";
   const consultLabel = item.ctaConsultLabel || (isGiftCard ? "Comprar" : "Consultar");
-  const enrollLabel = item.ctaEnrollLabel || (isGiftCard ? "Anadir al carrito" : "Inscribirme");
+  const enrollLabel = item.ctaEnrollLabel || (isGiftCard ? "Añadir al carrito" : "Inscribirme");
   const [added, setAdded] = useState(false);
   const defaultPrice = useMemo(
     () =>
@@ -75,8 +74,8 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                 <h3>Metodos de pago</h3>
                 <p>Puedes pagar con cualquiera de estos medios</p>
                 <ul>
-                  {item.paymentMethods.map((method) => (
-                    <li key={method}>{method}</li>
+                  {item.paymentMethods.map((method, index) => (
+                    <li key={`${method}-${index}`}>{method}</li>
                   ))}
                 </ul>
               </div>
@@ -104,10 +103,10 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                 <div className="class-detail__fact-block">
                   <h2>Precio</h2>
                   <div className="class-detail__price-list">
-                    {item.priceOptions.map((option) => (
+                    {item.priceOptions.map((option, index) => (
                       <div
                         className="class-detail__price-row"
-                        key={option.label}
+                        key={`${option.label}-${index}`}
                       >
                         <span>{option.label}</span>
                         <strong>{option.price}</strong>
@@ -120,14 +119,14 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                   <p className="class-detail__duration">{item.duration}</p>
                   {item.schedule.length ? (
                     <div className="class-detail__schedule">
-                      {item.schedule.map((schedule) => (
+                      {item.schedule.map((schedule, index) => (
                         <div
                           className="class-detail__schedule-item"
-                          key={schedule.day}
+                          key={`${schedule.day}-${index}`}
                         >
                           <h4>{schedule.day}</h4>
-                          {schedule.slots.map((slot) => (
-                            <p key={slot}>{slot}</p>
+                          {schedule.slots.map((slot, slotIndex) => (
+                            <p key={`${slot}-${slotIndex}`}>{slot}</p>
                           ))}
                         </div>
                       ))}
@@ -139,8 +138,8 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
               <section className="class-detail__includes">
                 <h2>Incluye</h2>
                 <ul>
-                  {item.included.map((included) => (
-                    <li key={included}>{renderInlineMarkdown(includedText(included))}</li>
+                  {item.included.map((included, index) => (
+                    <li key={`${included}-${index}`}>{renderInlineMarkdown(includedText(included))}</li>
                   ))}
                 </ul>
                 {consultHref ? (
@@ -180,7 +179,7 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                     {added && (
                       <div className="gift-card-cart-feedback">
                         <p className="gift-card-cart-feedback__message">
-                          Gift card anadida al carrito.
+                          Gift card añadida.
                         </p>
                         <div className="gift-card-cart-feedback__summary">
                           <div className="gift-card-cart-feedback__row">
@@ -194,9 +193,6 @@ export function DetailPage({ item }: { item: ExperienceItem }) {
                             </div>
                           )}
                         </div>
-                        <Link className="class-detail__button" href="/carrito">
-                          Ver carrito
-                        </Link>
                       </div>
                     )}
                   </>

@@ -21,3 +21,10 @@ export async function generateShopItemMetadata(
 export async function getShopRouteItem(params: Promise<{ slug: string }>) {
   return getPublicShopItemBySlug((await params).slug);
 }
+
+export async function findLegacyShopSlug(slug: string) {
+  const { published } = await getPublicShopData();
+  const escapedSlug = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const canonical = published.find((item) => item.slug.match(new RegExp(`^${escapedSlug}-\\d+$`)));
+  return canonical?.slug ?? null;
+}

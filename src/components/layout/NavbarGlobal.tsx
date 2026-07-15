@@ -74,6 +74,7 @@ export function NavbarGlobal({
   const [staticMobileOpen, setStaticMobileOpen] = useState(false);
   const [mobileScrolled, setMobileScrolled] = useState(false);
   const [desktopOpen, setDesktopOpen] = useState<string | null>(null);
+  const [desktopPinned, setDesktopPinned] = useState<string | null>(null);
   const [scrollDesktopOpen, setScrollDesktopOpen] = useState<string | null>(
     null
   );
@@ -132,16 +133,17 @@ export function NavbarGlobal({
 
   const closeDesktopMenu = useCallback(() => {
     clearDesktopCloseTimeout();
+    setDesktopPinned(null);
     setDesktopOpen(null);
   }, [clearDesktopCloseTimeout]);
 
   const scheduleDesktopMenuClose = useCallback(() => {
     clearDesktopCloseTimeout();
     desktopCloseTimeoutRef.current = setTimeout(() => {
-      setDesktopOpen(null);
+      setDesktopOpen((current) => (desktopPinned && current === desktopPinned ? current : null));
       desktopCloseTimeoutRef.current = null;
     }, DESKTOP_SUBMENU_CLOSE_DELAY);
-  }, [clearDesktopCloseTimeout]);
+  }, [clearDesktopCloseTimeout, desktopPinned]);
 
   const openScrollDesktopMenu = useCallback((href: string) => {
     clearScrollDesktopCloseTimeout();
@@ -166,6 +168,7 @@ export function NavbarGlobal({
       if (event.key === "Escape") {
         setMobileOpen(false);
         setStaticMobileOpen(false);
+        setDesktopPinned(null);
         clearDesktopCloseTimeout();
         clearScrollDesktopCloseTimeout();
         setDesktopOpen(null);
@@ -180,6 +183,7 @@ export function NavbarGlobal({
       ) {
         setMobileOpen(false);
         setStaticMobileOpen(false);
+        setDesktopPinned(null);
         clearDesktopCloseTimeout();
         clearScrollDesktopCloseTimeout();
         setDesktopOpen(null);
@@ -277,6 +281,15 @@ export function NavbarGlobal({
                   onFocus={() =>
                     children.length > 0 && openDesktopMenu(item.href)
                   }
+                  onBlur={(event) => {
+                    const nextTarget = event.relatedTarget;
+                    if (
+                      children.length > 0 &&
+                      !(nextTarget instanceof Node && event.currentTarget.contains(nextTarget))
+                    ) {
+                      scheduleDesktopMenuClose();
+                    }
+                  }}
                 >
                   <div className="hero__nav-group">
                     <Link
@@ -297,17 +310,24 @@ export function NavbarGlobal({
                         aria-expanded={open}
                         aria-haspopup="menu"
                         aria-controls={submenuId}
-                        aria-label={`Abrir submenu de ${item.label}`}
-                        onClick={() =>
-                          open ? closeDesktopMenu() : openDesktopMenu(item.href)
-                        }
+                        aria-label={`${open ? "Cerrar" : "Abrir"} submenu de ${item.label}`}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (open && desktopPinned === item.href) {
+                            closeDesktopMenu();
+                          } else {
+                            setDesktopPinned(item.href);
+                            openDesktopMenu(item.href);
+                          }
+                        }}
                       >
                         <span className="hero__plus" aria-hidden="true" />
                       </button>
                     )}
                   </div>
                   {children.length > 0 && (
-                    <ul className="nav-submenu" id={submenuId} role="menu">
+                    <ul className="nav-submenu" id={submenuId} role="menu" hidden={!open}>
                       {children.map((child) => (
                         <li
                           className="nav-submenu__item"

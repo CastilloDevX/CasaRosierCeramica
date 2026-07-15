@@ -25,15 +25,39 @@ const defaultPromo: PromoEntryData = {
 };
 
 export function PromoEntry({ promo = defaultPromo }: { promo?: PromoEntryData | null }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!promo) return;
+    const timeout = window.setTimeout(() => setOpen(true), 0);
+    return () => window.clearTimeout(timeout);
+  }, [promo]);
 
   useEffect(() => {
     if (!open) return;
     document.body.classList.add("promo-entrada-open");
     closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>("a[href], button:not([disabled])") ?? [],
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => {
@@ -50,12 +74,14 @@ export function PromoEntry({ promo = defaultPromo }: { promo?: PromoEntryData | 
       role="dialog"
       aria-modal="true"
       aria-labelledby="promo-entrada-title"
+      ref={dialogRef}
     >
       <div className="promo-entrada__shell">
         <button
           className="promo-entrada__close"
           type="button"
-          aria-label="Cerrar aviso promocional"
+          aria-label="Cerrar promocion"
+          title="Cerrar promocion"
           onClick={() => setOpen(false)}
           ref={closeRef}
         >

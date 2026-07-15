@@ -30,7 +30,6 @@ export const adminRoutes = {
   testimonials: "/admin/components/testimonials",
   footers: "/admin/components/footers",
   promoBanners: "/admin/components/promo-banners",
-  faqs: "/admin/components/faqs",
   menus: "/admin/menu",
   shop: "/admin/shop",
   products: "/admin/shop/products",

@@ -8,6 +8,8 @@ import { logAction } from "./history-logs";
 
 const TABLE = "redirects";
 const FILE_NAME = "redirects.json";
+const READ_TIMEOUT_MS = Number(process.env.CMS_REDIRECTS_READ_TIMEOUT_MS ?? 1_500);
+const ADMIN_LIST_LIMIT = Number(process.env.CMS_REDIRECTS_ADMIN_LIST_LIMIT ?? 200);
 
 type RedirectInput = Partial<Omit<Redirect, "id" | "created_at" | "updated_at" | "deleted_at">> & { id?: string; deleted_at?: string | null };
 
@@ -47,12 +49,32 @@ function redirectToRow(r: Redirect): Record<string, unknown> {
 async function readAllFromSupabase(): Promise<Redirect[] | null> {
   try {
     const supabase = createAdminClient();
-    const { data, error } = await supabase.from(TABLE).select("*");
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select("*")
+      .order("updated_at", { ascending: false })
+      .limit(ADMIN_LIST_LIMIT);
     if (error) throw error;
     if (!data || data.length === 0) return null;
     return (data as Array<Record<string, unknown>>).map(rowToRedirect);
   } catch {
     return null;
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise.catch(() => fallback).finally(() => {
+        if (timeout) clearTimeout(timeout);
+      }),
+      new Promise<T>((resolve) => {
+        timeout = setTimeout(() => resolve(fallback), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 }
 
@@ -83,7 +105,7 @@ async function deleteRedirectFromDb(id: string): Promise<void> {
 // ── Public API ──
 
 export async function getRedirects() {
-  const fromSupabase = await readAllFromSupabase();
+  const fromSupabase = await withTimeout(readAllFromSupabase(), READ_TIMEOUT_MS, null);
   if (fromSupabase) return fromSupabase;
   return readJsonFile<Redirect[]>(FILE_NAME, []);
 }

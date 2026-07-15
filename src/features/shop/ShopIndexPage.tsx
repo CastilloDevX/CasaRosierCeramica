@@ -1,50 +1,9 @@
-import Image from "next/image";
 import { HeaderInterno } from "@/components/layout/HeaderInterno";
 import { ShopGrid } from "@/components/shop/ShopGrid";
-import { MarkdownContent } from "@/components/ui/MarkdownContent";
+import { IdeaPromptSection } from "@/features/shared/contextual-sections/IdeaPromptSection";
 import { SitePage } from "@/features/shared/layout/SitePage";
 import { getShopPageSettings } from "@/lib/cms/shop-page";
 import { getPublicShopData } from "@/lib/cms/shop-public";
-import type { CmsHeroSettings } from "@/lib/cms/types";
-
-function ShopHeroContent({ hero }: { hero: CmsHeroSettings }) {
-  const variant = hero.heroVariant ?? "text";
-
-  if (variant === "presentation") {
-    return (
-      <div className="page-hero__presentation">
-        <div className="page-hero__presentation-text" style={{ color: hero.heroPresentationTextColor || "#FFFFFF" }}>
-          <MarkdownContent source={hero.heroPresentationText || hero.heroTitle || "Shop"} className="page-hero__presentation-copy" />
-        </div>
-        {hero.heroPresentationImage ? (
-          <div className="page-hero__presentation-image">
-            <Image src={hero.heroPresentationImage} alt={hero.heroTitle || "Shop"} fill sizes="420px" className="object-contain" unoptimized />
-          </div>
-        ) : null}
-      </div>
-    );
-  }
-
-  if (variant === "image") {
-    return (
-      <div className="page-hero__script-stack">
-        {hero.titleImage ? (
-          <Image src={hero.titleImage} alt={hero.heroTitle || "Shop"} fill sizes="520px" className="page-hero__script-image page-hero__script-image--back" unoptimized />
-        ) : null}
-        {hero.titleImageSecondary ? (
-          <Image src={hero.titleImageSecondary} alt={hero.heroTitle || "Shop"} fill sizes="520px" className="page-hero__script-image page-hero__script-image--front" unoptimized />
-        ) : null}
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <p className="page-hero__eyebrow">{hero.heroSubtitle || "Casa Rosier"}</p>
-      <h1 className="page-hero__title">{hero.heroTitle || "Shop"}</h1>
-    </div>
-  );
-}
 
 export async function ShopIndexPage() {
   const [{ published, shopCategories }, page] = await Promise.all([
@@ -128,6 +87,7 @@ export async function ShopIndexPage() {
       )}
     >
       <ShopGrid published={published} shopCategories={shopCategories} />
+      {page.showSocialGallerySection ? <IdeaPromptSection context="shop" /> : null}
     </SitePage>
   );
 }

@@ -2,10 +2,11 @@ import type { NavigationItem } from "@/data/types";
 import { experienceHref } from "@/lib/routes";
 import { getMenuByLocation } from "./menus";
 import { getOfferings } from "./offerings";
+import { isPublicOfferingVisible, publicOfferingLabel } from "./public-visibility";
 import type { MenuItem, Offering } from "./types";
 
 type DynamicMenuKey = "classes" | "workshops" | "privateBookings" | "giftCards";
-const PUBLIC_NAV_CACHE_TTL_MS = Number(process.env.CMS_PUBLIC_NAV_CACHE_MS ?? 15_000);
+const PUBLIC_NAV_CACHE_TTL_MS = Number(process.env.CMS_PUBLIC_NAV_CACHE_MS ?? 0);
 const publicNavigationCache = new Map<string, { items: NavigationItem[]; expiresAt: number }>();
 
 const dynamicMenuConfig: Record<DynamicMenuKey, {
@@ -53,6 +54,7 @@ function getCachedPublicNavigation(location: string) {
 }
 
 function cachePublicNavigation(location: string, items: NavigationItem[]) {
+  if (PUBLIC_NAV_CACHE_TTL_MS <= 0) return items;
   publicNavigationCache.set(location, {
     items,
     expiresAt: Date.now() + PUBLIC_NAV_CACHE_TTL_MS,
@@ -100,7 +102,7 @@ function dynamicKeyForItem(item: NavigationItem): DynamicMenuKey | null {
   if (byHref) return byHref[0];
 
   const label = normalizeLabel(item.label);
-  if (label === "clases" || label === "classes") return "classes";
+  if (label === "clases" || label === "classes" || label.startsWith("clases")) return "classes";
   if (label === "workshops") return "workshops";
   if (item.href === "/reservas-privadas" || label === "reservas privadas" || label === "experiencias") return "privateBookings";
   if (
@@ -116,6 +118,9 @@ function dynamicKeyForItem(item: NavigationItem): DynamicMenuKey | null {
 
 function labelForDynamicItem(item: NavigationItem, key: DynamicMenuKey) {
   const label = normalizeLabel(item.label);
+  if (key === "classes" || key === "workshops") {
+    return dynamicMenuConfig[key].label;
+  }
   if (key === "privateBookings" && label === "reservas privadas") {
     return dynamicMenuConfig[key].label;
   }
@@ -179,7 +184,7 @@ function normalizePublicMenuStructure(items: NavigationItem[]) {
 
 function offeringToNavigationItem(offering: Offering, order: number): NavigationItem {
   return {
-    label: offering.title,
+    label: publicOfferingLabel(offering),
     href: experienceHref(kindForOffering(offering.type), offering.slug),
     order,
     visible: true,
@@ -194,18 +199,18 @@ function mergeGeneratedChildrenWithSavedOrder(generated: NavigationItem[], saved
   const merged: NavigationItem[] = [];
 
   saved
-    .filter((child) => child.visible)
     .slice()
     .sort((a, b) => a.order - b.order)
     .forEach((child) => {
       const generatedChild = generatedByHref.get(child.href);
-      if (generatedChild) usedHrefs.add(child.href);
+      if (!generatedChild) return;
+      usedHrefs.add(generatedChild.href);
       merged.push({
-        ...(generatedChild ?? child),
-        label: child.label || generatedChild?.label || "",
-        href: child.href,
-        visible: child.visible,
-        target: child.target ?? generatedChild?.target,
+        ...generatedChild,
+        label: generatedChild.label,
+        href: generatedChild.href,
+        visible: true,
+        target: generatedChild.target,
       });
     });
 
@@ -219,7 +224,7 @@ function mergeGeneratedChildrenWithSavedOrder(generated: NavigationItem[], saved
 async function getDynamicChildrenByKey() {
   const offerings = await getOfferings();
   const published = offerings
-    .filter((offering) => offering.status === "published" && !offering.deleted_at && offering.slug)
+    .filter(isPublicOfferingVisible)
     .sort((a, b) => a.title.localeCompare(b.title));
 
   return (Object.entries(dynamicMenuConfig) as [DynamicMenuKey, typeof dynamicMenuConfig[DynamicMenuKey]][])

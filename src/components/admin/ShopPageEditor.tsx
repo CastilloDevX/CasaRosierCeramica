@@ -6,20 +6,24 @@ import Link from "@/components/admin/AdminLink";
 import { ShopGrid } from "@/components/shop/ShopGrid";
 import { NavbarGlobal } from "@/components/layout/NavbarGlobal";
 import { PublicHeroContent, PublicHeroTitle } from "@/components/hero/PublicHeroContent";
+import { SocialGallery } from "@/components/home/SocialGallery";
+import Switch from "@/components/ui/Switch";
 import type { NavigationItem, ShopCategory, ShopItem } from "@/data/types";
+import { getIdeaPromptContent } from "@/features/shared/contextual-sections/ideaPromptContent";
 import { normalizeHeroSettings } from "@/lib/cms/hero-settings";
-import type { Product, ProductCategory, ShopPageSettings, CmsHeroSettings } from "@/lib/cms/types";
+import type { Product, ProductCategory, ShopPageSettings, CmsHeroSettings, SocialGallery as CmsSocialGallery } from "@/lib/cms/types";
 import type { SiteSettings } from "@/lib/cms/settings";
 import AdminActionModal from "./AdminActionModal";
 import ProductsTable from "./ProductsTable";
 import SharedHeroEditor from "./SharedHeroEditor";
 
-type TabKey = "hero" | "items" | "preview";
+type TabKey = "hero" | "items" | "additions" | "preview";
 type ModalState = { type: "success" | "error"; title: string; message?: string } | null;
 
 const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "hero", label: "Hero" },
   { key: "items", label: "Articulos" },
+  { key: "additions", label: "Adiciones" },
   { key: "preview", label: "Vista previa" },
 ];
 
@@ -66,6 +70,7 @@ export default function ShopPageEditor({
   shopCategories,
   navigationItems,
   menuSettings,
+  socialGallery,
   initialTab = "hero",
 }: {
   page: ShopPageSettings;
@@ -75,6 +80,7 @@ export default function ShopPageEditor({
   shopCategories: ShopCategory[];
   navigationItems: NavigationItem[];
   menuSettings: SiteSettings["menu"];
+  socialGallery: CmsSocialGallery | null;
   initialTab?: TabKey;
 }) {
   const [tab, setTab] = useState<TabKey>(initialTab);
@@ -83,12 +89,14 @@ export default function ShopPageEditor({
     heroTitle: "Shop",
     heroSubtitle: "Casa Rosier",
   }));
+  const [showSocialGallerySection, setShowSocialGallerySection] = useState(page.showSocialGallerySection);
   const previewCharacteristicLabels = page.previewCharacteristicLabels.join("\n");
   const [seoTitle] = useState(page.seo_title);
   const [seoDescription] = useState(page.seo_description);
   const [seoImage] = useState(page.seo_image);
   const [isLoading, setIsLoading] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
+  const socialGalleryProps = getShopSocialGalleryProps(socialGallery);
 
   async function save(nextStatus = status) {
     setIsLoading(true);
@@ -101,6 +109,7 @@ export default function ShopPageEditor({
         hero,
         showCharacteristicsInPreview: true,
         previewCharacteristicLabels: previewCharacteristicLabels.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean),
+        showSocialGallerySection,
         seo_title: seoTitle,
         seo_description: seoDescription,
         seo_image: seoImage,
@@ -131,6 +140,7 @@ export default function ShopPageEditor({
             <span className={`status-pill status-pill--${status}`}>{status}</span>
             <span>{published.length} articulos publicados</span>
             <span>{categories.length} categorias</span>
+            <span>{showSocialGallerySection ? "Galeria social activa" : "Galeria social oculta"}</span>
             <span>Caracteristicas visibles</span>
           </div>
         </div>
@@ -156,6 +166,7 @@ export default function ShopPageEditor({
               details={hero}
               titleFallback="Shop"
               subtitleFallback="Casa Rosier"
+              textFieldsVisibility="text-only"
               onChange={(next) => setHero((current) => ({ ...current, ...next }))}
             />
           </div>
@@ -174,13 +185,57 @@ export default function ShopPageEditor({
           </section>
         ) : null}
 
+        {tab === "additions" ? (
+          <div className="cms-studio-additions">
+            <section className="form-block cms-editor-card cms-studio-additions__card">
+              <div className="cms-studio-additions__head">
+                <h3>Adiciones</h3>
+                <p>Activa bloques complementarios que se muestran al final de la página, antes del footer.</p>
+              </div>
+              <div className="cms-studio-additions__toggle-row">
+                <Switch
+                  checked={showSocialGallerySection}
+                  onCheckedChange={setShowSocialGallerySection}
+                  label="Incluir galería social al final de la página"
+                  description="Muestra la sección “Y tu, cuando tuviste tu última idea?” con la galería social pública antes del footer."
+                />
+              </div>
+            </section>
+
+            <section className="form-block cms-editor-card cms-studio-additions__card">
+              <div className="cms-studio-additions__head">
+                <h3>Vista del componente</h3>
+                <p>Referencia real de la sección que se insertará al final de la página pública.</p>
+              </div>
+              <div className="cms-studio-additions__preview" aria-label="Vista previa de la galería social">
+                {showSocialGallerySection ? (
+                  <SocialGallery {...socialGalleryProps} />
+                ) : (
+                  <div className="empty-inline">
+                    <strong>Galería desactivada.</strong>
+                    <span>Activa la adición para ver el componente público.</span>
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
+
         {tab === "preview" ? (
-          <ShopPagePreview hero={hero} published={published} shopCategories={shopCategories} navigationItems={navigationItems} menuSettings={menuSettings} />
+          <ShopPagePreview
+            hero={hero}
+            published={published}
+            shopCategories={shopCategories}
+            navigationItems={navigationItems}
+            menuSettings={menuSettings}
+            showSocialGallerySection={showSocialGallerySection}
+            socialGallery={socialGallery}
+          />
         ) : null}
       </div>
 
       <div className="admin-sticky-actionbar">
-        <span className="admin-sticky-actionbar__meta">{published.length} articulos publicados · {categories.length} categorias</span>
+        <span className="admin-sticky-actionbar__meta">{published.length} articulos publicados · {categories.length} categorias · {showSocialGallerySection ? "Galeria activa" : "Galeria oculta"}</span>
         <button type="button" className="secondary-btn" onClick={() => setTab("preview")}>Vista previa</button>
         <button type="button" className="secondary-btn" onClick={() => save("draft")} disabled={isLoading}>{isLoading ? "Guardando..." : "Borrador"}</button>
         <button type="button" className="primary-btn" onClick={() => save("published")} disabled={isLoading}>{isLoading ? "Publicando..." : "Publicar"}</button>
@@ -195,18 +250,23 @@ function ShopPagePreview({
   shopCategories,
   navigationItems,
   menuSettings,
+  showSocialGallerySection,
+  socialGallery,
 }: {
   hero: CmsHeroSettings;
   published: ShopItem[];
   shopCategories: ShopCategory[];
   navigationItems: NavigationItem[];
   menuSettings: SiteSettings["menu"];
+  showSocialGallerySection: boolean;
+  socialGallery: CmsSocialGallery | null;
 }) {
   const heroVariant = hero.heroVariant ?? "text";
   const isImageLikeHero = heroVariant === "image" || heroVariant === "presentation";
   const menuTone = hero.heroMenuTone ?? (isImageLikeHero ? "light" : "dark");
   const heroStyle = buildHeroStyle(hero);
   const heightClass = isImageLikeHero ? "header-interno--large" : "header-interno--medium";
+  const socialGalleryProps = getShopSocialGalleryProps(socialGallery);
 
   return (
     <div className="cms-preview-frame">
@@ -244,8 +304,31 @@ function ShopPagePreview({
             </header>
           </div>
           <ShopGrid published={published} shopCategories={shopCategories} />
+          {showSocialGallerySection ? <SocialGallery {...socialGalleryProps} /> : null}
         </div>
       </div>
     </div>
   );
+}
+
+function getShopSocialGalleryProps(gallery: CmsSocialGallery | null) {
+  const fallback = getIdeaPromptContent("shop");
+  const posts = gallery?.items
+    .filter((item) => item.is_visible !== false && item.image_url)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((item) => ({
+      image: item.image_url,
+      title: item.title,
+      body: item.description,
+      instagramUrl: item.instagram_url,
+    }));
+
+  return {
+    id: fallback.id,
+    title: gallery?.title || fallback.title,
+    subtitle: gallery?.description || fallback.subtitle,
+    posts: posts?.length ? posts : fallback.posts,
+    ariaLabel: fallback.ariaLabel,
+    sourceHref: gallery?.cta_url || fallback.sourceHref,
+  };
 }

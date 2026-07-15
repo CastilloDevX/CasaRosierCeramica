@@ -14,6 +14,10 @@ type SubmissionInput = Partial<Omit<FormSubmission, "id" | "created_at" | "updat
   deleted_at?: string | null;
 };
 
+function writeHistory(data: Parameters<typeof logAction>[0]) {
+  void logAction(data).catch(() => undefined);
+}
+
 function normalizeSubmission(input: SubmissionInput, existing?: FormSubmission) {
   const now = new Date().toISOString();
   const status = input.status ?? existing?.status ?? "new";
@@ -126,7 +130,7 @@ export async function createFormSubmission(data: SubmissionInput) {
   const next = normalizeSubmission(data);
   await writeJsonFile(FILE_NAME, [next, ...items]);
   await upsertSubmission(next);
-  await logAction({ action: "create", entity_type: "form_submission", entity_id: next.id, entity_title: `${next.name} — ${next.subject || next.form_name}`, new_data: next });
+  writeHistory({ action: "create", entity_type: "form_submission", entity_id: next.id, entity_title: `${next.name} — ${next.subject || next.form_name}`, new_data: next });
   return next;
 }
 
@@ -143,7 +147,7 @@ export async function updateFormSubmission(id: string, data: SubmissionInput) {
     await writeJsonFile(FILE_NAME, items);
   }
   await upsertSubmission(next, true);
-  await logAction({ action: "update", entity_type: "form_submission", entity_id: next.id, entity_title: `${next.name} — ${next.subject || next.form_name}`, old_data: old, new_data: next });
+  writeHistory({ action: "update", entity_type: "form_submission", entity_id: next.id, entity_title: `${next.name} — ${next.subject || next.form_name}`, old_data: old, new_data: next });
   return next;
 }
 
@@ -163,7 +167,7 @@ export async function moveFormSubmissionToTrash(id: string, deletedBy?: string) 
   }
   await upsertSubmission(trashed, true);
   await addTrashItem({ id: randomUUID(), entity_type: "form_submission", entity_id: current.id, title: `${current.name} — ${current.subject || current.form_name}`, deleted_by: dBy, deleted_at: deletedAt, restore_data: current });
-  await logAction({ action: "trash", entity_type: "form_submission", entity_id: current.id, entity_title: `${current.name} — ${current.subject || current.form_name}`, old_data: current, user_email: dBy });
+  writeHistory({ action: "trash", entity_type: "form_submission", entity_id: current.id, entity_title: `${current.name} — ${current.subject || current.form_name}`, old_data: current, user_email: dBy });
   return trashed;
 }
 
@@ -179,7 +183,7 @@ export async function restoreFormSubmission(id: string) {
   else { items[index] = restored; await writeJsonFile(FILE_NAME, items); }
   await upsertSubmission(restored);
   if (trashItem) await removeTrashItem(trashItem.id);
-  await logAction({ action: "restore", entity_type: "form_submission", entity_id: restored.id, entity_title: `${restored.name} — ${restored.subject || restored.form_name}` });
+  writeHistory({ action: "restore", entity_type: "form_submission", entity_id: restored.id, entity_title: `${restored.name} — ${restored.subject || restored.form_name}` });
   return restored;
 }
 
@@ -192,6 +196,6 @@ export async function deleteFormSubmissionPermanently(id: string) {
   await deleteSubmissionFromDb(id);
   const trashItem = await getTrashItemByEntity(id);
   if (trashItem) await removeTrashItem(trashItem.id);
-  if (item) await logAction({ action: "delete_permanently", entity_type: "form_submission", entity_id: id, entity_title: `${item.name} — ${item.subject || item.form_name}`, old_data: item });
+  if (item) writeHistory({ action: "delete_permanently", entity_type: "form_submission", entity_id: id, entity_title: `${item.name} — ${item.subject || item.form_name}`, old_data: item });
   return true;
 }

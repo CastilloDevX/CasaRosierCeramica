@@ -12,35 +12,41 @@ export function ShopDetail({ item }: { item: ShopItem }) {
       <div className="container shop-detail__container">
         <div className="shop-detail__layout">
           <section className="shop-detail__media-column">
-            <ThumbnailGallery
-              items={item.gallery.length ? item.gallery : [item.image]}
-              ariaLabel={`Galeria de ${item.name}`}
-              className="shop-gallery"
-              thumbsClassName="shop-gallery__thumbs"
-              renderMain={(image) => (
-                <img
-                  className="shop-gallery__main"
-                  src={assetPath(image ?? item.image)}
-                  alt={item.name}
-                />
-              )}
-              renderThumb={(image, index, isActive, select) => (
-                  <button
-                    className={classNames(
-                      "shop-gallery__thumb",
-                      isActive && "is-active"
-                    )}
-                    type="button"
-                    aria-label={`Ver imagen ${index + 1} de ${item.name}`}
-                    onClick={select}
-                  >
-                    <img
-                      src={assetPath(image)}
-                      alt={`${item.name} ${index + 1}`}
-                    />
-                  </button>
-              )}
-            />
+            {item.gallery.length ? (
+              <ThumbnailGallery
+                items={item.gallery}
+                ariaLabel={`Galeria de ${item.name}`}
+                className="shop-gallery"
+                thumbsClassName="shop-gallery__thumbs"
+                renderMain={(image) => (
+                  <img
+                    className="shop-gallery__main"
+                    src={assetPath(image)}
+                    alt={item.name}
+                  />
+                )}
+                renderThumb={(image, index, isActive, select) => (
+                    <button
+                      className={classNames(
+                        "shop-gallery__thumb",
+                        isActive && "is-active"
+                      )}
+                      type="button"
+                      aria-label={`Ver imagen ${index + 1} de ${item.name}`}
+                      onClick={select}
+                    >
+                      <img
+                        src={assetPath(image)}
+                        alt={`${item.name} ${index + 1}`}
+                      />
+                    </button>
+                )}
+              />
+            ) : (
+              <div className="shop-gallery shop-gallery--empty" aria-label={`Galeria de ${item.name}`}>
+                <div className="shop-gallery__empty-frame">No galería proprocionada</div>
+              </div>
+            )}
             <div className="shop-sidecard">
               <h3>Disponibilidad</h3>
               <p>{item.availability}</p>

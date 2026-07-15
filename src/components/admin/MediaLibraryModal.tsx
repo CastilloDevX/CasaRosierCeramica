@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import MediaPicker from "./MediaPicker";
 
@@ -14,6 +14,7 @@ export default function MediaLibraryModal({
   onClose: () => void;
 }) {
   const canUseDocument = typeof document !== "undefined";
+  const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -22,7 +23,7 @@ export default function MediaLibraryModal({
     document.body.style.overflow = "hidden";
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && !isBusy) onClose();
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -30,7 +31,7 @@ export default function MediaLibraryModal({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onClose]);
+  }, [isBusy, open, onClose]);
 
   if (!open || !canUseDocument) return null;
 
@@ -53,13 +54,16 @@ export default function MediaLibraryModal({
         type="button"
         className="media-library-modal__backdrop"
         aria-label="Cerrar biblioteca"
-        onClick={onClose}
+        disabled={isBusy}
+        onClick={() => {
+          if (!isBusy) onClose();
+        }}
         style={{
           position: "absolute",
           inset: 0,
           border: 0,
           background: "rgb(11 28 48 / 46%)",
-          cursor: "pointer",
+          cursor: isBusy ? "not-allowed" : "pointer",
         }}
       />
       <div
@@ -76,7 +80,7 @@ export default function MediaLibraryModal({
           padding: 22,
         }}
       >
-        <MediaPicker onSelect={onSelect} onClose={onClose} />
+        <MediaPicker onSelect={onSelect} onClose={onClose} onBusyChange={setIsBusy} />
       </div>
     </div>,
     document.body,

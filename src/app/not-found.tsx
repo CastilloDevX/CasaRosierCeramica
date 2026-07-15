@@ -26,11 +26,10 @@ export default async function NotFoundPage() {
           heroMenuTone="dark"
         >
           <div className="not-found-hero__copy">
-            <p className="not-found-hero__kicker">Pagina no encontrada</p>
-            <h1 className="not-found-hero__title">
-              <span>404</span>
-              <span>Sin encontrar</span>
-            </h1>
+            <h1 className="not-found-hero__title">404</h1>
+            <h2 className="not-found-hero__subtitle">
+              Pagina no encontrada
+            </h2>
             <p className="not-found-hero__text">
               La pagina que buscas no esta disponible o cambio de direccion.
             </p>

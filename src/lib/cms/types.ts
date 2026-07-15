@@ -969,6 +969,7 @@ export interface ShopPageSettings {
   hero: CmsHeroSettings;
   showCharacteristicsInPreview: boolean;
   previewCharacteristicLabels: string[];
+  showSocialGallerySection: boolean;
   seo_title: string;
   seo_description: string;
   seo_image: string;

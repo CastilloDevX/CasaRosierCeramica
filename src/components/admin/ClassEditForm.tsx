@@ -199,7 +199,7 @@ function defaultConsultLabel(type: Offering["type"]) {
 }
 
 function defaultEnrollLabel(type: Offering["type"]) {
-  return type === "gift_card" ? "Anadir al carrito" : "Inscribirme";
+  return type === "gift_card" ? "Añadir al carrito" : "Inscribirme";
 }
 
 function textList(value: unknown) {

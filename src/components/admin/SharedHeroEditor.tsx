@@ -131,11 +131,13 @@ export default function SharedHeroEditor({
   details,
   titleFallback,
   subtitleFallback,
+  textFieldsVisibility = "all",
   onChange,
 }: {
   details: CmsHeroSettings;
   titleFallback: string;
   subtitleFallback?: string;
+  textFieldsVisibility?: "all" | "text-only";
   onChange: (next: Partial<CmsHeroSettings>) => void;
 }) {
   const [device, setDevice] = useState<DeviceKey>("desktop");
@@ -144,6 +146,7 @@ export default function SharedHeroEditor({
   const navColor = details.heroMenuColor || (details.heroMenuTone === "light" ? "#ffffff" : "#3f3933");
   const isImageHero = details.heroVariant === "image";
   const isPresentationHero = details.heroVariant === "presentation";
+  const showTextFields = textFieldsVisibility === "all" || details.heroVariant === "text";
   const frameStyle = {
     width: `${preset.width}px`,
     height: `${preset.height}px`,
@@ -213,8 +216,12 @@ export default function SharedHeroEditor({
         </div>
 
         <div className="mt-5 grid gap-5 md:grid-cols-2">
-          <TextField label="Título del hero" value={details.heroTitle} placeholder={titleFallback} onChange={(event) => onChange({ heroTitle: event.target.value })} />
-          <TextField label="Subtítulo del hero" value={details.heroSubtitle} placeholder={subtitleFallback} onChange={(event) => onChange({ heroSubtitle: event.target.value })} />
+          {showTextFields ? (
+            <>
+              <TextField label="Título del hero" value={details.heroTitle} placeholder={titleFallback} onChange={(event) => onChange({ heroTitle: event.target.value })} />
+              <TextField label="Subtítulo del hero" value={details.heroSubtitle} placeholder={subtitleFallback} onChange={(event) => onChange({ heroSubtitle: event.target.value })} />
+            </>
+          ) : null}
           {details.heroVariant === "presentation" ? (
             <div className="md:col-span-2">
               <MediaSelectField label="Imagen de fondo" value={details.heroImage} onChange={(heroImage) => onChange({ heroImage })} previewClassName="cms-shared-hero-media-preview" />

@@ -7,6 +7,9 @@ export const metadata: Metadata = {
     "Piezas ceramicas creadas en el estudio. Objetos unicos, series pequenas y piezas disponibles para compra."
 };
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default function ShopPage() {
   return <ShopIndexPage />;
 }

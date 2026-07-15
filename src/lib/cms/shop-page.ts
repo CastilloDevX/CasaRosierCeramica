@@ -21,6 +21,7 @@ export const defaultShopPageSettings: ShopPageSettings = {
   }),
   showCharacteristicsInPreview: true,
   previewCharacteristicLabels: ["Peso", "Medidas", "Caracteristicas"],
+  showSocialGallerySection: false,
   seo_title: "Shop | Casa Rosier",
   seo_description: "Piezas ceramicas disponibles en Casa Rosier.",
   seo_image: "",
@@ -35,6 +36,7 @@ function normalizeShopPageSettings(input: Partial<ShopPageSettings> | null | und
   const row = input as Partial<ShopPageSettings> & {
     show_characteristics_in_preview?: boolean;
     preview_characteristic_labels?: unknown;
+    show_social_gallery_section?: boolean;
   } | null | undefined;
 
   const labels = stringArray(input?.previewCharacteristicLabels ?? row?.preview_characteristic_labels);
@@ -51,6 +53,7 @@ function normalizeShopPageSettings(input: Partial<ShopPageSettings> | null | und
     }),
     showCharacteristicsInPreview: (input?.showCharacteristicsInPreview ?? row?.show_characteristics_in_preview) !== false,
     previewCharacteristicLabels: labels.length ? labels : defaultShopPageSettings.previewCharacteristicLabels,
+    showSocialGallerySection: (input?.showSocialGallerySection ?? row?.show_social_gallery_section) === true,
     seo_title: String(input?.seo_title ?? defaultShopPageSettings.seo_title),
     seo_description: String(input?.seo_description ?? defaultShopPageSettings.seo_description),
     seo_image: String(input?.seo_image ?? ""),
@@ -65,6 +68,7 @@ function toRow(settings: ShopPageSettings) {
     hero: settings.hero,
     show_characteristics_in_preview: settings.showCharacteristicsInPreview,
     preview_characteristic_labels: settings.previewCharacteristicLabels,
+    show_social_gallery_section: settings.showSocialGallerySection,
     seo_title: settings.seo_title,
     seo_description: settings.seo_description,
     seo_image: settings.seo_image,

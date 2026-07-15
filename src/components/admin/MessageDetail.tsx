@@ -15,11 +15,38 @@ type ModalState = {
   onConfirm?: () => void;
 } | null;
 
+function cleanEmail(value: string) {
+  return value.trim().replace(/\s+/g, "");
+}
+
+function cleanPhone(value: string) {
+  const trimmed = value.trim();
+  const hasLeadingPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
+  return digits ? `${hasLeadingPlus ? "+" : ""}${digits}` : "";
+}
+
+function replyMailHref(item: FormSubmission) {
+  const email = cleanEmail(item.email);
+  if (!email) return "";
+  const subject = encodeURIComponent(`Re: ${item.subject || "Tu mensaje a Casa Rosier"}`);
+  const body = encodeURIComponent(`Hola ${item.name || ""},\n\n`);
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${subject}&body=${body}`;
+}
+
+function nextStatusAction(status: FormSubmission["status"]) {
+  if (status === "new") return { status: "read" as const, label: "Marcar como leído" };
+  if (status !== "replied") return { status: "replied" as const, label: "Marcar como respondido" };
+  return null;
+}
+
 export default function MessageDetail({ item }: { item: FormSubmission }) {
   const router = useRouter();
   const [modal, setModal] = useState<ModalState>(null);
   const [pending, setPending] = useState(false);
   const [localStatus, setLocalStatus] = useState(item.status);
+  const mailHref = replyMailHref(item);
+  const statusAction = nextStatusAction(localStatus);
 
   async function run(action: string, extra?: Record<string, string>) {
     const previousStatus = localStatus;
@@ -77,8 +104,8 @@ export default function MessageDetail({ item }: { item: FormSubmission }) {
             <h3>Cliente</h3>
             <div className="grid-2">
               <div><p className="auth-kicker">Nombre</p><p style={{ fontWeight: 500 }}>{item.name}</p></div>
-              <div><p className="auth-kicker">Email</p><p><a href={`mailto:${item.email}`}>{item.email}</a></p></div>
-              {item.phone ? <div><p className="auth-kicker">Teléfono</p><p>{item.phone}</p></div> : null}
+              <div><p className="auth-kicker">Email</p><p><a href={mailHref || `mailto:${cleanEmail(item.email)}`}>{item.email}</a></p></div>
+              {item.phone ? <div><p className="auth-kicker">Teléfono</p><p>{cleanPhone(item.phone) || item.phone}</p></div> : null}
               <div><p className="auth-kicker">Formulario</p><p>{item.form_name} ({item.form_slug})</p></div>
               {item.source_page ? <div><p className="auth-kicker">Página de origen</p><p className="muted">{item.source_page}</p></div> : null}
               <div><p className="auth-kicker">Recibido</p><p>{new Date(item.created_at).toLocaleString()}</p></div>
@@ -93,10 +120,21 @@ export default function MessageDetail({ item }: { item: FormSubmission }) {
           ) : null}
 
           <div style={{ display: "flex", gap: "0.5rem", marginTop: "1.5rem" }}>
-            {localStatus !== "read" ? (
-              <button className="secondary-btn" disabled={pending} onClick={() => run("status", { status: "read" })}>Marcar como leído</button>
+            {mailHref ? (
+              <a
+                className="primary-btn"
+                href={mailHref}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Responder email
+              </a>
             ) : null}
-            {item.phone ? <a className="secondary-btn message-call-btn" href={`tel:${item.phone}`}>Llamar</a> : null}
+            {statusAction ? (
+              <button className="secondary-btn" disabled={pending} onClick={() => run("status", { status: statusAction.status })}>
+                {pending ? "Actualizando..." : statusAction.label}
+              </button>
+            ) : null}
             <button className="danger-btn" disabled={pending} onClick={requestTrash}>{pending ? "Enviando..." : "Papelera"}</button>
           </div>
         </div>

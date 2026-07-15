@@ -8,8 +8,9 @@ const filters = [
   { value: "published", label: "Publicado", href: "/admin/components/testimonials?status=published" },
 ] as const;
 
-export default async function Page({ searchParams }: { searchParams?: { status?: string } }) {
-  const rawStatus = searchParams?.status;
+export default async function Page({ searchParams }: { searchParams?: Promise<{ status?: string }> }) {
+  const params = await searchParams;
+  const rawStatus = params?.status;
   const status = rawStatus === "draft" || rawStatus === "published" ? rawStatus : "all";
   const items = await getTestimonials();
   const filtered = items

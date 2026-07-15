@@ -9,6 +9,7 @@ export type IdeaPromptContext =
   | "experience-detail"
   | "blog"
   | "blog-post"
+  | "shop"
   | "studio";
 
 export interface IdeaPromptContent {
@@ -35,6 +36,7 @@ const ideaPromptByContext: Partial<Record<IdeaPromptContext, IdeaPromptContent>>
   "experience-detail": defaultIdeaPromptContent,
   blog: defaultIdeaPromptContent,
   "blog-post": defaultIdeaPromptContent,
+  shop: defaultIdeaPromptContent,
   studio: defaultIdeaPromptContent
 };
 

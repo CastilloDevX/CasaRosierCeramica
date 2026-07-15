@@ -1,6 +1,17 @@
 import { requireAdminApi } from "@/lib/auth/supabase-auth";
 import { createProduct, getProducts } from "@/lib/cms/products";
+import { invalidatePublicNavigationCache } from "@/lib/cms/navigation-public";
+import { revalidatePath } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
+
+function refreshProductPaths(slug?: string) {
+  invalidatePublicNavigationCache();
+  revalidatePath("/");
+  revalidatePath("/shop");
+  revalidatePath("/admin/shop");
+  revalidatePath("/admin/shop/products");
+  if (slug) revalidatePath(`/shop/${slug}`);
+}
 
 export async function GET(request: NextRequest) {
   if (!(await requireAdminApi())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -16,6 +27,6 @@ export async function POST(request: NextRequest) {
   if (!(await requireAdminApi())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json();
   if (!body?.name) return NextResponse.json({ error: "El nombre es obligatorio." }, { status: 400 });
-  try { const item = await createProduct(body); return NextResponse.json({ product: item }); }
+  try { const item = await createProduct(body); refreshProductPaths(item.slug); return NextResponse.json({ product: item }); }
   catch (err) { return NextResponse.json({ error: err instanceof Error ? err.message : "Error" }, { status: 400 }); }
 }

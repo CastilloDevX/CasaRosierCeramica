@@ -113,7 +113,7 @@ export default function FooterContactForm({ preview = false }: { preview?: boole
   }
 
   return (
-    <form className="contact-form" onSubmit={handleSubmit}>
+    <form className="contact-form" action="/api/forms/footer-contact/submit" method="post" onSubmit={handleSubmit}>
       {content}
     </form>
   );

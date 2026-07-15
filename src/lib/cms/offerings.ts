@@ -3,6 +3,7 @@ import { createAdminClient } from "../supabase/admin";
 import { addTrashItem, getCurrentUserEmail, getTrashItemByEntity, removeTrashItem } from "./trash";
 import { readJsonFile, writeJsonFile } from "./local-storage";
 import { isOfferingStatus, isOfferingType } from "./types";
+import { sanitizePublicText } from "./public-visibility";
 import type { ClassOfferingDetails, Offering } from "./types";
 import type { Json } from "../supabase/types";
 import { logAction } from "./history-logs";
@@ -10,10 +11,12 @@ import { logAction } from "./history-logs";
 const TABLE = "offerings";
 const HERO_SETTINGS_TABLE = "offering_public_hero_settings";
 const FILE_NAME = "offerings.json";
-const SUPABASE_READ_TIMEOUT_MS = 1_500;
-const OFFERINGS_CACHE_TTL_MS = 15_000;
+const SUPABASE_READ_TIMEOUT_MS = 12_000;
+const OFFERINGS_CACHE_TTL_MS = Number(process.env.CMS_OFFERINGS_CACHE_MS ?? 0);
 
 let offeringsCache: { items: Offering[]; expiresAt: number } | null = null;
+let forcedLocalSource = false;
+let lastLoggedSource: "supabase" | "local-json" | null = null;
 
 type OfferingInput = Partial<Omit<Offering, "id" | "created_at" | "updated_at" | "deleted_at">> & {
   id?: string;
@@ -26,7 +29,18 @@ function getCachedOfferings() {
 }
 
 function cacheOfferings(items: Offering[]) {
+  if (OFFERINGS_CACHE_TTL_MS <= 0) return;
   offeringsCache = { items, expiresAt: Date.now() + OFFERINGS_CACHE_TTL_MS };
+}
+
+export function invalidateOfferingsCache() {
+  offeringsCache = null;
+}
+
+function logSource(source: "supabase" | "local-json") {
+  if (lastLoggedSource === source) return;
+  lastLoggedSource = source;
+  console.info(`[cms:offerings] source=${source}`);
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T) {
@@ -63,12 +77,30 @@ function uniqueSlug(items: Offering[], baseSlug: string, currentId?: string) {
   return `${baseSlug}-${counter}`;
 }
 
-function duplicateSlugBase(slug: string, items: Offering[]) {
-  const match = slug.match(/^(.*)-(\d+)$/);
-  if (match?.[1] && items.some((item) => item.slug === match[1])) {
-    return match[1];
+function duplicateSlugBase(slug: string) {
+  const normalized = toSlug(slug) || "offering";
+  return normalized.endsWith("-copia") ? normalized : `${normalized}-copia`;
+}
+
+function sanitizeDuplicateValue(value: unknown): unknown {
+  if (typeof value === "string") return sanitizePublicText(value);
+  if (Array.isArray(value)) return value.map(sanitizeDuplicateValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, sanitizeDuplicateValue(entry)]));
   }
-  return slug;
+  return value;
+}
+
+function sanitizeDuplicateData(data: OfferingInput): OfferingInput {
+  return sanitizeDuplicateValue(data) as OfferingInput;
+}
+
+function writeHistory(data: Parameters<typeof logAction>[0]) {
+  void logAction(data).catch(() => undefined);
+}
+
+function writeTrashItem(data: Parameters<typeof addTrashItem>[0]) {
+  void addTrashItem(data).catch(() => undefined);
 }
 
 function normalizeTextArray(value: unknown) {
@@ -133,7 +165,8 @@ function rowToOffering(row: Record<string, unknown>): Offering {
 }
 
 function offeringToRow(offering: Offering): Record<string, unknown> {
-  const { ...rest } = offering;
+  const rest = { ...(offering as Offering & { public_hero_settings?: unknown }) };
+  delete rest.public_hero_settings;
   return {
     ...rest,
     schedule: rest.schedule as unknown as Json,
@@ -358,14 +391,6 @@ async function readOneFromSupabase(column: "id" | "slug", value: string): Promis
   }
 }
 
-async function upsertToSupabase(item: Offering): Promise<void> {
-  try {
-    const supabase = createAdminClient();
-    await supabase.from(TABLE).upsert(offeringToRow(item), { onConflict: "id" });
-    await syncHeroSettingsToSupabase(item);
-  } catch { /* best-effort */ }
-}
-
 async function saveToSupabase(item: Offering): Promise<void> {
   const supabase = createAdminClient();
   const { error } = await supabase.from(TABLE).upsert(offeringToRow(item), { onConflict: "id" });
@@ -392,15 +417,19 @@ export async function getOfferings() {
   const cached = getCachedOfferings();
   if (cached) return cached;
 
-  const fromSupabase = await withTimeout(readAllFromSupabase(), SUPABASE_READ_TIMEOUT_MS, null);
-  if (fromSupabase) {
-    cacheOfferings(fromSupabase);
-    return fromSupabase;
+  if (!forcedLocalSource) {
+    const fromSupabase = await withTimeout(readAllFromSupabase(), SUPABASE_READ_TIMEOUT_MS, null);
+    if (fromSupabase) {
+      logSource("supabase");
+      cacheOfferings(fromSupabase);
+      return fromSupabase;
+    }
   }
 
   const localOfferings = await readJsonFile<Offering[]>(FILE_NAME, []);
+  logSource("local-json");
   cacheOfferings(localOfferings);
-  void seedSupabase(localOfferings);
+  if (!forcedLocalSource) void seedSupabase(localOfferings);
   return localOfferings;
 }
 
@@ -408,8 +437,13 @@ export async function getOfferingById(id: string) {
   const cached = getCachedOfferings()?.find((item) => item.id === id);
   if (cached) return cached;
 
-  const fromSupabase = await withTimeout(readOneFromSupabase("id", id), SUPABASE_READ_TIMEOUT_MS, null);
-  if (fromSupabase) return fromSupabase;
+  if (!forcedLocalSource) {
+    const fromSupabase = await withTimeout(readOneFromSupabase("id", id), SUPABASE_READ_TIMEOUT_MS, null);
+    if (fromSupabase) {
+      logSource("supabase");
+      return fromSupabase;
+    }
+  }
 
   const offerings = await getOfferings();
   return offerings.find((item) => item.id === id) ?? null;
@@ -419,11 +453,48 @@ export async function getOfferingBySlug(slug: string) {
   const cached = getCachedOfferings()?.find((item) => item.slug === slug);
   if (cached) return cached;
 
-  const fromSupabase = await withTimeout(readOneFromSupabase("slug", slug), SUPABASE_READ_TIMEOUT_MS, null);
-  if (fromSupabase) return fromSupabase;
+  if (!forcedLocalSource) {
+    const fromSupabase = await withTimeout(readOneFromSupabase("slug", slug), SUPABASE_READ_TIMEOUT_MS, null);
+    if (fromSupabase) {
+      logSource("supabase");
+      return fromSupabase;
+    }
+  }
 
   const offerings = await getOfferings();
   return offerings.find((item) => item.slug === slug) ?? null;
+}
+
+async function persistOffering(item: Offering, localItems: Offering[]) {
+  if (!forcedLocalSource) {
+    try {
+      await saveToSupabase(item);
+      logSource("supabase");
+      invalidateOfferingsCache();
+      return;
+    } catch {
+      forcedLocalSource = true;
+    }
+  }
+  await writeJsonFile(FILE_NAME, localItems);
+  logSource("local-json");
+  cacheOfferings(localItems);
+}
+
+async function removePersistedOffering(id: string, localItems: Offering[]) {
+  if (!forcedLocalSource) {
+    try {
+      await deleteFromSupabase(id);
+      logSource("supabase");
+      invalidateOfferingsCache();
+      return;
+    } catch {
+      forcedLocalSource = true;
+    }
+  }
+  await writeJsonFile(FILE_NAME, localItems);
+  logSource("local-json");
+  cacheOfferings(localItems);
 }
 
 export async function createOffering(data: OfferingInput) {
@@ -435,9 +506,8 @@ export async function createOffering(data: OfferingInput) {
   }
 
   const nextItems = [next, ...offerings];
-  await saveToSupabase(next);
-  cacheOfferings(nextItems);
-  void logAction({ action: "create", entity_type: "offering", entity_id: next.id, entity_title: next.title, new_data: next });
+  await persistOffering(next, nextItems);
+  writeHistory({ action: "create", entity_type: "offering", entity_id: next.id, entity_title: next.title, new_data: next });
   return next;
 }
 
@@ -449,13 +519,12 @@ export async function updateOffering(id: string, data: OfferingInput) {
   const old = offerings[index];
   const next = normalizeOffering(data, old, offerings);
   offerings[index] = next;
-  await saveToSupabase(next);
-  cacheOfferings(offerings);
+  await persistOffering(next, offerings);
   if (old.status !== next.status) {
-    if (next.status === "published") void logAction({ action: "publish", entity_type: "offering", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
-    else if (old.status === "published") void logAction({ action: "unpublish", entity_type: "offering", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
+    if (next.status === "published") writeHistory({ action: "publish", entity_type: "offering", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
+    else if (old.status === "published") writeHistory({ action: "unpublish", entity_type: "offering", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
   }
-  void logAction({ action: "update", entity_type: "offering", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
+  writeHistory({ action: "update", entity_type: "offering", entity_id: next.id, entity_title: next.title, old_data: old, new_data: next });
   return next;
 }
 
@@ -463,22 +532,21 @@ export async function duplicateOffering(id: string) {
   const offerings = await getOfferings();
   const original = offerings.find((item) => item.id === id);
   if (!original) return null;
-  const duplicateData: OfferingInput = { ...original, id: undefined, deleted_at: null };
+  const duplicateData = sanitizeDuplicateData({ ...original, id: undefined, deleted_at: null });
   const copy = normalizeOffering(
-    { ...duplicateData, title: `${original.title} (copia)`, slug: duplicateSlugBase(original.slug, offerings), status: "draft", deleted_at: null },
+    { ...duplicateData, title: `${original.title} (copia)`, slug: duplicateSlugBase(original.slug), status: "draft", deleted_at: null },
     undefined,
     offerings,
   );
   const nextItems = [copy, ...offerings];
-  await saveToSupabase(copy);
-  cacheOfferings(nextItems);
-  void logAction({ action: "duplicate", entity_type: "offering", entity_id: original.id, entity_title: original.title, new_data: copy });
+  await persistOffering(copy, nextItems);
+  writeHistory({ action: "duplicate", entity_type: "offering", entity_id: original.id, entity_title: original.title, new_data: copy });
   return copy;
 }
 
 export async function moveOfferingToTrash(id: string, deletedBy?: string) {
   const dBy = deletedBy ?? await getCurrentUserEmail();
-  const offerings = await readJsonFile<Offering[]>(FILE_NAME, []);
+  const offerings = await getOfferings();
   const index = offerings.findIndex((item) => item.id === id);
   if (index === -1) return null;
 
@@ -487,20 +555,18 @@ export async function moveOfferingToTrash(id: string, deletedBy?: string) {
   const trashed: Offering = { ...current, status: "deleted", deleted_at: deletedAt, updated_at: deletedAt };
 
   offerings[index] = trashed;
-  await writeJsonFile(FILE_NAME, offerings);
-  cacheOfferings(offerings);
-  await upsertToSupabase(trashed);
+  await persistOffering(trashed, offerings);
 
-  await addTrashItem({
+  writeTrashItem({
     id: randomUUID(), entity_type: "offering", entity_id: current.id, title: current.title,
     deleted_by: dBy, deleted_at: deletedAt, restore_data: current,
   });
-  await logAction({ action: "trash", entity_type: "offering", entity_id: current.id, entity_title: current.title, old_data: current, user_email: dBy });
+  writeHistory({ action: "trash", entity_type: "offering", entity_id: current.id, entity_title: current.title, old_data: current, user_email: dBy });
   return trashed;
 }
 
 export async function restoreOffering(id: string) {
-  const offerings = await readJsonFile<Offering[]>(FILE_NAME, []);
+  const offerings = await getOfferings();
   const index = offerings.findIndex((item) => item.id === id);
   const trashItem = await getTrashItemByEntity(id);
   if (index === -1 && !trashItem) return null;
@@ -514,17 +580,15 @@ export async function restoreOffering(id: string) {
   } else {
     offerings[index] = restored;
   }
-  await writeJsonFile(FILE_NAME, offerings);
-  cacheOfferings(offerings);
-  await upsertToSupabase(restored);
+  await persistOffering(restored, offerings);
 
   if (trashItem) await removeTrashItem(trashItem.id);
-  await logAction({ action: "restore", entity_type: "offering", entity_id: restored.id, entity_title: restored.title });
+  writeHistory({ action: "restore", entity_type: "offering", entity_id: restored.id, entity_title: restored.title });
   return restored;
 }
 
 export async function deleteOfferingPermanently(id: string) {
-  const offerings = await readJsonFile<Offering[]>(FILE_NAME, []);
+  const offerings = await getOfferings();
   const item = offerings.find((o) => o.id === id);
   const next = offerings.filter((item) => item.id !== id);
 
@@ -532,10 +596,8 @@ export async function deleteOfferingPermanently(id: string) {
   const changed = next.length !== offerings.length || Boolean(trashItem);
   if (!changed) return false;
 
-  await writeJsonFile(FILE_NAME, next);
-  cacheOfferings(next);
-  await deleteFromSupabase(id);
+  await removePersistedOffering(id, next);
   if (trashItem) await removeTrashItem(trashItem.id);
-  if (item) await logAction({ action: "delete_permanently", entity_type: "offering", entity_id: id, entity_title: item.title, old_data: item });
+  if (item) writeHistory({ action: "delete_permanently", entity_type: "offering", entity_id: id, entity_title: item.title, old_data: item });
   return true;
 }

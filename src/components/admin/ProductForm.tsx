@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Product, ProductCategory } from "@/lib/cms/types";
 import AdminActionModal from "./AdminActionModal";
+import MediaLibraryModal from "./MediaLibraryModal";
 import MediaSelectField from "./MediaSelectField";
 
 const statusLabels: Record<string, string> = {
@@ -13,6 +14,7 @@ const statusLabels: Record<string, string> = {
 };
 
 type SaveIntent = "draft" | "publish";
+type GalleryPickerTarget = "add" | number | null;
 type ModalState = {
   type: "success" | "error";
   title: string;
@@ -20,6 +22,15 @@ type ModalState = {
   details?: string[];
   redirectOnClose?: boolean;
 } | null;
+
+function isAbsoluteUrl(url: string) {
+  return /^https?:\/\//i.test(url);
+}
+
+function imageSrc(url: string) {
+  if (!url) return "";
+  return isAbsoluteUrl(url) || url.startsWith("/") ? url : `/${url}`;
+}
 
 function SectionIcon({ children }: { children: string }) {
   return <span className="material-symbols-outlined" aria-hidden="true">{children}</span>;
@@ -52,6 +63,176 @@ function skuFromName(value: string) {
   return base ? `CR-${base.slice(0, 18)}` : "";
 }
 
+function ProductGalleryField({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [pickerTarget, setPickerTarget] = useState<GalleryPickerTarget>(null);
+  const [uploadingTarget, setUploadingTarget] = useState<GalleryPickerTarget>(null);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function applyImage(url: string, target: Exclude<GalleryPickerTarget, null>) {
+    if (target === "add") {
+      onChange([...value, url]);
+      return;
+    }
+    onChange(value.map((item, index) => (index === target ? url : item)));
+  }
+
+  async function uploadFile(file: File, target: Exclude<GalleryPickerTarget, null>) {
+    setUploadingTarget(target);
+    setError(null);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "shop");
+
+    const response = await fetch("/api/admin/media/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await response.json().catch(() => ({})) as { asset?: { file_url?: string }; error?: string };
+    setUploadingTarget(null);
+
+    if (!response.ok || !data.asset?.file_url) {
+      setError(data.error || "No se pudo subir la imagen.");
+      return;
+    }
+
+    applyImage(data.asset.file_url, target);
+  }
+
+  function removeImage(index: number) {
+    onChange(value.filter((_, currentIndex) => currentIndex !== index));
+  }
+
+  function moveImage(from: number, to: number) {
+    if (from === to || to < 0 || to >= value.length) return;
+    const next = [...value];
+    const [image] = next.splice(from, 1);
+    next.splice(to, 0, image);
+    onChange(next);
+  }
+
+  function handleDrop(targetIndex: number) {
+    if (draggingIndex === null) return;
+    moveImage(draggingIndex, targetIndex);
+    setDraggingIndex(null);
+  }
+
+  return (
+    <div className="shop-product-gallery span-2">
+      <div className="shop-product-gallery__head">
+        <div>
+          <span className="field-label">Galería</span>
+          <p>Agrega imágenes desde tu equipo o la biblioteca. Se muestran en una fila con scroll horizontal.</p>
+        </div>
+        <span>{value.length} imágenes</span>
+      </div>
+
+      <div className="shop-product-gallery__rail" aria-label="Galería del producto">
+        <div className="shop-product-gallery__add-card" aria-label="Añadir imagen a la galería">
+          <div className="shop-product-gallery__add-icon" aria-hidden="true">
+            <span className="material-symbols-outlined">add_photo_alternate</span>
+          </div>
+          <strong>Añadir imagen</strong>
+          <div className="shop-product-gallery__actions">
+            <label className="secondary-btn" style={{ cursor: uploadingTarget === "add" ? "wait" : "pointer" }}>
+              {uploadingTarget === "add" ? "Subiendo..." : "Cargar imagen"}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                disabled={uploadingTarget === "add"}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void uploadFile(file, "add");
+                  event.target.value = "";
+                }}
+              />
+            </label>
+            <button type="button" className="secondary-btn" onClick={() => setPickerTarget("add")}>
+              Biblioteca
+            </button>
+          </div>
+        </div>
+
+        {value.map((url, index) => (
+          <article
+            className={`shop-product-gallery__item ${draggingIndex === index ? "is-dragging" : ""}`}
+            key={`${url}-${index}`}
+            draggable
+            aria-grabbed={draggingIndex === index}
+            onDragStart={() => setDraggingIndex(index)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={() => handleDrop(index)}
+            onDragEnd={() => setDraggingIndex(null)}
+          >
+            <div className="shop-product-gallery__order-controls" aria-label={`Orden de imagen ${index + 1}`}>
+              <button
+                type="button"
+                aria-label={`Mover imagen ${index + 1} a la izquierda`}
+                disabled={index === 0}
+                onClick={() => moveImage(index, index - 1)}
+              >
+                &lt;
+              </button>
+              <span>{index + 1}</span>
+              <button
+                type="button"
+                aria-label={`Mover imagen ${index + 1} a la derecha`}
+                disabled={index === value.length - 1}
+                onClick={() => moveImage(index, index + 1)}
+              >
+                &gt;
+              </button>
+            </div>
+            <div className="shop-product-gallery__preview">
+              {url ? <img src={imageSrc(url)} alt={`Imagen de galería ${index + 1}`} loading="lazy" decoding="async" /> : <span>Sin imagen</span>}
+            </div>
+            <div className="shop-product-gallery__item-actions">
+              <label className="secondary-btn" style={{ cursor: uploadingTarget === index ? "wait" : "pointer" }}>
+                {uploadingTarget === index ? "Subiendo..." : "Sustituir"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  disabled={uploadingTarget === index}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void uploadFile(file, index);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+              <button type="button" className="secondary-btn" onClick={() => setPickerTarget(index)}>
+                Biblioteca
+              </button>
+              <button type="button" className="danger-btn" onClick={() => removeImage(index)}>
+                Eliminar
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      {error ? <p className="form-error">{error}</p> : null}
+
+      <MediaLibraryModal
+        open={pickerTarget !== null}
+        onSelect={(url) => {
+          if (pickerTarget !== null) applyImage(url, pickerTarget);
+          setPickerTarget(null);
+        }}
+        onClose={() => setPickerTarget(null)}
+      />
+    </div>
+  );
+}
+
 export default function ProductForm({ mode, item }: { mode: "create" | "edit"; item?: Product }) {
   const router = useRouter();
   const [name, setName] = useState(item?.name ?? "");
@@ -61,7 +242,7 @@ export default function ProductForm({ mode, item }: { mode: "create" | "edit"; i
   const [description, setDescription] = useState(item?.description ?? "");
   const [excerpt, setExcerpt] = useState(item?.excerpt ?? "");
   const [mainImageId, setMainImageId] = useState(item?.main_image_id ?? "");
-  const [galleryInput, setGalleryInput] = useState((item?.gallery ?? []).join("\n"));
+  const [galleryUrls, setGalleryUrls] = useState(item?.gallery ?? []);
   const [price, setPrice] = useState<number | null>(item?.price ?? null);
   const [stock, setStock] = useState<number | null>(item?.stock ?? null);
   const [lowStockThreshold, setLowStockThreshold] = useState(item?.low_stock_threshold ?? 5);
@@ -146,7 +327,7 @@ export default function ProductForm({ mode, item }: { mode: "create" | "edit"; i
         description: description.trim(),
         excerpt: excerpt.trim(),
         main_image_id: mainImageId,
-        gallery: galleryInput.split("\n").map((value) => value.trim()).filter(Boolean),
+        gallery: galleryUrls.map((value) => value.trim()).filter(Boolean),
         price,
         stock,
         low_stock_threshold: lowStockThreshold,
@@ -229,7 +410,7 @@ export default function ProductForm({ mode, item }: { mode: "create" | "edit"; i
             <div className="grid-2">
               <label className="field span-2"><span>Extracto</span><textarea rows={3} value={excerpt} onChange={(event) => setExcerpt(event.target.value)} /></label>
               <label className="field span-2"><span>Descripción</span><textarea rows={7} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
-              <label className="field span-2"><span>Galería (una URL por línea)</span><textarea rows={4} value={galleryInput} onChange={(event) => setGalleryInput(event.target.value)} /></label>
+              <ProductGalleryField value={galleryUrls} onChange={setGalleryUrls} />
             </div>
           </section>
 

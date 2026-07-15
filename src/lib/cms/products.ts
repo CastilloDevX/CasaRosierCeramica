@@ -11,6 +11,8 @@ import { logAction } from "./history-logs";
 const TABLE = "products";
 const FILE_NAME = "products.json";
 const DATA_DIR = path.join(process.cwd(), "data");
+let forcedLocalSource = false;
+let lastLoggedSource: "supabase" | "local-json" | null = null;
 
 type ProductInput = Partial<Omit<Product, "id" | "created_at" | "updated_at" | "deleted_at">> & {
   id?: string;
@@ -112,6 +114,12 @@ async function readLocalProducts(): Promise<Product[]> {
   }
 }
 
+function logSource(source: "supabase" | "local-json") {
+  if (lastLoggedSource === source) return;
+  lastLoggedSource = source;
+  console.info(`[cms:products] source=${source}`);
+}
+
 async function readFromSupabase(query: (s: ReturnType<typeof createAdminClient>) => Promise<Record<string, unknown> | null>): Promise<Product | null> {
   try {
     const supabase = createAdminClient();
@@ -123,53 +131,96 @@ async function readFromSupabase(query: (s: ReturnType<typeof createAdminClient>)
 }
 
 async function upsertProduct(product: Product): Promise<void> {
-  try {
-    const supabase = createAdminClient();
-    await supabase.from(TABLE).upsert(productToRow(product), { onConflict: "id" });
-  } catch { /* best-effort */ }
+  const supabase = createAdminClient();
+  const { error } = await supabase.from(TABLE).upsert(productToRow(product), { onConflict: "id" });
+  if (error) throw error;
 }
 
 async function deleteProductFromDb(id: string): Promise<void> {
-  try {
-    const supabase = createAdminClient();
-    await supabase.from(TABLE).delete().eq("id", id);
-  } catch { /* best-effort */ }
+  const supabase = createAdminClient();
+  const { error } = await supabase.from(TABLE).delete().eq("id", id);
+  if (error) throw error;
+}
+
+async function persistProduct(product: Product, localItems: Product[]) {
+  if (!forcedLocalSource) {
+    try {
+      await upsertProduct(product);
+      logSource("supabase");
+      return;
+    } catch {
+      forcedLocalSource = true;
+    }
+  }
+  await writeJsonFile(FILE_NAME, localItems);
+  logSource("local-json");
+}
+
+async function removePersistedProduct(id: string, localItems: Product[]) {
+  if (!forcedLocalSource) {
+    try {
+      await deleteProductFromDb(id);
+      logSource("supabase");
+      return;
+    } catch {
+      forcedLocalSource = true;
+    }
+  }
+  await writeJsonFile(FILE_NAME, localItems);
+  logSource("local-json");
 }
 
 // ── Public API ──
 
 export async function getProducts() {
-  const fromSupabase = await readAllFromSupabase();
-  if (fromSupabase) return fromSupabase;
+  if (!forcedLocalSource) {
+    const fromSupabase = await readAllFromSupabase();
+    if (fromSupabase) {
+      logSource("supabase");
+      return fromSupabase;
+    }
+  }
   const local = await readLocalProducts();
+  logSource("local-json");
   return local.length ? local : readJsonFile<Product[]>(FILE_NAME, []);
 }
 
 export async function getProductById(id: string) {
-  const result = await readFromSupabase(async (supabase) => {
-    const { data } = await supabase.from(TABLE).select("*").eq("id", id).maybeSingle();
-    return data as Record<string, unknown> | null;
-  });
-  if (result) return result;
+  if (!forcedLocalSource) {
+    const result = await readFromSupabase(async (supabase) => {
+      const { data } = await supabase.from(TABLE).select("*").eq("id", id).maybeSingle();
+      return data as Record<string, unknown> | null;
+    });
+    if (result) {
+      logSource("supabase");
+      return result;
+    }
+  }
   const items = await readJsonFile<Product[]>(FILE_NAME, []);
+  logSource("local-json");
   return items.find((p) => p.id === id) ?? null;
 }
 
 export async function getProductBySlug(slug: string) {
-  const result = await readFromSupabase(async (supabase) => {
-    const { data } = await supabase.from(TABLE).select("*").eq("slug", slug).maybeSingle();
-    return data as Record<string, unknown> | null;
-  });
-  if (result) return result;
+  if (!forcedLocalSource) {
+    const result = await readFromSupabase(async (supabase) => {
+      const { data } = await supabase.from(TABLE).select("*").eq("slug", slug).maybeSingle();
+      return data as Record<string, unknown> | null;
+    });
+    if (result) {
+      logSource("supabase");
+      return result;
+    }
+  }
   const items = await readJsonFile<Product[]>(FILE_NAME, []);
+  logSource("local-json");
   return items.find((p) => p.slug === slug) ?? null;
 }
 
 export async function createProduct(data: ProductInput) {
   const items = await getProducts();
   const next = normalizeProduct(data, undefined, items);
-  await writeJsonFile(FILE_NAME, [next, ...items]);
-  await upsertProduct(next);
+  await persistProduct(next, [next, ...items]);
   await logAction({ action: "create", entity_type: "product", entity_id: next.id, entity_title: next.name, new_data: next });
   return next;
 }
@@ -181,8 +232,7 @@ export async function updateProduct(id: string, data: ProductInput) {
   const old = items[index];
   const next = normalizeProduct(data, old, items);
   items[index] = next;
-  await writeJsonFile(FILE_NAME, items);
-  await upsertProduct(next);
+  await persistProduct(next, items);
   if (old.status !== next.status) {
     if (next.status === "published") await logAction({ action: "publish", entity_type: "product", entity_id: next.id, entity_title: next.name, old_data: old, new_data: next });
     else if (old.status === "published") await logAction({ action: "unpublish", entity_type: "product", entity_id: next.id, entity_title: next.name, old_data: old, new_data: next });
@@ -196,51 +246,51 @@ export async function duplicateProduct(id: string) {
   const original = items.find((p) => p.id === id);
   if (!original) return null;
   const copy = normalizeProduct({ ...original, name: `${original.name} (copia)`, slug: "", status: "draft" }, undefined, items);
-  await writeJsonFile(FILE_NAME, [copy, ...items]);
-  await upsertProduct(copy);
+  await persistProduct(copy, [copy, ...items]);
   await logAction({ action: "duplicate", entity_type: "product", entity_id: original.id, entity_title: original.name, new_data: copy });
   return copy;
 }
 
 export async function moveProductToTrash(id: string, deletedBy?: string) {
   const dBy = deletedBy ?? await getCurrentUserEmail();
-  const items = await readJsonFile<Product[]>(FILE_NAME, []);
+  const items = await getProducts();
   const index = items.findIndex((p) => p.id === id);
   if (index === -1) return null;
   const current = items[index];
   const deletedAt = new Date().toISOString();
   const trashed: Product = { ...current, status: "deleted", deleted_at: deletedAt, updated_at: deletedAt };
   items[index] = trashed;
-  await writeJsonFile(FILE_NAME, items);
-  await upsertProduct(trashed);
+  await persistProduct(trashed, items);
   await addTrashItem({ id: randomUUID(), entity_type: "product", entity_id: current.id, title: current.name, deleted_by: dBy, deleted_at: deletedAt, restore_data: current });
   await logAction({ action: "trash", entity_type: "product", entity_id: current.id, entity_title: current.name, old_data: current, user_email: dBy });
   return trashed;
 }
 
 export async function restoreProduct(id: string) {
-  const items = await readJsonFile<Product[]>(FILE_NAME, []);
+  const items = await getProducts();
   const index = items.findIndex((p) => p.id === id);
   const trashItem = await getTrashItemByEntity(id);
   if (index === -1 && !trashItem) return null;
   const restored = trashItem?.restore_data && typeof trashItem.restore_data === "object"
     ? ({ ...(trashItem.restore_data as Product), status: "draft", deleted_at: null, updated_at: new Date().toISOString() } as Product)
     : ({ ...items[index], status: "draft", deleted_at: null, updated_at: new Date().toISOString() } as Product);
-  if (index === -1) { const all = await readJsonFile<Product[]>(FILE_NAME, []); all.unshift(restored); await writeJsonFile(FILE_NAME, all); }
-  else { items[index] = restored; await writeJsonFile(FILE_NAME, items); }
-  await upsertProduct(restored);
+  if (index === -1) {
+    items.unshift(restored);
+  } else {
+    items[index] = restored;
+  }
+  await persistProduct(restored, items);
   if (trashItem) await removeTrashItem(trashItem.id);
   await logAction({ action: "restore", entity_type: "product", entity_id: restored.id, entity_title: restored.name });
   return restored;
 }
 
 export async function deleteProductPermanently(id: string) {
-  const items = await readJsonFile<Product[]>(FILE_NAME, []);
+  const items = await getProducts();
   const item = items.find((p) => p.id === id);
   const next = items.filter((p) => p.id !== id);
   if (next.length === items.length) return false;
-  await writeJsonFile(FILE_NAME, next);
-  await deleteProductFromDb(id);
+  await removePersistedProduct(id, next);
   const trashItem = await getTrashItemByEntity(id);
   if (trashItem) await removeTrashItem(trashItem.id);
   if (item) await logAction({ action: "delete_permanently", entity_type: "product", entity_id: id, entity_title: item.name, old_data: item });

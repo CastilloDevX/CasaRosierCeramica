@@ -10,6 +10,8 @@ import { logAction } from "./history-logs";
 const TABLE = "product_categories";
 const FILE_NAME = "product-categories.json";
 const DATA_DIR = path.join(process.cwd(), "data");
+let forcedLocalSource = false;
+let lastLoggedSource: "supabase" | "local-json" | null = null;
 
 type CatInput = Partial<Omit<ProductCategory, "id" | "created_at" | "updated_at" | "deleted_at">> & { id?: string; deleted_at?: string | null };
 
@@ -61,6 +63,12 @@ async function readLocalCategories(): Promise<ProductCategory[]> {
   }
 }
 
+function logSource(source: "supabase" | "local-json") {
+  if (lastLoggedSource === source) return;
+  lastLoggedSource = source;
+  console.info(`[cms:product-categories] source=${source}`);
+}
+
 async function readFromSupabase(query: (s: ReturnType<typeof createAdminClient>) => Promise<Record<string, unknown> | null>): Promise<ProductCategory | null> {
   try {
     const supabase = createAdminClient();
@@ -72,99 +80,136 @@ async function readFromSupabase(query: (s: ReturnType<typeof createAdminClient>)
 }
 
 async function upsertCategory(cat: ProductCategory): Promise<void> {
-  try {
-    const supabase = createAdminClient();
-    await supabase.from(TABLE).upsert(categoryToRow(cat), { onConflict: "id" });
-  } catch { /* best-effort */ }
+  const supabase = createAdminClient();
+  const { error } = await supabase.from(TABLE).upsert(categoryToRow(cat), { onConflict: "id" });
+  if (error) throw error;
 }
 
 async function deleteCategoryFromDb(id: string): Promise<void> {
-  try {
-    const supabase = createAdminClient();
-    await supabase.from(TABLE).delete().eq("id", id);
-  } catch { /* best-effort */ }
+  const supabase = createAdminClient();
+  const { error } = await supabase.from(TABLE).delete().eq("id", id);
+  if (error) throw error;
+}
+
+async function persistCategory(cat: ProductCategory, localItems: ProductCategory[]) {
+  if (!forcedLocalSource) {
+    try {
+      await upsertCategory(cat);
+      logSource("supabase");
+      return;
+    } catch {
+      forcedLocalSource = true;
+    }
+  }
+  await writeJsonFile(FILE_NAME, localItems);
+  logSource("local-json");
+}
+
+async function removePersistedCategory(id: string, localItems: ProductCategory[]) {
+  if (!forcedLocalSource) {
+    try {
+      await deleteCategoryFromDb(id);
+      logSource("supabase");
+      return;
+    } catch {
+      forcedLocalSource = true;
+    }
+  }
+  await writeJsonFile(FILE_NAME, localItems);
+  logSource("local-json");
 }
 
 // ── Public API ──
 
 export async function getCategories() {
-  const fromSupabase = await readAllFromSupabase();
-  if (fromSupabase) return fromSupabase;
+  if (!forcedLocalSource) {
+    const fromSupabase = await readAllFromSupabase();
+    if (fromSupabase) {
+      logSource("supabase");
+      return fromSupabase;
+    }
+  }
   const local = await readLocalCategories();
+  logSource("local-json");
   return local.length ? local : readJsonFile<ProductCategory[]>(FILE_NAME, []);
 }
 
 export async function getCategoryById(id: string) {
-  const result = await readFromSupabase(async (supabase) => {
-    const { data } = await supabase.from(TABLE).select("*").eq("id", id).maybeSingle();
-    return data as Record<string, unknown> | null;
-  });
-  if (result) return result;
+  if (!forcedLocalSource) {
+    const result = await readFromSupabase(async (supabase) => {
+      const { data } = await supabase.from(TABLE).select("*").eq("id", id).maybeSingle();
+      return data as Record<string, unknown> | null;
+    });
+    if (result) {
+      logSource("supabase");
+      return result;
+    }
+  }
   const items = await readJsonFile<ProductCategory[]>(FILE_NAME, []);
+  logSource("local-json");
   return items.find((c) => c.id === id) ?? null;
 }
 
 export async function createCategory(data: CatInput) {
-  const items = await readJsonFile<ProductCategory[]>(FILE_NAME, []);
+  const items = await getCategories();
   const next = normalize(data, undefined, items);
-  await writeJsonFile(FILE_NAME, [next, ...items]);
-  await upsertCategory(next);
+  await persistCategory(next, [next, ...items]);
   await logAction({ action: "create", entity_type: "product_category", entity_id: next.id, entity_title: next.name, new_data: next });
   return next;
 }
 
 export async function updateCategory(id: string, data: CatInput) {
-  const items = await readJsonFile<ProductCategory[]>(FILE_NAME, []);
+  const items = await getCategories();
   const index = items.findIndex((c) => c.id === id);
   if (index === -1) return null;
   const old = items[index];
   const next = normalize(data, old, items);
   items[index] = next;
-  await writeJsonFile(FILE_NAME, items);
-  await upsertCategory(next);
+  await persistCategory(next, items);
   await logAction({ action: "update", entity_type: "product_category", entity_id: next.id, entity_title: next.name, old_data: old, new_data: next });
   return next;
 }
 
 export async function moveCategoryToTrash(id: string, dBy?: string) {
   const resolvedBy = dBy ?? await getCurrentUserEmail();
-  const items = await readJsonFile<ProductCategory[]>(FILE_NAME, []);
+  const items = await getCategories();
   const index = items.findIndex((c) => c.id === id);
   if (index === -1) return null;
   const c = items[index];
   const d = new Date().toISOString();
   const t: ProductCategory = { ...c, status: "deleted", deleted_at: d, updated_at: d };
   items[index] = t;
-  await writeJsonFile(FILE_NAME, items);
-  await upsertCategory(t);
+  await persistCategory(t, items);
   await addTrashItem({ id: randomUUID(), entity_type: "product_category", entity_id: c.id, title: c.name, deleted_by: resolvedBy, deleted_at: d, restore_data: c });
   await logAction({ action: "trash", entity_type: "product_category", entity_id: c.id, entity_title: c.name, old_data: c, user_email: resolvedBy });
   return t;
 }
 
 export async function restoreCategory(id: string) {
-  const items = await readJsonFile<ProductCategory[]>(FILE_NAME, []);
+  const items = await getCategories();
   const index = items.findIndex((c) => c.id === id);
   const trashItem = await getTrashItemByEntity(id);
   if (index === -1 && !trashItem) return null;
   const r = trashItem?.restore_data && typeof trashItem.restore_data === "object"
     ? ({ ...(trashItem.restore_data as ProductCategory), status: "active", deleted_at: null, updated_at: new Date().toISOString() } as ProductCategory)
     : ({ ...items[index], status: "active", deleted_at: null, updated_at: new Date().toISOString() } as ProductCategory);
-  if (index === -1) { const a = await readJsonFile<ProductCategory[]>(FILE_NAME, []); a.unshift(r); await writeJsonFile(FILE_NAME, a); }
-  else { items[index] = r; await writeJsonFile(FILE_NAME, items); }
-  await upsertCategory(r);
+  if (index === -1) {
+    items.unshift(r);
+  } else {
+    items[index] = r;
+  }
+  await persistCategory(r, items);
   if (trashItem) await removeTrashItem(trashItem.id);
   await logAction({ action: "restore", entity_type: "product_category", entity_id: r.id, entity_title: r.name });
   return r;
 }
 
 export async function deleteCategoryPermanently(id: string) {
-  const items = await readJsonFile<ProductCategory[]>(FILE_NAME, []);
+  const items = await getCategories();
   const item = items.find((c) => c.id === id);
   const next = items.filter((c) => c.id !== id);
   if (next.length === items.length) return false;
-  await writeJsonFile(FILE_NAME, next);
-  await deleteCategoryFromDb(id);
+  await removePersistedCategory(id, next);
   const t = await getTrashItemByEntity(id);
   if (t) await removeTrashItem(t.id);
   if (item) await logAction({ action: "delete_permanently", entity_type: "product_category", entity_id: id, entity_title: item.name, old_data: item });

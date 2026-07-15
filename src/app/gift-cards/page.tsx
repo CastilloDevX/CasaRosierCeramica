@@ -8,6 +8,9 @@ export const metadata: Metadata = {
     "Gift cards de Casa Rosier para regalar experiencias de ceramica en Barcelona."
 };
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function GiftCardsPage() {
   const config = await getExperienceCollectionConfig("giftCards");
   return <ExperienceCollectionPage config={config} />;

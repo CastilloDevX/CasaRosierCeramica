@@ -1,6 +1,7 @@
 import type { ShopCategory, ShopItem } from "@/data/types";
 import { getCategories } from "./product-categories";
 import { getProducts } from "./products";
+import { isPublicProductVisible } from "./public-visibility";
 import type { Product, ProductCategory } from "./types";
 
 function formatPrice(value: number | null) {
@@ -35,7 +36,7 @@ function orderFromProduct(product: Product) {
 }
 
 function productToShopItem(product: Product, categories: ProductCategory[]): ShopItem {
-  const gallery = [product.main_image_id, ...(product.gallery ?? [])].filter(Boolean);
+  const gallery = Array.from(new Set((product.gallery ?? []).map((image) => image.trim()).filter(Boolean)));
 
   return {
     id: product.id,
@@ -60,7 +61,7 @@ function productToShopItem(product: Product, categories: ProductCategory[]): Sho
 export async function getPublicShopData() {
   const [products, categories] = await Promise.all([getProducts(), getCategories()]);
   const published = products
-    .filter((product) => product.status === "published" && product.deleted_at === null)
+    .filter(isPublicProductVisible)
     .map((product) => productToShopItem(product, categories))
     .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 

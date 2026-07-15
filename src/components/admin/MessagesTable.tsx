@@ -62,6 +62,31 @@ function originTitle(item: FormSubmission) {
   return `Mensaje desde ${sourceLabel(item)}`;
 }
 
+function cleanEmail(value: string) {
+  return value.trim().replace(/\s+/g, "");
+}
+
+function cleanPhone(value: string) {
+  const trimmed = value.trim();
+  const hasLeadingPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
+  return digits ? `${hasLeadingPlus ? "+" : ""}${digits}` : "";
+}
+
+function replyMailHref(item: FormSubmission) {
+  const email = cleanEmail(item.email);
+  if (!email) return "";
+  const subject = encodeURIComponent(`Re: ${item.subject || "Tu mensaje a Casa Rosier"}`);
+  const body = encodeURIComponent(`Hola ${item.name || ""},\n\n`);
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${subject}&body=${body}`;
+}
+
+function nextStatusAction(item: FormSubmission) {
+  if (item.status === "new") return { status: "read" as const, label: "Marcar como leído" };
+  if (item.status !== "replied") return { status: "replied" as const, label: "Marcar como respondido" };
+  return null;
+}
+
 export default function MessagesTable({ items }: { items: FormSubmission[] }) {
   const [messages, setMessages] = useState(items);
   const [selectedId, setSelectedId] = useState(items[0]?.id ?? "");
@@ -99,7 +124,8 @@ export default function MessagesTable({ items }: { items: FormSubmission[] }) {
   }, [messages, query, filter, sort]);
 
   const selected = messages.find((item) => item.id === selectedId) ?? filteredItems[0] ?? null;
-  const replySubject = selected ? encodeURIComponent(`Re: ${selected.subject || "Tu mensaje a Casa Rosier"}`) : "";
+  const selectedMailHref = selected ? replyMailHref(selected) : "";
+  const selectedStatusAction = selected ? nextStatusAction(selected) : null;
 
   function showResult(type: "success" | "error", title: string, message: string) {
     setActionModal({ type, title, message });
@@ -268,8 +294,8 @@ export default function MessagesTable({ items }: { items: FormSubmission[] }) {
 
             <div className="message-contact-grid">
               <div><span>Nombre</span><strong>{selected.name || "Sin nombre"}</strong></div>
-              <div><span>Email</span><a href={`mailto:${selected.email}`}>{selected.email}</a></div>
-              {selected.phone ? <div><span>Teléfono</span><a href={`tel:${selected.phone}`}>{selected.phone}</a></div> : null}
+              <div><span>Email</span><a href={selectedMailHref || `mailto:${cleanEmail(selected.email)}`}>{selected.email}</a></div>
+              {selected.phone ? <div><span>Teléfono</span><strong>{cleanPhone(selected.phone) || selected.phone}</strong></div> : null}
               <div><span>Recibido</span><strong>{formatDate(selected.created_at)}</strong></div>
               <div><span>Estado</span><strong>{statusLabels[selected.status]}</strong></div>
               {selected.source_page ? <div><span>Origen</span><strong>{selected.source_page}</strong></div> : null}
@@ -292,12 +318,23 @@ export default function MessagesTable({ items }: { items: FormSubmission[] }) {
             ) : null}
 
             <div className="message-actions-bar">
-              <a className="primary-btn" href={`mailto:${selected.email}?subject=${replySubject}`}>
-                Responder por Email
+              <a
+                className="primary-btn"
+                href={selectedMailHref}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Responder email
               </a>
-              {selected.phone ? <a className="secondary-btn message-call-btn" href={`tel:${selected.phone}`}>Llamar</a> : null}
-              {selected.status !== "read" ? (
-                <button type="button" className="secondary-btn" onClick={() => updateStatus(selected.id, "read")}>Marcar leído</button>
+              {selectedStatusAction ? (
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  disabled={pendingAction === `${selected.id}:status:${selectedStatusAction.status}`}
+                  onClick={() => updateStatus(selected.id, selectedStatusAction.status)}
+                >
+                  {pendingAction === `${selected.id}:status:${selectedStatusAction.status}` ? "Actualizando..." : selectedStatusAction.label}
+                </button>
               ) : null}
             </div>
           </>

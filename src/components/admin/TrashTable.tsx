@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import AdminActionModal from "./AdminActionModal";
 import AdminPagination from "./AdminPagination";
 import { getTrashEntityLabel, type TrashEntityOption } from "@/lib/cms/trash-entity-labels";
 import type { TrashItem } from "@/lib/cms/types";
@@ -46,7 +47,7 @@ type TrashResponse = {
 };
 type DeleteModalState = {
   item: TrashItem;
-  status: "confirm" | "loading" | "success" | "error";
+  status: "confirm" | "success" | "error";
   message?: string;
 } | null;
 
@@ -84,8 +85,11 @@ export default function TrashTable({
   const [total, setTotal] = useState(initialTotal);
   const [totalPages, setTotalPages] = useState(initialTotalPages);
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [deleteModal, setDeleteModal] = useState<DeleteModalState>(null);
+  const isDeletingPermanently = pendingAction?.startsWith("del:");
+  const isBusy = isLoading || Boolean(pendingAction);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -153,29 +157,36 @@ export default function TrashTable({
   async function action(item: TrashItem, type: "restore" | "del") {
     const cfg = apiMap[item.entity_type];
     if (!cfg) throw new Error("No hay una ruta configurada para este tipo de elemento.");
+    setPendingAction(`${type}:${item.id}`);
     const url = type === "restore" ? cfg.restore : cfg.del;
-    const method = cfg.method || "PATCH";
-    const body = cfg.body ? cfg.body(item.entity_id, type === "restore" ? "restore" : "permanent") :
-      method === "DELETE" ? undefined :
-      JSON.stringify({ action: type === "restore" ? "restore" : "trash" });
-    const res = await fetch(method === "DELETE" ? `${url}${item.entity_id}` : url === `/api/admin/media/delete` ? url : `${url}${item.entity_id}`, {
-      method: cfg.method || (type === "del" ? "DELETE" : "PATCH"),
-      headers: body ? { "Content-Type": "application/json" } : undefined,
-      body,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({})) as { error?: string };
-      throw new Error(data.error || "No se pudo completar la acción.");
+    const requestMethod = cfg.method || (type === "del" ? "DELETE" : "PATCH");
+    const body = cfg.body
+      ? cfg.body(item.entity_id, type === "restore" ? "restore" : "permanent")
+      : requestMethod === "DELETE"
+        ? undefined
+        : JSON.stringify({ action: "restore" });
+
+    try {
+      const res = await fetch(url === "/api/admin/media/delete" || url === "/api/admin/shop/shipping" ? url : `${url}${item.entity_id}`, {
+        method: requestMethod,
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error || "No se pudo completar la acción.");
+      }
+      await reloadCurrentPage();
+      router.refresh();
+    } finally {
+      setPendingAction(null);
     }
-    await reloadCurrentPage();
-    router.refresh();
   }
 
   async function confirmPermanentDelete() {
-    if (!deleteModal || deleteModal.status === "loading") return;
+    if (!deleteModal || pendingAction) return;
 
     const item = deleteModal.item;
-    setDeleteModal({ item, status: "loading" });
 
     try {
       await action(item, "del");
@@ -200,7 +211,7 @@ export default function TrashTable({
         <div className="trash-table-head__controls" aria-label="Controles de papelera">
           <label className="trash-table-head__field">
             <span>Entidad</span>
-            <select value={entityFilter} onChange={(event) => { setEntityFilter(event.target.value); setPage(1); }}>
+            <select value={entityFilter} disabled={isBusy} onChange={(event) => { setEntityFilter(event.target.value); setPage(1); }}>
               <option value="all">Todas las entidades</option>
               {entityOptions.map((entity) => (
                 <option key={entity.value} value={entity.value}>{entity.label}</option>
@@ -209,7 +220,7 @@ export default function TrashTable({
           </label>
           <label className="trash-table-head__field">
             <span>Fecha</span>
-            <select value={dateSort} onChange={(event) => { setDateSort(event.target.value as DateSort); setPage(1); }}>
+            <select value={dateSort} disabled={isBusy} onChange={(event) => { setDateSort(event.target.value as DateSort); setPage(1); }}>
               <option value="newest">Más recientes primero</option>
               <option value="oldest">Más antiguos primero</option>
             </select>
@@ -219,6 +230,7 @@ export default function TrashTable({
             <input
               type="search"
               value={query}
+              disabled={isBusy}
               placeholder="Buscar en papelera"
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -230,7 +242,7 @@ export default function TrashTable({
           {isLoading ? <span className="paginated-table-loading">Cargando...</span> : null}
         </div>
         {error ? <p className="form-error">{error}</p> : null}
-        <div className={isLoading ? "paginated-table is-loading" : "paginated-table"}>
+        <div className={isBusy ? "paginated-table is-loading" : "paginated-table"}>
         <table className="admin-table">
           <thead>
             <tr>
@@ -247,9 +259,13 @@ export default function TrashTable({
                 <td>{item.title}</td>
                 <td>{new Date(item.deleted_at).toLocaleString()}</td>
                 <td>
-                  <div className="row-actions">
-                    <button type="button" className="secondary-btn" onClick={() => action(item, "restore")}>Restaurar</button>
-                    <button type="button" className="danger-btn" onClick={() => setDeleteModal({ item, status: "confirm" })}>Eliminar definitivamente</button>
+                  <div className="row-actions trash-row-actions">
+                    <button type="button" className="secondary-btn" disabled={isBusy} onClick={() => action(item, "restore")}>
+                      {pendingAction === `restore:${item.id}` ? "Restaurando..." : "Restaurar"}
+                    </button>
+                    <button type="button" className="danger-btn" disabled={isBusy} onClick={() => setDeleteModal({ item, status: "confirm" })}>
+                      Eliminar definitivamente
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -264,68 +280,32 @@ export default function TrashTable({
           </tbody>
         </table>
         </div>
-        <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} disabled={isLoading} />
+        <AdminPagination page={page} totalPages={totalPages} onPageChange={setPage} disabled={isBusy} />
       </div>
 
-      {deleteModal ? (
-        <div className="admin-action-modal trash-delete-modal" role="dialog" aria-modal="true" aria-labelledby="trash-delete-modal-title">
-          <button
-            type="button"
-            className="admin-action-modal__backdrop"
-            aria-label="Cerrar modal"
-            disabled={deleteModal.status === "loading"}
-            onClick={() => {
-              if (deleteModal.status !== "loading") setDeleteModal(null);
-            }}
-          />
-          <div className={`admin-action-modal__panel admin-action-modal__panel--${deleteModal.status === "success" ? "success" : deleteModal.status === "error" ? "error" : "confirm"}`}>
-            <div className={`admin-action-modal__icon ${deleteModal.status === "loading" ? "admin-action-modal__icon--loading" : ""}`} aria-hidden="true">
-              <span className="material-symbols-outlined">
-                {deleteModal.status === "success" ? "check_circle" : deleteModal.status === "error" ? "error" : deleteModal.status === "loading" ? "progress_activity" : "warning"}
-              </span>
-            </div>
-            <div className="admin-action-modal__body">
-              <h3 id="trash-delete-modal-title">
-                {deleteModal.status === "success"
-                  ? "Eliminación definitiva completada"
-                  : deleteModal.status === "error"
-                    ? "No se pudo eliminar"
-                    : deleteModal.status === "loading"
-                      ? "Eliminando definitivamente"
-                      : "Eliminar definitivamente"}
-              </h3>
-              <p>
-                {deleteModal.message || (deleteModal.status === "loading"
-                  ? "Estamos eliminando el elemento. Mantén esta ventana abierta."
-                  : `Se eliminará "${deleteModal.item.title}" de forma permanente.`)}
-              </p>
-              {deleteModal.status === "confirm" ? (
-                <ul className="admin-action-modal__details">
-                  <li>Esta acción no se puede deshacer.</li>
-                  <li>El elemento no podrá restaurarse desde la papelera.</li>
-                </ul>
-              ) : null}
-            </div>
-            <div className="admin-action-modal__actions">
-              {deleteModal.status === "confirm" ? (
-                <button type="button" className="secondary-btn" onClick={() => setDeleteModal(null)}>
-                  Cancelar
-                </button>
-              ) : null}
-              {deleteModal.status === "confirm" ? (
-                <button type="button" className="danger-btn" onClick={confirmPermanentDelete}>
-                  Eliminar definitivamente
-                </button>
-              ) : null}
-              {deleteModal.status === "success" || deleteModal.status === "error" ? (
-                <button type="button" className={deleteModal.status === "error" ? "danger-btn" : "primary-btn"} onClick={() => setDeleteModal(null)}>
-                  Entendido
-                </button>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <AdminActionModal
+        open={Boolean(deleteModal) || Boolean(isDeletingPermanently)}
+        type={isDeletingPermanently ? "info" : deleteModal?.status === "success" ? "success" : deleteModal?.status === "error" ? "error" : "confirm"}
+        title={isDeletingPermanently ? "Eliminando definitivamente" : deleteModal?.status === "success" ? "Eliminación completada" : deleteModal?.status === "error" ? "No se pudo eliminar" : "Eliminar definitivamente"}
+        message={
+          isDeletingPermanently
+            ? "Estamos eliminando el elemento. Mantén esta ventana abierta."
+            : deleteModal?.message || (deleteModal ? `Se eliminará "${deleteModal.item.title}" de forma permanente. Esta acción no se puede deshacer.` : "")
+        }
+        details={deleteModal?.status === "confirm" ? ["El elemento no podrá restaurarse desde la papelera."] : undefined}
+        confirmLabel={isDeletingPermanently ? "Eliminando..." : deleteModal?.status === "confirm" ? "Eliminar" : "Entendido"}
+        cancelLabel="Cancelar"
+        confirmDisabled={Boolean(isDeletingPermanently)}
+        cancelDisabled={Boolean(isDeletingPermanently)}
+        closeOnConfirm={deleteModal?.status !== "confirm"}
+        onConfirm={() => {
+          if (isDeletingPermanently) return;
+          if (deleteModal?.status === "confirm") void confirmPermanentDelete();
+        }}
+        onClose={() => {
+          if (!isDeletingPermanently) setDeleteModal(null);
+        }}
+      />
     </>
   );
 }

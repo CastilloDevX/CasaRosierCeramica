@@ -7,6 +7,8 @@ import { type NextRequest, NextResponse } from "next/server";
 function refreshSocialGalleryViews() {
   invalidatePublicContentCache();
   revalidatePath("/", "layout");
+  revalidatePath("/shop");
+  revalidatePath("/admin/shop");
   revalidatePath("/admin/components/social-galleries");
 }
 

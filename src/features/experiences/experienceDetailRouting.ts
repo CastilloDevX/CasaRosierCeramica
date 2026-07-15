@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ExperienceItem, ExperienceKind } from "@/data/types";
 import { getOfferingBySlug, getOfferings } from "@/lib/cms/offerings";
 import { normalizeHeroSettings } from "@/lib/cms/hero-settings";
+import { isPublicOfferingVisible, publicOfferingLabel, sanitizePublicText } from "@/lib/cms/public-visibility";
 import type { ClassOfferingDetails, Offering } from "@/lib/cms/types";
 
 type LegacyProgramItem = {
@@ -38,7 +39,7 @@ function stringValue(value: unknown) {
 
 function splitParagraphs(value: unknown) {
   if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
-  return stringValue(value)
+  return sanitizePublicText(stringValue(value))
     .split(/\n{2,}|\r?\n/)
     .map((item) => item.trim())
     .filter(Boolean);
@@ -83,7 +84,7 @@ function ctaConsultLabel(details: LegacyOfferingDetails, type: Offering["type"])
 }
 
 function ctaEnrollLabel(details: LegacyOfferingDetails, type: Offering["type"]) {
-  return stringValue(details.ctaEnrollLabel) || (type === "gift_card" ? "Anadir al carrito" : "Inscribirme");
+  return stringValue(details.ctaEnrollLabel) || (type === "gift_card" ? "Añadir al carrito" : "Inscribirme");
 }
 
 function hasDetailValue(value: unknown): boolean {
@@ -164,8 +165,11 @@ function programForDetails(content: Partial<ClassOfferingDetails["content"]>, de
 }
 
 function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
+  const title = publicOfferingLabel(offering);
   const details = detailsForOffering(offering);
   const content = { ...details.content };
+  const excerpt = sanitizePublicText(offering.excerpt);
+  const highlightDescription = sanitizePublicText(details.highlightDescription || stringValue(details.introHighlight));
   const galleryImages = (details.galleryImages?.length ? details.galleryImages : offering.gallery.map((image, order) => ({ image, alt: "", order })))
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .map((item) => item.image)
@@ -177,7 +181,7 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
   const consultHref = ctaConsultHref(details);
   const enrollHref = ctaEnrollHref(details);
   const hero = normalizeHeroSettings(details, {
-    heroTitle: details.heroTitle || offering.title,
+    heroTitle: details.heroTitle || title,
     heroSubtitle: details.heroSubtitle || stringValue(details.category) || offering.type,
     heroImage: details.heroImage || offering.cover_image_url || "img/hero-bg.jpg",
   });
@@ -186,10 +190,10 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     id: offering.id,
     kind: kindFromOffering(offering.type),
     slug: offering.slug,
-    title: offering.title,
-    subtitle: offering.subtitle || offering.title,
+    title,
+    subtitle: offering.subtitle || title,
     category: details.heroSubtitle || stringValue(details.category) || offering.type,
-    excerpt: offering.excerpt,
+    excerpt,
     description: splitParagraphs(offering.description),
     coverImage: offering.cover_image_url || galleryImages[0] || details.heroImage || "img/hero-bg.jpg",
     heroImage: hero.heroImage || offering.cover_image_url || "img/hero-bg.jpg",
@@ -256,10 +260,10 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     presentationImageScale: hero.presentationImageScale,
     presentationImageScaleTablet: hero.presentationImageScaleTablet,
     presentationImageScaleMobile: hero.presentationImageScaleMobile,
-    heroTitle: hero.heroTitle || offering.title,
-    listingTitle: offering.title,
+    heroTitle: hero.heroTitle || title,
+    listingTitle: title,
     listingSubtitle: details.heroSubtitle || "",
-    introHighlight: details.highlightDescription || stringValue(details.introHighlight) || offering.excerpt,
+    introHighlight: highlightDescription || excerpt,
     galleryImages: galleryImages.length ? galleryImages : [offering.cover_image_url || details.heroImage || "img/hero-bg.jpg"],
     videoCardImage: details.videoPoster || stringValue(details.videoCardImage) || galleryImages[0] || offering.cover_image_url || "img/hero-bg.jpg",
     videoCardLabel: details.videoUrl ? "VIDEO" : stringValue(details.videoCardLabel) || "IMAGEN",
@@ -283,8 +287,8 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
     ctaEnrollHref: enrollHref,
     ctaConsultLabel: ctaConsultLabel(details, offering.type),
     ctaEnrollLabel: ctaEnrollLabel(details, offering.type),
-    seoTitle: offering.seo_title || `${offering.title} | Casa Rosier`,
-    seoDescription: offering.seo_description || offering.excerpt,
+    seoTitle: offering.seo_title || `${title} | Casa Rosier`,
+    seoDescription: sanitizePublicText(offering.seo_description) || excerpt,
     isPublished: offering.status === "published",
     isFeatured: offering.featured,
     order: 0,
@@ -294,13 +298,13 @@ function cmsOfferingToExperienceItem(offering: Offering): ExperienceItem {
 export async function getPublicExperienceItems() {
   const offerings = await getOfferings();
   return offerings
-    .filter((item) => item.status === "published" && !item.deleted_at)
+    .filter(isPublicOfferingVisible)
     .map(cmsOfferingToExperienceItem);
 }
 
 async function bySlug(slug: string) {
   const offering = await getOfferingBySlug(slug);
-  if (!offering || offering.status !== "published" || offering.deleted_at) return null;
+  if (!offering || !isPublicOfferingVisible(offering)) return null;
   return cmsOfferingToExperienceItem(offering);
 }
 
@@ -327,4 +331,11 @@ export async function getExperienceRouteItem(
 ) {
   const item = await bySlug((await params).slug);
   return item?.kind === kind ? item : null;
+}
+
+export async function findLegacyExperienceSlug(slug: string, kind: ExperienceKind) {
+  const items = await getPublicExperienceItems();
+  const escapedSlug = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const canonical = items.find((item) => item.kind === kind && item.slug.match(new RegExp(`^${escapedSlug}-\\d+$`)));
+  return canonical?.slug ?? null;
 }

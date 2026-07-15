@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ExperienceDetailPage } from "@/features/experiences/ExperienceDetailPage";
 import {
   generateExperienceMetadata,
+  findLegacyExperienceSlug,
   getExperienceRouteItem
 } from "@/features/experiences/experienceDetailRouting";
 
@@ -22,7 +23,12 @@ export default async function ClassDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const item = await getExperienceRouteItem(params, "class");
-  if (!item) notFound();
+  const resolvedParams = await params;
+  const item = await getExperienceRouteItem(Promise.resolve(resolvedParams), "class");
+  if (!item) {
+    const legacySlug = await findLegacyExperienceSlug(resolvedParams.slug, "class");
+    if (legacySlug) redirect(`/clases/${legacySlug}`);
+    notFound();
+  }
   return <ExperienceDetailPage item={item} />;
 }

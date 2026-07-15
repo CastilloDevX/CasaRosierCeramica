@@ -19,12 +19,16 @@ function isAbsoluteUrl(url: string) {
 export default function MediaPicker({
   onSelect,
   onClose,
+  onBusyChange,
 }: {
   onSelect: (url: string) => void;
   onClose: () => void;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -40,6 +44,38 @@ export default function MediaPicker({
     load();
   }, []);
 
+  async function uploadFile(file: File) {
+    setIsUploading(true);
+    setUploadError(null);
+    onBusyChange?.(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "general");
+
+    try {
+      const response = await fetch("/api/admin/media/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json().catch(() => ({})) as { asset?: MediaAsset; error?: string };
+
+      if (!response.ok || !data.asset) {
+        setUploadError(data.error || "No se pudo subir la imagen.");
+        return;
+      }
+
+      setAssets((current) => [data.asset as MediaAsset, ...current.filter((asset) => asset.id !== data.asset?.id)]);
+    } catch {
+      setUploadError("No se pudo subir la imagen. Revisa tu conexión e intenta de nuevo.");
+    } finally {
+      setIsUploading(false);
+      onBusyChange?.(false);
+    }
+  }
+
+  const imageAssets = assets.filter((a) => a.status === "active" && isImage(a));
+
   return (
     <div className="media-library-picker space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -47,13 +83,30 @@ export default function MediaPicker({
           <h3 className="media-library-picker__title text-headline-sm text-on-surface">Biblioteca del proyecto</h3>
           <p className="media-library-picker__copy text-label-md text-on-surface-variant">Selecciona una imagen activa.</p>
         </div>
-        <button type="button" className="secondary-btn" onClick={onClose}>
-          Cerrar
-        </button>
+        <div className="media-library-picker__actions">
+          <label className="primary-btn" aria-disabled={isUploading} style={{ cursor: isUploading ? "wait" : "pointer" }}>
+            {isUploading ? "Subiendo..." : "Subir imagen"}
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              disabled={isUploading}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void uploadFile(file);
+                event.target.value = "";
+              }}
+            />
+          </label>
+          <button type="button" className="secondary-btn" onClick={onClose} disabled={isUploading}>
+            Cerrar
+          </button>
+        </div>
       </div>
+      {uploadError ? <p className="form-error">{uploadError}</p> : null}
       {isLoading ? (
         <Loader />
-      ) : assets.filter((a) => a.status === "active" && isImage(a)).length === 0 ? (
+      ) : imageAssets.length === 0 ? (
         <EmptyState
           icon="image"
           title="No hay archivos"
@@ -61,14 +114,15 @@ export default function MediaPicker({
         />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {assets
-            .filter((a) => a.status === "active" && isImage(a))
+          {imageAssets
             .map((asset) => (
               <button
                 key={asset.id}
                 type="button"
                 className="media-library-picker__asset group text-left rounded-xl border border-outline-variant bg-surface-container-lowest overflow-hidden hover:border-primary-container hover:shadow-lg transition-all"
+                disabled={isUploading}
                 onClick={() => {
+                  if (isUploading) return;
                   onSelect(asset.file_url);
                   onClose();
                 }}

@@ -10,6 +10,9 @@ export default function AdminActionModal({
   details,
   confirmLabel = "Aceptar",
   cancelLabel = "Cancelar",
+  confirmDisabled = false,
+  cancelDisabled = false,
+  closeOnConfirm = true,
   onConfirm,
   onClose,
 }: {
@@ -20,6 +23,9 @@ export default function AdminActionModal({
   details?: string[];
   confirmLabel?: string;
   cancelLabel?: string;
+  confirmDisabled?: boolean;
+  cancelDisabled?: boolean;
+  closeOnConfirm?: boolean;
   onConfirm?: () => void;
   onClose: () => void;
 }) {
@@ -29,7 +35,7 @@ export default function AdminActionModal({
 
   return (
     <div className="admin-action-modal" role="dialog" aria-modal="true" aria-labelledby="admin-action-modal-title">
-      <button type="button" className="admin-action-modal__backdrop" aria-label="Cerrar modal" onClick={onClose} />
+      <button type="button" className="admin-action-modal__backdrop" aria-label="Cerrar modal" disabled={cancelDisabled} onClick={onClose} />
       <div className={`admin-action-modal__panel admin-action-modal__panel--${type}`}>
         <div className="admin-action-modal__icon" aria-hidden="true">
           <span className="material-symbols-outlined">
@@ -49,16 +55,17 @@ export default function AdminActionModal({
         </div>
         <div className="admin-action-modal__actions">
           {isConfirm ? (
-            <button type="button" className="secondary-btn" onClick={onClose}>
+            <button type="button" className="secondary-btn" disabled={cancelDisabled} onClick={onClose}>
               {cancelLabel}
             </button>
           ) : null}
           <button
             type="button"
             className={type === "error" ? "danger-btn" : "primary-btn"}
+            disabled={confirmDisabled}
             onClick={() => {
               onConfirm?.();
-              onClose();
+              if (closeOnConfirm) onClose();
             }}
           >
             {confirmLabel}

@@ -3,6 +3,7 @@ import ShopPageEditor from "@/components/admin/ShopPageEditor";
 import { getPublicNavigationItems } from "@/lib/cms/navigation-public";
 import { getCategories } from "@/lib/cms/product-categories";
 import { getProducts } from "@/lib/cms/products";
+import { getPublicSocialGallery } from "@/lib/cms/public-content";
 import { getSettings } from "@/lib/cms/settings";
 import { getShopPageSettings } from "@/lib/cms/shop-page";
 import { getPublicShopData } from "@/lib/cms/shop-public";
@@ -11,16 +12,17 @@ type ShopSearchParams = { tab?: string };
 
 export default async function ShopPage({ searchParams }: { searchParams?: Promise<ShopSearchParams> }) {
   const params = await searchParams;
-  const [page, products, categories, shopData, navigationItems, settings] = await Promise.all([
+  const [page, products, categories, shopData, navigationItems, settings, socialGallery] = await Promise.all([
     getShopPageSettings(),
     getProducts(),
     getCategories(),
     getPublicShopData(),
     getPublicNavigationItems("main"),
     getSettings(),
+    getPublicSocialGallery(),
   ]);
   const activeProducts = products.filter((product) => product.status !== "deleted");
-  const initialTab = params?.tab === "items" ? "items" : params?.tab === "preview" ? "preview" : "hero";
+  const initialTab = params?.tab === "items" ? "items" : params?.tab === "additions" ? "additions" : params?.tab === "preview" ? "preview" : "hero";
 
   return (
     <AdminShell>
@@ -32,6 +34,7 @@ export default async function ShopPage({ searchParams }: { searchParams?: Promis
         shopCategories={shopData.shopCategories}
         navigationItems={navigationItems}
         menuSettings={settings.menu}
+        socialGallery={socialGallery}
         initialTab={initialTab}
       />
     </AdminShell>
